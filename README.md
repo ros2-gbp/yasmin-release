@@ -6,9 +6,9 @@
 
 **YASMIN** is a project focused on implementing robot behaviors using Finite State Machines (FSM). It is available for ROS 2, Python and C++.
 
-[![License: MIT](https://img.shields.io/badge/GitHub-GPL--3.0-informational)](https://opensource.org/license/gpl-3-0) [![GitHub release](https://img.shields.io/github/release/uleroboticsgroup/yasmin.svg)](https://github.com/uleroboticsgroup/yasmin/releases) [![Code Size](https://img.shields.io/github/languages/code-size/uleroboticsgroup/yasmin.svg?branch=main)](https://github.com/uleroboticsgroup/yasmin?branch=main) [![Dependencies](https://img.shields.io/librariesio/github/uleroboticsgroup/yasmin?branch=main)](https://libraries.io/github/uleroboticsgroup/yasmin?branch=main) [![Last Commit](https://img.shields.io/github/last-commit/uleroboticsgroup/yasmin.svg)](https://github.com/uleroboticsgroup/yasmin/commits/main) [![GitHub issues](https://img.shields.io/github/issues/uleroboticsgroup/yasmin)](https://github.com/uleroboticsgroup/yasmin/issues) [![GitHub pull requests](https://img.shields.io/github/issues-pr/uleroboticsgroup/yasmin)](https://github.com/uleroboticsgroup/yasmin/pulls) [![Contributors](https://img.shields.io/github/contributors/uleroboticsgroup/yasmin.svg)](https://github.com/uleroboticsgroup/yasmin/graphs/contributors) [![Python Formatter Check](https://github.com/uleroboticsgroup/yasmin/actions/workflows/python-formatter.yml/badge.svg?branch=main)](https://github.com/uleroboticsgroup/yasmin/actions/workflows/python-formatter.yml?branch=main) [![C++ Formatter Check](https://github.com/uleroboticsgroup/yasmin/actions/workflows/cpp-formatter.yml/badge.svg?branch=main)](https://github.com/uleroboticsgroup/yasmin/actions/workflows/cpp-formatter.yml?branch=main)
-
 <div align="center">
+
+[![License: MIT](https://img.shields.io/badge/GitHub-GPL--3.0-informational)](https://opensource.org/license/gpl-3-0) [![GitHub release](https://img.shields.io/github/release/uleroboticsgroup/yasmin.svg)](https://github.com/uleroboticsgroup/yasmin/releases) [![Code Size](https://img.shields.io/github/languages/code-size/uleroboticsgroup/yasmin.svg?branch=main)](https://github.com/uleroboticsgroup/yasmin?branch=main) [![Dependencies](https://img.shields.io/librariesio/github/uleroboticsgroup/yasmin?branch=main)](https://libraries.io/github/uleroboticsgroup/yasmin?branch=main) [![Last Commit](https://img.shields.io/github/last-commit/uleroboticsgroup/yasmin.svg)](https://github.com/uleroboticsgroup/yasmin/commits/main) [![GitHub issues](https://img.shields.io/github/issues/uleroboticsgroup/yasmin)](https://github.com/uleroboticsgroup/yasmin/issues) [![GitHub pull requests](https://img.shields.io/github/issues-pr/uleroboticsgroup/yasmin)](https://github.com/uleroboticsgroup/yasmin/pulls) [![Contributors](https://img.shields.io/github/contributors/uleroboticsgroup/yasmin.svg)](https://github.com/uleroboticsgroup/yasmin/graphs/contributors) [![Python Formatter Check](https://github.com/uleroboticsgroup/yasmin/actions/workflows/python-formatter.yml/badge.svg?branch=main)](https://github.com/uleroboticsgroup/yasmin/actions/workflows/python-formatter.yml?branch=main) [![C++ Formatter Check](https://github.com/uleroboticsgroup/yasmin/actions/workflows/cpp-formatter.yml/badge.svg?branch=main)](https://github.com/uleroboticsgroup/yasmin/actions/workflows/cpp-formatter.yml?branch=main)
 
 | ROS 2 Distro |                             Branch                             |                                                                                                             Build status                                                                                                              |                                                               Docker Image                                                                | Documentation                                                                                                                                                      |
 | :----------: | :------------------------------------------------------------: | :-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------: | :---------------------------------------------------------------------------------------------------------------------------------------: | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -44,19 +44,33 @@
 
 ## Installation
 
+### Debian Packages
+
+To install YASMIN and its packages, use the following command:
+
 ```shell
-$ cd ~/ros2_ws/src
-$ git clone https://github.com/uleroboticsgroup/yasmin.git
-$ cd ~/ros2_ws
-$ rosdep install --from-paths src --ignore-src -r -y
-$ cd ~/ros2_ws
-$ colcon build
+sudo apt install ros-$ROS_DISTRO-yasmin ros-$ROS_DISTRO-yasmin-*
 ```
 
-If you are using a deprecated ROS 2 distro (like Foxy or Galactic) or the Rolling distro, you may need to install the example interfaces:
+### Building from Source
+
+Follow these steps to build the source code from this repository:
 
 ```shell
-$ sudo apt install -y ros-$ROS_DISTRO-example-interfaces
+cd ~/ros2_ws/src
+git clone https://github.com/uleroboticsgroup/yasmin.git
+cd ~/ros2_ws
+rosdep install --from-paths src --ignore-src -r -y
+cd ~/ros2_ws
+colcon build
+```
+
+#### Note for Deprecated or Rolling ROS 2 Distros
+
+If you are using a deprecated ROS 2 distribution (e.g., Foxy or Galactic) or the Rolling distribution, install the example interfaces:
+
+```shell
+sudo apt install -y ros-$ROS_DISTRO-example-interfaces
 ```
 
 ## Docker
@@ -65,27 +79,27 @@ If your operating system doesn't support ROS 2, docker is a great alternative. Y
 
 ```shell
 ## Assuming you are in the YASMIN project directory
-$ docker build -t yasmin .
+docker build -t yasmin .
 ```
 
 To use a shortcut the docker build, you may use the following command:
 
 ```shell
 ## Assuming you are in the YASMIN project directory
-$ make docker_build
+make docker_build
 ```
 
 After the image is created, run a docker container with the following command:
 
 ```shell
-$ docker run -it --net=host --ipc=host --privileged --env="DISPLAY" --env="QT_X11_NO_MITSHM=1" --volume="/tmp/.X11-unix:/tmp/.X11-unix:rw" --volume="${XAUTHORITY}:/root/.Xauthority" --entrypoint /bin/bash yasmin
+docker run -it --net=host --ipc=host --privileged --env="DISPLAY" --env="QT_X11_NO_MITSHM=1" --volume="/tmp/.X11-unix:/tmp/.X11-unix:rw" --volume="${XAUTHORITY}:/root/.Xauthority" --entrypoint /bin/bash yasmin
 ```
 
 To use a shortcut the docker run, you may use following command:
 
 ```shell
 ## Assuming you are in the YASMIN project directory
-$ make docker_run
+make docker_run
 ```
 
 ## Demos
@@ -97,7 +111,7 @@ There are some examples, for both Python and C++, that can be found in [yasmin_d
 #### Vanilla Demo (FSM)
 
 ```shell
-$ ros2 run yasmin_demos yasmin_demo.py
+ros2 run yasmin_demos yasmin_demo.py
 ```
 
 <p align="center">
@@ -115,7 +129,7 @@ import yasmin
 from yasmin import State
 from yasmin import Blackboard
 from yasmin import StateMachine
-from yasmin_ros.ros_logs import set_ros_loggers
+from yasmin_ros import set_ros_loggers
 from yasmin_viewer import YasminViewerPub
 
 
@@ -262,11 +276,11 @@ if __name__ == "__main__":
 #### Service Demo (FSM + ROS 2 Service Client)
 
 ```shell
-$ ros2 run yasmin_demos add_two_ints_server
+ros2 run yasmin_demos add_two_ints_server
 ```
 
 ```shell
-$ ros2 run yasmin_demos service_client_demo.py
+ros2 run yasmin_demos service_client_demo.py
 ```
 
 <details>
@@ -281,7 +295,7 @@ from yasmin import CbState
 from yasmin import Blackboard
 from yasmin import StateMachine
 from yasmin_ros import ServiceState
-from yasmin_ros.ros_logs import set_ros_loggers
+from yasmin_ros import set_ros_loggers
 from yasmin_ros.basic_outcomes import SUCCEED, ABORT
 from yasmin_viewer import YasminViewerPub
 
@@ -451,11 +465,11 @@ if __name__ == "__main__":
 #### Action Demo (FSM + ROS 2 Action)
 
 ```shell
-$ ros2 run yasmin_demos fibonacci_action_server
+ros2 run yasmin_demos fibonacci_action_server
 ```
 
 ```shell
-$ ros2 run yasmin_demos action_client_demo.py
+ros2 run yasmin_demos action_client_demo.py
 ```
 
 <details>
@@ -468,7 +482,7 @@ from example_interfaces.action import Fibonacci
 import yasmin
 from yasmin import CbState, Blackboard, StateMachine
 from yasmin_ros import ActionState
-from yasmin_ros.ros_logs import set_ros_loggers
+from yasmin_ros import set_ros_loggers
 from yasmin_ros.basic_outcomes import SUCCEED, ABORT, CANCEL
 from yasmin_viewer import YasminViewerPub
 
@@ -664,7 +678,7 @@ if __name__ == "__main__":
 #### Monitor Demo (FSM + ROS 2 Subscriber)
 
 ```shell
-$ ros2 run yasmin_demos monitor_demo.py
+ros2 run yasmin_demos monitor_demo.py
 ```
 
 <details>
@@ -679,7 +693,7 @@ import yasmin
 from yasmin import Blackboard
 from yasmin import StateMachine
 from yasmin_ros import MonitorState
-from yasmin_ros.ros_logs import set_ros_loggers
+from yasmin_ros import set_ros_loggers
 from yasmin_ros.basic_outcomes import TIMEOUT
 from yasmin_viewer import YasminViewerPub
 
@@ -812,7 +826,7 @@ if __name__ == "__main__":
 #### Nav2 Demo (Hierarchical FSM + ROS 2 Action)
 
 ```shell
-$ ros2 run yasmin_demos nav_demo.py
+ros2 run yasmin_demos nav_demo.py
 ```
 
 <details>
@@ -829,7 +843,7 @@ from yasmin import CbState
 from yasmin import Blackboard
 from yasmin import StateMachine
 from yasmin_ros import ActionState
-from yasmin_ros.ros_logs import set_ros_loggers
+from yasmin_ros import set_ros_loggers
 from yasmin_ros.basic_outcomes import SUCCEED, ABORT, CANCEL
 from yasmin_viewer import YasminViewerPub
 
@@ -1044,7 +1058,7 @@ if __name__ == "__main__":
 #### Vanilla Demo
 
 ```shell
-$ ros2 run yasmin_demos yasmin_demo
+ros2 run yasmin_demos yasmin_demo
 ```
 
 <details>
@@ -1205,11 +1219,11 @@ int main(int argc, char *argv[]) {
 #### Service Demo (FSM + ROS 2 Service Client)
 
 ```shell
-$ ros2 run yasmin_demos add_two_ints_server
+ros2 run yasmin_demos add_two_ints_server
 ```
 
 ```shell
-$ ros2 run yasmin_demos service_client_demo
+ros2 run yasmin_demos service_client_demo
 ```
 
 <details>
@@ -1403,11 +1417,11 @@ int main(int argc, char *argv[]) {
 #### Action Demo (FSM + ROS 2 Action)
 
 ```shell
-$ ros2 run yasmin_demos fibonacci_action_server
+ros2 run yasmin_demos fibonacci_action_server
 ```
 
 ```shell
-$ ros2 run yasmin_demos action_client_demo
+ros2 run yasmin_demos action_client_demo
 ```
 
 <details>
@@ -1612,7 +1626,7 @@ int main(int argc, char *argv[]) {
 #### Monitor Demo (FSM + ROS 2 Subscriber)
 
 ```shell
-$ ros2 run yasmin_demos monitor_demo
+ros2 run yasmin_demos monitor_demo
 ```
 
 <details>
@@ -1779,7 +1793,7 @@ The **YASMIN Viewer** provides a convenient way to monitor **YASMIN**'s Finite S
 ### Getting Started
 
 ```shell
-$ ros2 run yasmin_viewer yasmin_viewer_node
+ros2 run yasmin_viewer yasmin_viewer_node
 ```
 
 Once started, open http://localhost:5000/ in your browser to view your state machines.
@@ -1789,7 +1803,7 @@ Once started, open http://localhost:5000/ in your browser to view your state mac
 You can specify a custom host and port by using the following command:
 
 ```shell
-$ ros2 run yasmin_viewer yasmin_viewer_node --ros-args -p host:=127.0.0.1 -p port:=5032
+ros2 run yasmin_viewer yasmin_viewer_node --ros-args -p host:=127.0.0.1 -p port:=5032
 ```
 
 After running the command, access your state machines at http://127.0.0.1:5032/.

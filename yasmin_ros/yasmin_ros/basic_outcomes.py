@@ -1,4 +1,4 @@
-# Copyright (C) 2023  Miguel Ángel González Santamarta
+# Copyright (C) 2023 Miguel Ángel González Santamarta
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -14,8 +14,8 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 """
-This module defines a set of status codes that can be used to represent 
-the outcome of various operations within the application. These codes can 
+This module defines a set of status codes that can be used to represent
+the outcome of various operations within the application. These codes can
 be utilized for error handling, logging, and user feedback.
 """
 

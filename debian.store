@@ -1,1 +1,1 @@
-{"base": "00618e3", "parent": "debian/rolling/yasmin_viewer", "previous": "817506a", "trim": "", "trimbase": ""}
+{"base": "25f257c41f62", "parent": "debian/kilted/yasmin_viewer", "previous": "208d21f741f4", "trim": "", "trimbase": ""}

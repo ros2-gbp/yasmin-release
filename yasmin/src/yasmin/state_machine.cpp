@@ -294,7 +294,7 @@ StateMachine::execute(std::shared_ptr<blackboard::Blackboard> blackboard) {
 
   YASMIN_LOG_INFO("Executing state machine with initial state '%s'",
                   this->start_state.c_str());
-  this->call_start_cbs(blackboard, this->get_start_state());
+  this->call_start_cbs(blackboard, this->start_state);
 
   this->current_state_mutex->lock();
   this->current_state = this->start_state;
@@ -348,7 +348,7 @@ StateMachine::execute(std::shared_ptr<blackboard::Blackboard> blackboard) {
       YASMIN_LOG_INFO("State machine transitioning '%s' : '%s' --> '%s'",
                       this->current_state.c_str(), old_outcome.c_str(),
                       outcome.c_str());
-      this->call_transition_cbs(blackboard, this->get_start_state(), outcome,
+      this->call_transition_cbs(blackboard, this->current_state, outcome,
                                 old_outcome);
 
       this->current_state_mutex->lock();

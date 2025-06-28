@@ -10,31 +10,6 @@ if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic)
 endif()
 
-if(NOT DEFINED ENV{ROS_DISTRO})
-  message(FATAL_ERROR "ROS_DISTRO is not defined." )
-endif()
-if("$ENV{ROS_DISTRO}" STREQUAL "foxy")
-  message(STATUS "Build for ROS 2 Foxy")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DFOXY")
-elseif("$ENV{ROS_DISTRO}" STREQUAL "galactic")
-  message(STATUS "Build for ROS 2 Galactic")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DGALACTIC")
-elseif("$ENV{ROS_DISTRO}" STREQUAL "humble")
-  message(STATUS "Build for ROS 2 Humble")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DHUMBLE")
-elseif("$ENV{ROS_DISTRO}" STREQUAL "iron")
-  message(STATUS "Build for ROS 2 Iron")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DIRON")
-elseif("$ENV{ROS_DISTRO}" STREQUAL "jazzy")
-  message(STATUS "Build for ROS 2 Jazzy")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DJAZZY")
-elseif("$ENV{ROS_DISTRO}" STREQUAL "rolling")
-  message(STATUS "Build for ROS 2 Rolling")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DROLLING")
-else()
-  message(FATAL_ERROR "Unsupported ROS Distribution: " "$ENV{ROS_DISTRO}")
-endif()
-
 # Find dependencies
 find_package(ament_cmake REQUIRED)
 find_package(ament_cmake_python REQUIRED)
@@ -48,11 +23,19 @@ find_package(nav_msgs REQUIRED)
 find_package(example_interfaces REQUIRED)
 
 # C++
-include_directories(include)
 include_directories(src)
+include_directories(include)
 
-set(LIB ${CMAKE_PROJECT_NAME}_lib)
 set(DEPENDENCIES
+  rclcpp::rclcpp
+  rclcpp_action::rclcpp_action
+  yasmin::yasmin
+  yasmin_ros::yasmin_ros
+  yasmin_viewer::yasmin_viewer
+  ${nav_msgs_TARGETS}
+  ${example_interfaces_TARGETS}
+)
+set(DEPENDENCIES_PACKAGE
   rclcpp
   rclcpp_action
   yasmin
@@ -62,9 +45,13 @@ set(DEPENDENCIES
   example_interfaces
 )
 
+install(DIRECTORY include/
+  DESTINATION include/${PROJECT_NAME}
+)
+
 # demo
 add_executable(yasmin_demo src/yasmin_demo.cpp)
-ament_target_dependencies(yasmin_demo ${DEPENDENCIES})
+target_link_libraries(yasmin_demo PUBLIC ${DEPENDENCIES})
 install(TARGETS
   yasmin_demo
   DESTINATION lib/${PROJECT_NAME}
@@ -72,23 +59,31 @@ install(TARGETS
 
 # remap demo
 add_executable(remap_demo src/remap_demo.cpp)
-ament_target_dependencies(remap_demo ${DEPENDENCIES})
+target_link_libraries(remap_demo PUBLIC ${DEPENDENCIES})
 install(TARGETS
-remap_demo
+  remap_demo
   DESTINATION lib/${PROJECT_NAME}
 )
 
 # monitor demo
 add_executable(monitor_demo src/monitor_demo.cpp)
-ament_target_dependencies(monitor_demo ${DEPENDENCIES})
+target_link_libraries(monitor_demo PUBLIC ${DEPENDENCIES})
 install(TARGETS
   monitor_demo
   DESTINATION lib/${PROJECT_NAME}
 )
 
+# publisher demo
+add_executable(publisher_demo src/publisher_demo.cpp)
+target_link_libraries(publisher_demo PUBLIC ${DEPENDENCIES})
+install(TARGETS
+  publisher_demo
+  DESTINATION lib/${PROJECT_NAME}
+)
+
 # service client demo
 add_executable(service_client_demo src/service_client_demo.cpp)
-ament_target_dependencies(service_client_demo ${DEPENDENCIES})
+target_link_libraries(service_client_demo PUBLIC ${DEPENDENCIES})
 install(TARGETS
   service_client_demo
   DESTINATION lib/${PROJECT_NAME}
@@ -96,7 +91,7 @@ install(TARGETS
 
 # action client demo
 add_executable(action_client_demo src/action_client_demo.cpp)
-ament_target_dependencies(action_client_demo ${DEPENDENCIES})
+target_link_libraries(action_client_demo PUBLIC ${DEPENDENCIES})
 install(TARGETS
   action_client_demo
   DESTINATION lib/${PROJECT_NAME}
@@ -104,30 +99,38 @@ install(TARGETS
 
 # add_two_ints service server
 add_executable(add_two_ints_server src/add_two_ints_server.cpp)
-ament_target_dependencies(add_two_ints_server ${DEPENDENCIES})
+target_link_libraries(add_two_ints_server PUBLIC ${DEPENDENCIES})
 install(TARGETS
-add_two_ints_server
+  add_two_ints_server
   DESTINATION lib/${PROJECT_NAME}
 )
 
 # fibonacci action server
 add_executable(fibonacci_action_server src/fibonacci_action_server.cpp)
-ament_target_dependencies(fibonacci_action_server ${DEPENDENCIES})
+target_link_libraries(fibonacci_action_server PUBLIC ${DEPENDENCIES})
 install(TARGETS
-fibonacci_action_server
+  fibonacci_action_server
+  DESTINATION lib/${PROJECT_NAME}
+)
+
+# multiple_states_demos
+add_executable(multiple_states_demo src/multiple_states_demo.cpp src/foo_state.cpp src/bar_state.cpp)
+target_link_libraries(multiple_states_demo PUBLIC ${DEPENDENCIES})
+install(TARGETS
+  multiple_states_demo
   DESTINATION lib/${PROJECT_NAME}
 )
 
 # concurrent states demo
 add_executable(concurrence_demo src/concurrence_demo.cpp)
-ament_target_dependencies(concurrence_demo ${DEPENDENCIES})
+target_link_libraries(concurrence_demo PUBLIC ${DEPENDENCIES})
 install(TARGETS
-concurrence_demo
+  concurrence_demo
   DESTINATION lib/${PROJECT_NAME}
 )
 
 ament_export_include_directories(include)
-ament_export_libraries(${LIB})
+ament_export_dependencies(${DEPENDENCIES_PACKAGE})
 
 
 # Python
@@ -149,6 +152,11 @@ install(PROGRAMS
 )
 
 install(PROGRAMS
+  yasmin_demos/publisher_demo.py
+  DESTINATION lib/${PROJECT_NAME}
+)
+
+install(PROGRAMS
   yasmin_demos/service_client_demo.py
   DESTINATION lib/${PROJECT_NAME}
 )
@@ -160,6 +168,11 @@ install(PROGRAMS
 
 install(PROGRAMS
   yasmin_demos/nav_demo.py
+  DESTINATION lib/${PROJECT_NAME}
+)
+
+install(PROGRAMS
+  yasmin_demos/multiple_states_demo.py
   DESTINATION lib/${PROJECT_NAME}
 )
 

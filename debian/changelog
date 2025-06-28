@@ -1,0 +1,197 @@
+ros-jazzy-yasmin-demos (3.3.0-1noble) noble; urgency=high
+
+  * python version of publisher state
+  * improving publisher demo
+  * initial version of a publisher state
+  * removing FOXY env and fixing service qos for kilted and greater
+  * Kilted support (#56 <https://github.com/uleroboticsgroup/yasmin/issues/56>)
+    * Kilted support
+    * Keep only the single Foxy exception
+    * fixup! Keep only the single Foxy exception
+  * minor format fixes to multiple_states_demo
+  * adding kilted flag to cmakelists
+  * Fix deprecation of ament_target_dependencies
+  * Declare states outside the state_machine (#53 <https://github.com/uleroboticsgroup/yasmin/issues/53>)
+    * Create .h for foo and bar states
+    * Create foo and bar state and the states handler
+    * feat/multiple_states_demo example
+    * Fix the C++ format
+    * Create python version for multiple states demo
+    * Fix C++ format pt.2
+    * Add license to new files
+  * Contributors: Miguel Ángel González Santamarta, Pedro Edom, Tim Clephas
+
+ -- Miguel Ángel González Santamarta <mgons@unileon.es>  Fri, 27 Jun 2025 22:00:00 -0000
+
+ros-jazzy-yasmin-demos (3.2.0-1noble) noble; urgency=high
+
+  * fixing c++ version in CMakeLists
+  * Add Concurrence - Running Parallel/Concurrent States (#50 <https://github.com/uleroboticsgroup/yasmin/issues/50>)
+    * add concurrence state
+    * add mutex for intermedaite state dict
+    * prefix self vars with underscore
+    * add concurrence str definition
+    * add comment docs conform 120 character limit
+    * fix init comment on concurrence
+    * fix str gen for concurrence
+    * replace state string representation as outcome map key with an integer alternative
+    * add logic and tests to protect against running a state instance concurrently with itself
+    * add newlines at end of files
+    * verify intermedaite state outcome registration
+    * add untested cpp implementation
+    * fix compile warnings and add a demo
+    * add licensing
+    * run clang format on c files
+    * run black format on py files
+    * add python demo for concurrence
+    * adjust to match python demo better
+    ---------
+    Co-authored-by: William Freidank <mailto:william.freidank@gtri.gatech.edu>
+  * adding remapping to C++ version
+  * Preempt monitor state on cancel request (#46 <https://github.com/uleroboticsgroup/yasmin/issues/46>)
+    * Preempt monitor state on cancel request
+    * Add canceled outcome to monitor_state and monitor_demo
+    * Implement monitor_state cancel check in Python
+  * Feat/remmaping (#47 <https://github.com/uleroboticsgroup/yasmin/issues/47>)
+    * started remmaping
+    * remmaping working with demo
+    * reformated with black
+    * formated again with --line-length 90
+    * added remap documentation to the code
+  * Contributors: LuisMilczarek, Miguel Ángel González Santamarta, Paul Verhoeckx, William Freidank
+
+ -- Miguel Ángel González Santamarta <mgons@unileon.es>  Thu, 10 Apr 2025 22:00:00 -0000
+
+ros-jazzy-yasmin-demos (3.1.0-1noble) noble; urgency=high
+
+  * set_ros_loggers allows setting node to log
+  * fixing license comments
+  * updating changelog files
+  * Contributors: Miguel Ángel González Santamarta
+
+ -- Miguel Ángel González Santamarta <mgons@unileon.es>  Tue, 04 Feb 2025 23:00:00 -0000
+
+ros-jazzy-yasmin-demos (3.0.3-1noble) noble; urgency=high
+
+  * fixing license in c++ service client demo
+  * removing unused params in demo servers
+  * Contributors: Miguel Ángel González Santamarta
+
+ -- Miguel Ángel González Santamarta <mgons@unileon.es>  Mon, 16 Dec 2024 23:00:00 -0000
+
+ros-jazzy-yasmin-demos (3.0.2-1noble) noble; urgency=high
+
+  * adding servers for demos
+  * build_depend for ros_environment
+  * adding ros-environment dependency
+  * fixing dependencies in package.xml files
+  * action-tutorials-interfaces replaced with example-interfaces
+  * Contributors: Miguel Ángel González Santamarta
+
+ -- Miguel Ángel González Santamarta <mgons@unileon.es>  Sun, 15 Dec 2024 23:00:00 -0000
+
+ros-jazzy-yasmin-demos (3.0.1-1noble) noble; urgency=high
+
+
+
+ -- Miguel Ángel González Santamarta <mgons@unileon.es>  Sat, 30 Nov 2024 23:00:00 -0000
+
+ros-jazzy-yasmin-demos (3.0.0-1noble) noble; urgency=high
+
+  * fixing CMakeLists format
+  * ROS 2 fixed in CMakeLists
+  * fixing C++ comments
+  * setting black formatter line length to 90
+  * improving Python comments for Doxygen
+  * comments added to C++ files for Doxygen
+  * galactic support added to cmakelists
+  * is_running added to state
+  * raise exception when state machine ends by canceling but with bad transition
+  * catching KeyboardInterrupt in python demos
+  * cancel C++ state machine on ROS 2 shutdown
+  * validating state machine before publishing
+  * improving yasmin logs
+  * c++ to_string fixed
+  * new ros logs for YASMIN_LOG
+  * fixing demos names in cpp demo and monitor
+  * black formatter applied to python files
+  * shared_pt creations fixed in demos
+  * Contributors: Miguel Ángel González Santamarta
+
+ -- Miguel Ángel González Santamarta <mgons@unileon.es>  Sat, 23 Nov 2024 23:00:00 -0000
+
+ros-jazzy-yasmin-demos (2.4.2-1noble) noble; urgency=high
+
+
+
+ -- Miguel Ángel González Santamarta <mgons@unileon.es>  Wed, 02 Oct 2024 22:00:00 -0000
+
+ros-jazzy-yasmin-demos (2.4.1-1noble) noble; urgency=high
+
+
+
+ -- Miguel Ángel González Santamarta <mgons@unileon.es>  Fri, 09 Aug 2024 13:27:00 -0000
+
+ros-jazzy-yasmin-demos (2.4.0-1noble) noble; urgency=high
+
+
+
+ -- Miguel Ángel González Santamarta <mgons@unileon.es>  Fri, 09 Aug 2024 11:22:00 -0000
+
+ros-jazzy-yasmin-demos (2.3.1-1noble) noble; urgency=high
+
+  * demos fixes
+  * yasmin_demo renamed to yasmin_demos
+  * Contributors: Miguel Ángel González Santamarta
+
+ -- Miguel Ángel González Santamarta <mgons@unileon.es>  Sun, 21 Jul 2024 22:00:00 -0000
+
+ros-jazzy-yasmin-demos (2.3.0-1noble) noble; urgency=high
+
+
+
+ -- Miguel Ángel González Santamarta <mgons@unileon.es>  Fri, 12 Jul 2024 22:00:00 -0000
+
+ros-jazzy-yasmin-demos (2.2.0-1noble) noble; urgency=high
+
+
+
+ -- Miguel Ángel González Santamarta <mgons@unileon.es>  Sat, 29 Jun 2024 22:00:00 -0000
+
+ros-jazzy-yasmin-demos (2.1.1-1noble) noble; urgency=high
+
+
+
+ -- Miguel Ángel González Santamarta <mgons@unileon.es>  Fri, 07 Jun 2024 22:00:00 -0000
+
+ros-jazzy-yasmin-demos (2.1.0-1noble) noble; urgency=high
+
+
+
+ -- Miguel Ángel González Santamarta <mgons@unileon.es>  Tue, 04 Jun 2024 22:00:00 -0000
+
+ros-jazzy-yasmin-demos (2.0.2-1noble) noble; urgency=high
+
+
+
+ -- Miguel Ángel González Santamarta <mgons@unileon.es>  Sat, 04 May 2024 22:00:00 -0000
+
+ros-jazzy-yasmin-demos (2.0.1-1noble) noble; urgency=high
+
+
+
+ -- Miguel Ángel González Santamarta <mgons@unileon.es>  Tue, 16 Apr 2024 14:57:56 +0200
+
+ros-jazzy-yasmin-demos (2.0.0-1noble) noble; urgency=high
+
+
+
+ -- Miguel Ángel González Santamarta <mgons@unileon.es>  Tue, 16 Apr 2024 14:57:56 +0200
+
+ros-jazzy-yasmin-demos (1.0.0-1noble) noble; urgency=high
+
+
+
+ -- Miguel Ángel González Santamarta <mgons@unileon.es>  Tue, 05 Dec 2023 23:00:00 -0000
+
+

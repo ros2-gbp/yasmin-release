@@ -23,6 +23,7 @@
 #include "yasmin/state.hpp"
 #include "yasmin/state_machine.hpp"
 #include "yasmin_ros/basic_outcomes.hpp"
+#include "yasmin_ros/get_parameters_state.hpp"
 #include "yasmin_ros/ros_logs.hpp"
 #include "yasmin_viewer/yasmin_viewer_pub.hpp"
 
@@ -30,54 +31,79 @@ using namespace yasmin;
 
 /**
  * @brief Represents the "Foo" state in the state machine.
+ *
+ * This state increments a counter each time it is executed and
+ * communicates the current count via the blackboard.
  */
 class FooState : public yasmin::State {
 public:
+  /// Counter to track the number of executions.
+  int counter;
+
   /**
    * @brief Constructs a FooState object, initializing the counter.
    */
-  FooState() : yasmin::State({yasmin_ros::basic_outcomes::SUCCEED}){};
+  FooState() : yasmin::State({"outcome1", "outcome2"}), counter(0){};
 
   /**
    * @brief Executes the Foo state logic.
    *
-   * Executes the logic for the Foo state.
+   * This method logs the execution, waits for 3 seconds,
+   * increments the counter, and sets a string in the blackboard.
+   * The state will transition to either "outcome1" or "outcome2"
+   * based on the current value of the counter.
    *
    * @param blackboard Shared pointer to the blackboard for state communication.
-   * @return std::string The outcome of the execution, which can be SUCCEED.
+   * @return std::string The outcome of the execution: "outcome1" or "outcome2".
    */
   std::string
   execute(std::shared_ptr<yasmin::blackboard::Blackboard> blackboard) override {
-    std::string data = blackboard->get<std::string>("foo_data");
-    YASMIN_LOG_INFO("%s", data.c_str());
-    blackboard->set<std::string>("foo_out_data", data);
-    return yasmin_ros::basic_outcomes::SUCCEED;
+    YASMIN_LOG_INFO("Executing state FOO");
+    std::this_thread::sleep_for(std::chrono::seconds(3));
+
+    if (this->counter < blackboard->get<int>("max_counter")) {
+      this->counter += 1;
+      blackboard->set<std::string>("foo_str",
+                                   blackboard->get<std::string>("counter_str") +
+                                       ": " + std::to_string(this->counter));
+      return "outcome1";
+
+    } else {
+      return "outcome2";
+    }
   };
 };
 
 /**
  * @brief Represents the "Bar" state in the state machine.
+ *
+ * This state logs the value from the blackboard and provides
+ * a single outcome to transition.
  */
 class BarState : public yasmin::State {
 public:
   /**
    * @brief Constructs a BarState object.
    */
-  BarState() : yasmin::State({yasmin_ros::basic_outcomes::SUCCEED}) {}
+  BarState() : yasmin::State({"outcome3"}) {}
 
   /**
    * @brief Executes the Bar state logic.
    *
-   * Executes the logic for the Bar state.
+   * This method logs the execution, waits for 3 seconds,
+   * retrieves a string from the blackboard, and logs it.
    *
    * @param blackboard Shared pointer to the blackboard for state communication.
    * @return std::string The outcome of the execution: "outcome3".
    */
   std::string
   execute(std::shared_ptr<yasmin::blackboard::Blackboard> blackboard) override {
-    std::string datga = blackboard->get<std::string>("bar_data");
-    YASMIN_LOG_INFO("%s", datga.c_str());
-    return yasmin_ros::basic_outcomes::SUCCEED;
+    YASMIN_LOG_INFO("Executing state BAR");
+    std::this_thread::sleep_for(std::chrono::seconds(3));
+
+    YASMIN_LOG_INFO(blackboard->get<std::string>("foo_str").c_str());
+
+    return "outcome3";
   }
 };
 
@@ -94,20 +120,15 @@ public:
  * @throws std::exception If there is an error during state machine execution.
  */
 int main(int argc, char *argv[]) {
-  YASMIN_LOG_INFO("yasmin_remapping_demo");
+  YASMIN_LOG_INFO("yasmin_parameters_demo");
   rclcpp::init(argc, argv);
 
   // Set ROS 2 logs
   yasmin_ros::set_ros_loggers();
 
-  // Create blackboard
-  auto blackboard = std::make_shared<yasmin::blackboard::Blackboard>();
-  blackboard->set<std::string>("msg1", "test1");
-  blackboard->set<std::string>("msg2", "test2");
-
   // Create a state machine
   auto sm = std::make_shared<yasmin::StateMachine>(
-      std::initializer_list<std::string>{yasmin_ros::basic_outcomes::SUCCEED});
+      std::initializer_list<std::string>{"outcome4"});
 
   // Cancel state machine on ROS 2 shutdown
   rclcpp::on_shutdown([sm]() {
@@ -117,35 +138,32 @@ int main(int argc, char *argv[]) {
   });
 
   // Add states to the state machine
-  sm->add_state("STATE1", std::make_shared<FooState>(),
+  sm->add_state("GETTING_PARAMETERS",
+                std::make_shared<yasmin_ros::GetParametersState>(
+                    std::map<std::string, std::any>{
+                        {"max_counter", 3},
+                        {"counter_str", std::string("Counter")},
+                    }),
                 {
-                    {yasmin_ros::basic_outcomes::SUCCEED, "STATE2"},
-                },
-                {
-                    {"foo_data", "msg1"},
+                    {yasmin_ros::basic_outcomes::SUCCEED, "FOO"},
+                    {yasmin_ros::basic_outcomes::ABORT, "outcome4"},
                 });
-  sm->add_state("STATE2", std::make_shared<FooState>(),
+  sm->add_state("FOO", std::make_shared<FooState>(),
                 {
-                    {yasmin_ros::basic_outcomes::SUCCEED, "STATE3"},
-                },
-                {
-                    {"foo_data", "msg2"},
+                    {"outcome1", "BAR"},
+                    {"outcome2", "outcome4"},
                 });
-  sm->add_state("STATE3", std::make_shared<BarState>(),
+  sm->add_state("BAR", std::make_shared<BarState>(),
                 {
-                    {yasmin_ros::basic_outcomes::SUCCEED,
-                     yasmin_ros::basic_outcomes::SUCCEED},
-                },
-                {
-                    {"bar_data", "foo_out_data"},
+                    {"outcome3", "FOO"},
                 });
 
   // Publish state machine updates
-  yasmin_viewer::YasminViewerPub yasmin_pub("YASMIN_REMAPPING_DEMO", sm);
+  yasmin_viewer::YasminViewerPub yasmin_pub("YASMIN_PARAMETERS_DEMO", sm);
 
   // Execute the state machine
   try {
-    std::string outcome = (*sm.get())(blackboard);
+    std::string outcome = (*sm.get())();
     YASMIN_LOG_INFO(outcome.c_str());
   } catch (const std::exception &e) {
     YASMIN_LOG_WARN(e.what());

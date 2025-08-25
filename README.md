@@ -253,7 +253,7 @@ def main():
     )
 
     # Publish FSM information for visualization
-    YasminViewerPub("yasmin_demo", sm)
+    YasminViewerPub("YASMIN_DEMO", sm)
 
     # Execute the FSM
     try:
@@ -523,7 +523,7 @@ def main():
     Raises:
         KeyboardInterrupt: If the execution is interrupted by the user.
     """
-    yasmin.YASMIN_LOG_INFO("yasmin_demo")
+    yasmin.YASMIN_LOG_INFO("yasmin_concurrence_demo")
 
     # Initialize ROS 2
     rclpy.init()
@@ -560,7 +560,7 @@ def main():
     )
 
     # Publish FSM information for visualization
-    YasminViewerPub("yasmin_demo", sm)
+    YasminViewerPub("YASMIN_CONCURRENCE_DEMO", sm)
 
     # Execute the FSM
     try:
@@ -1132,6 +1132,361 @@ if __name__ == "__main__":
 
 </details>
 
+#### Publisher Demo (FSM + ROS 2 Publisher)
+
+```shell
+ros2 run yasmin_demos publisher_demo.py
+```
+
+<details>
+<summary>Click to expand</summary>
+
+```python
+#!/usr/bin/env python3
+
+# Copyright (C) 2025 Miguel Ángel González Santamarta
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+import time
+import rclpy
+from std_msgs.msg import Int32
+
+import yasmin
+from yasmin.cb_state import CbState
+from yasmin.state_machine import StateMachine
+from yasmin.blackboard import Blackboard
+
+from yasmin_ros.basic_outcomes import SUCCEED
+from yasmin_ros import PublisherState
+from yasmin_ros.ros_logs import set_ros_loggers
+
+from yasmin_viewer.yasmin_viewer_pub import YasminViewerPub
+
+
+class PublishIntState(PublisherState):
+    """
+    PublishIntState is a YASMIN ROS publisher state that sends incrementing integers
+    to the 'count' topic using std_msgs.msg.Int32 messages.
+
+    This state increments a counter on the blackboard and publishes it.
+    """
+
+    def __init__(self):
+        """
+        Initializes the PublishIntState with the topic 'count' and a message creation callback.
+        """
+        super().__init__("count", self.create_int_msg)
+
+    def create_int_msg(self, blackboard: Blackboard) -> Int32:
+        """
+        Generates a std_msgs.msg.Int32 message with an incremented counter value.
+
+        Parameters:
+            blackboard (Blackboard): The shared data store between states.
+
+        Returns:
+            Int32: A ROS message containing the updated counter.
+        """
+        # Get and increment the counter from the blackboard
+        counter = blackboard.get("counter", 0)
+        counter += 1
+        blackboard.set("counter", counter)
+
+        # Log the message creation
+        yasmin.YASMIN_LOG_INFO(f"Creating message {counter}")
+
+        # Create and return the message
+        msg = Int32()
+        msg.data = counter
+        return msg
+
+
+def check_count(blackboard: Blackboard) -> str:
+    """
+    Checks the current counter against a max threshold to determine state transition.
+
+    Parameters:
+        blackboard (Blackboard): The shared data store between states.
+
+    Returns:
+        str: The outcome string ('outcome1' or 'outcome2').
+    """
+    # Simulate processing time
+    time.sleep(1)
+
+    # Retrieve the counter and max value from blackboard
+    count = blackboard.get("counter", 0)
+    max_count = blackboard.get("max_count", 10)
+
+    yasmin.YASMIN_LOG_INFO(f"Checking count: {count}")
+
+    # Determine and return the outcome based on the counter value
+    if count >= max_count:
+        return "outcome1"
+    else:
+        return "outcome2"
+
+
+def main(args=None):
+    """
+    Main function to initialize ROS 2, configure logging, build the YASMIN state machine,
+    and execute it until the max_count is reached.
+
+    Args:
+        args (list, optional): Command-line arguments passed to rclpy.init().
+    """
+    yasmin.YASMIN_LOG_INFO("yasmin_monitor_demo")
+    rclpy.init(args=args)
+
+    # Configure YASMIN to use ROS-based logging
+    set_ros_loggers()
+
+    # Create the state machine with 'SUCCEED' as the terminal outcome
+    sm = StateMachine([SUCCEED])
+
+    # Ensure the state machine cancels on shutdown
+    def on_shutdown():
+        if sm.is_running():
+            sm.cancel_state()
+
+    rclpy.get_default_context().on_shutdown(on_shutdown)
+
+    # Add the publishing state which loops until the condition is met
+    sm.add_state(
+        "PUBLISHING_INT",
+        PublishIntState(),
+        {
+            SUCCEED: "CHECKING_COUNTS",
+        },
+    )
+
+    # Add the conditional check state
+    sm.add_state(
+        "CHECKING_COUNTS",
+        CbState(["outcome1", "outcome2"], check_count),
+        {
+            "outcome1": SUCCEED,
+            "outcome2": "PUBLISHING_INT",
+        },
+    )
+
+    # Launch YASMIN Viewer publisher for state visualization
+    YasminViewerPub("YASMIN_PUBLISHER_DEMO", sm)
+
+    # Initialize blackboard with counter values
+    blackboard = Blackboard()
+    blackboard.set("counter", 0)
+    blackboard.set("max_count", 10)
+
+    # Run the state machine and log the outcome
+    try:
+        outcome = sm(blackboard)
+        yasmin.YASMIN_LOG_INFO(outcome)
+    except Exception as e:
+        yasmin.YASMIN_LOG_INFO(str(e))
+
+    # Shutdown ROS
+    rclpy.shutdown()
+
+
+if __name__ == "__main__":
+    main()
+```
+
+</details>
+
+
+#### Parameters Demo (FSM + ROS 2 Parameters)
+
+```shell
+ros2 run yasmin_demos parameters_demo.py --ros-args -p max_counter:=5
+```
+
+<details>
+<summary>Click to expand</summary>
+
+```python
+import time
+import rclpy
+
+import yasmin
+from yasmin import State
+from yasmin import Blackboard
+from yasmin import StateMachine
+from yasmin_ros import set_ros_loggers
+from yasmin_ros import GetParametersState
+from yasmin_ros.basic_outcomes import SUCCEED, ABORT
+from yasmin_viewer import YasminViewerPub
+
+
+# Define the FooState class, inheriting from the State class
+class FooState(State):
+    """
+    Represents the Foo state in the state machine.
+
+    Attributes:
+        counter (int): Counter to track the number of executions of this state.
+    """
+
+    def __init__(self) -> None:
+        """
+        Initializes the FooState instance, setting up the outcomes.
+
+        Outcomes:
+            outcome1: Indicates the state should continue to the Bar state.
+            outcome2: Indicates the state should finish execution and return.
+        """
+        super().__init__(["outcome1", "outcome2"])
+        self.counter = 0
+
+    def execute(self, blackboard: Blackboard) -> str:
+        """
+        Executes the logic for the Foo state.
+
+        Args:
+            blackboard (Blackboard): The shared data structure for states.
+
+        Returns:
+            str: The outcome of the execution, which can be "outcome1" or "outcome2".
+
+        Raises:
+            Exception: May raise exceptions related to state execution.
+        """
+        yasmin.YASMIN_LOG_INFO("Executing state FOO")
+        time.sleep(3)  # Simulate work by sleeping
+
+        if self.counter < blackboard["max_counter"]:
+            self.counter += 1
+            blackboard["foo_str"] = f"{blackboard['counter_str']}: {self.counter}"
+            return "outcome1"
+        else:
+            return "outcome2"
+
+
+# Define the BarState class, inheriting from the State class
+class BarState(State):
+    """
+    Represents the Bar state in the state machine.
+    """
+
+    def __init__(self) -> None:
+        """
+        Initializes the BarState instance, setting up the outcome.
+
+        Outcomes:
+            outcome3: Indicates the state should transition back to the Foo state.
+        """
+        super().__init__(outcomes=["outcome3"])
+
+    def execute(self, blackboard: Blackboard) -> str:
+        """
+        Executes the logic for the Bar state.
+
+        Args:
+            blackboard (Blackboard): The shared data structure for states.
+
+        Returns:
+            str: The outcome of the execution, which will always be "outcome3".
+
+        Raises:
+            Exception: May raise exceptions related to state execution.
+        """
+        yasmin.YASMIN_LOG_INFO("Executing state BAR")
+        time.sleep(3)  # Simulate work by sleeping
+
+        yasmin.YASMIN_LOG_INFO(blackboard["foo_str"])
+        return "outcome3"
+
+
+# Main function to initialize and run the state machine
+def main():
+    """
+    The main entry point of the application.
+
+    Initializes the ROS 2 environment, sets up the state machine,
+    and handles execution and termination.
+
+    Raises:
+        KeyboardInterrupt: If the execution is interrupted by the user.
+    """
+    yasmin.YASMIN_LOG_INFO("yasmin_parameters_demo")
+
+    # Initialize ROS 2
+    rclpy.init()
+
+    # Set ROS 2 loggers
+    set_ros_loggers()
+
+    # Create a finite state machine (FSM)
+    sm = StateMachine(outcomes=["outcome4"])
+
+    # Add states to the FSM
+    sm.add_state(
+        "GETTING_PARAMETERS",
+        GetParametersState(
+            parameters={
+                "max_counter": 3,
+                "counter_str": "Counter",
+            },
+        ),
+        transitions={
+            SUCCEED: "FOO",
+            ABORT: "outcome4",
+        },
+    )
+
+    sm.add_state(
+        "FOO",
+        FooState(),
+        transitions={
+            "outcome1": "BAR",
+            "outcome2": "outcome4",
+        },
+    )
+    sm.add_state(
+        "BAR",
+        BarState(),
+        transitions={
+            "outcome3": "FOO",
+        },
+    )
+
+    # Publish FSM information for visualization
+    YasminViewerPub("YASMIN_PARAMETERS_DEMO", sm)
+
+    # Execute the FSM
+    try:
+        outcome = sm()
+        yasmin.YASMIN_LOG_INFO(outcome)
+    except KeyboardInterrupt:
+        if sm.is_running():
+            sm.cancel_state()
+
+    # Shutdown ROS 2 if it's running
+    if rclpy.ok():
+        rclpy.shutdown()
+
+
+if __name__ == "__main__":
+    main()
+
+```
+
+</details>
+
+
 #### Nav2 Demo (Hierarchical FSM + ROS 2 Action)
 
 ```shell
@@ -1338,7 +1693,7 @@ def main() -> None:
     )
 
     # Publish FSM information for visualization
-    YasminViewerPub("YASMIN_NAV_DEMO", sm)
+    YasminViewerPub("YASMIN_NAV2_DEMO", sm)
 
     # Execute the state machine
     blackboard = Blackboard()
@@ -1507,7 +1862,7 @@ int main(int argc, char *argv[]) {
                 });
 
   // Publish state machine updates
-  yasmin_viewer::YasminViewerPub yasmin_pub("yasmin_demo", sm);
+  yasmin_viewer::YasminViewerPub yasmin_pub("YASMIN_DEMO", sm);
 
   // Execute the state machine
   try {
@@ -1616,7 +1971,7 @@ public:
  * @throws std::exception If there is an error during state machine execution.
  */
 int main(int argc, char *argv[]) {
-  YASMIN_LOG_INFO("yasmin_demo");
+  YASMIN_LOG_INFO("yasmin_remapping_demo");
   rclcpp::init(argc, argv);
 
   // Set ROS 2 logs
@@ -1663,7 +2018,7 @@ int main(int argc, char *argv[]) {
                 });
 
   // Publish state machine updates
-  yasmin_viewer::YasminViewerPub yasmin_pub("yasmin_demo", sm);
+  yasmin_viewer::YasminViewerPub yasmin_pub("YASMIN_REMAPPING_DEMO", sm);
 
   // Execute the state machine
   try {
@@ -1810,7 +2165,7 @@ public:
  * @throws std::exception If there is an error during state machine execution.
  */
 int main(int argc, char *argv[]) {
-  YASMIN_LOG_INFO("yasmin_demo");
+  YASMIN_LOG_INFO("yasmin_concurrence_demo");
   rclcpp::init(argc, argv);
 
   // Set ROS 2 logs
@@ -1849,7 +2204,7 @@ int main(int argc, char *argv[]) {
                 });
 
   // Publish state machine updates
-  yasmin_viewer::YasminViewerPub yasmin_pub("yasmin_demo", sm);
+  yasmin_viewer::YasminViewerPub yasmin_pub("YASMIN_CONCURRENCE_DEMO", sm);
 
   // Execute the state machine
   try {
@@ -2047,7 +2402,7 @@ int main(int argc, char *argv[]) {
                 });
 
   // Publish state machine visualization.
-  yasmin_viewer::YasminViewerPub yasmin_pub("YASMIN_ACTION_CLIENT_DEMO", sm);
+  yasmin_viewer::YasminViewerPub yasmin_pub("YASMIN_SERVICE_CLIENT_DEMO", sm);
 
   // Execute the state machine.
   try {
@@ -2416,6 +2771,345 @@ int main(int argc, char *argv[]) {
 
   // Publisher for visualizing the state machine's status
   yasmin_viewer::YasminViewerPub yasmin_pub("YASMIN_MONITOR_DEMO", sm);
+
+  // Execute the state machine
+  try {
+    std::string outcome = (*sm.get())();
+    YASMIN_LOG_INFO(outcome.c_str());
+  } catch (const std::exception &e) {
+    YASMIN_LOG_WARN(e.what());
+  }
+
+  rclcpp::shutdown();
+
+  return 0;
+}
+```
+
+</details>
+
+#### Publisher Demo (FSM + ROS 2 Publisher)
+
+```shell
+ros2 run yasmin_demos publisher_demo
+```
+
+<details>
+<summary>Click to expand</summary>
+
+```cpp
+#include <iostream>
+#include <memory>
+#include <string>
+
+#include "rclcpp/rclcpp.hpp"
+#include "std_msgs/msg/int32.hpp"
+
+#include "yasmin/cb_state.hpp"
+#include "yasmin/logs.hpp"
+#include "yasmin/state_machine.hpp"
+#include "yasmin_ros/basic_outcomes.hpp"
+#include "yasmin_ros/publisher_state.hpp"
+#include "yasmin_ros/ros_logs.hpp"
+#include "yasmin_viewer/yasmin_viewer_pub.hpp"
+
+using std::placeholders::_1;
+using std::placeholders::_2;
+using namespace yasmin;
+
+/**
+ * @class PublishIntState
+ * @brief A state that publishes ints.
+ *
+ * This class inherits from yasmin_ros::PublisherState and publish ints
+ * to the "count" topic.
+ */
+class PublishIntState
+    : public yasmin_ros::PublisherState<std_msgs::msg::Int32> {
+
+public:
+  /**
+   * @brief Constructor for the PublishIntState class.
+   */
+  PublishIntState()
+      : yasmin_ros::PublisherState<std_msgs::msg::Int32>(
+            "count", // topic name
+            std::bind(&PublishIntState::create_int_msg, this,
+                      _1) // create msg handler callback
+        ){};
+
+  /**
+   * @brief Create a new Int message.
+   *
+   *
+   * @param blackboard Shared pointer to the blackboard (unused in this
+   * implementation).
+   * @return A new Int message.
+   */
+  std_msgs::msg::Int32
+  create_int_msg(std::shared_ptr<yasmin::blackboard::Blackboard> blackboard) {
+
+    int counter = blackboard->get<int>("counter");
+    counter++;
+    blackboard->set<int>("counter", counter);
+
+    YASMIN_LOG_INFO("Creating message %d", counter);
+    std_msgs::msg::Int32 msg;
+    msg.data = counter;
+    return msg;
+  };
+};
+
+/**
+ * @brief Check the count in the blackboard and return an outcome based on it.
+ *
+ * This function checks the value of "counter" in the blackboard and compares it
+ * with "max_count". If "counter" exceeds "max_count", it returns "outcome1",
+ * otherwise it returns "outcome2".
+ *
+ * @param blackboard Shared pointer to the blackboard.
+ * @return A string representing the outcome.
+ */
+std::string
+check_count(std::shared_ptr<yasmin::blackboard::Blackboard> blackboard) {
+
+  // Sleep for 1 second to simulate some processing time
+  rclcpp::sleep_for(std::chrono::seconds(1));
+  YASMIN_LOG_INFO("Checking count: %d", blackboard->get<int>("counter"));
+
+  if (blackboard->get<int>("counter") >= blackboard->get<int>("max_count")) {
+    return "outcome1";
+  } else {
+    return "outcome2";
+  }
+}
+
+/**
+ * @brief Main function initializing ROS 2 and setting up the state machine.
+ *
+ * Initializes ROS 2, configures loggers, sets up the state machine with states
+ * and transitions, and starts monitoring odometry data. The state machine will
+ * cancel upon ROS 2 shutdown.
+ *
+ * @param argc Argument count.
+ * @param argv Argument vector.
+ * @return int Exit code.
+ *
+ * @exception std::exception Catches and logs any exceptions thrown by the state
+ * machine.
+ */
+int main(int argc, char *argv[]) {
+
+  YASMIN_LOG_INFO("yasmin_publisher_demo");
+  rclcpp::init(argc, argv);
+
+  // Set up ROS 2 loggers
+  yasmin_ros::set_ros_loggers();
+
+  // Create a state machine with a final outcome
+  auto sm = std::make_shared<yasmin::StateMachine>(
+      std::initializer_list<std::string>{yasmin_ros::basic_outcomes::SUCCEED});
+
+  // Cancel state machine on ROS 2 shutdown
+  rclcpp::on_shutdown([sm]() {
+    if (sm->is_running()) {
+      sm->cancel_state();
+    }
+  });
+
+  // Add states to the state machine
+  sm->add_state("PUBLISHING_INT", std::make_shared<PublishIntState>(),
+                {
+                    {yasmin_ros::basic_outcomes::SUCCEED,
+                     "CHECKINNG_COUNTS"}, // Transition back to itself
+                });
+  sm->add_state("CHECKINNG_COUNTS",
+                std::make_shared<yasmin::CbState>(
+                    std::initializer_list<std::string>{"outcome1", "outcome2"},
+                    check_count),
+                {{"outcome1", yasmin_ros::basic_outcomes::SUCCEED},
+                 {"outcome2", "PUBLISHING_INT"}});
+
+  // Publisher for visualizing the state machine's status
+  yasmin_viewer::YasminViewerPub yasmin_pub("YASMIN_PUBLISHER_DEMO", sm);
+
+  // Execute the state machine
+  std::shared_ptr<yasmin::blackboard::Blackboard> blackboard =
+      std::make_shared<yasmin::blackboard::Blackboard>();
+  blackboard->set<int>("counter", 0);
+  blackboard->set<int>("max_count", 10);
+  try {
+    std::string outcome = (*sm.get())(blackboard);
+    YASMIN_LOG_INFO(outcome.c_str());
+  } catch (const std::exception &e) {
+    YASMIN_LOG_WARN(e.what());
+  }
+
+  rclcpp::shutdown();
+
+  return 0;
+}
+```
+
+</details>
+
+#### Parameters Demo (FSM + ROS 2 Parameters)
+
+```shell
+ros2 run yasmin_demos parameters_demo --ros-args -p max_counter:=5
+```
+
+<details>
+<summary>Click to expand</summary>
+
+```cpp
+#include <chrono>
+#include <iostream>
+#include <memory>
+#include <string>
+
+#include "rclcpp/rclcpp.hpp"
+#include "yasmin/logs.hpp"
+#include "yasmin/state.hpp"
+#include "yasmin/state_machine.hpp"
+#include "yasmin_ros/basic_outcomes.hpp"
+#include "yasmin_ros/get_parameters_state.hpp"
+#include "yasmin_ros/ros_logs.hpp"
+#include "yasmin_viewer/yasmin_viewer_pub.hpp"
+
+using namespace yasmin;
+
+/**
+ * @brief Represents the "Foo" state in the state machine.
+ *
+ * This state increments a counter each time it is executed and
+ * communicates the current count via the blackboard.
+ */
+class FooState : public yasmin::State {
+public:
+  /// Counter to track the number of executions.
+  int counter;
+
+  /**
+   * @brief Constructs a FooState object, initializing the counter.
+   */
+  FooState() : yasmin::State({"outcome1", "outcome2"}), counter(0){};
+
+  /**
+   * @brief Executes the Foo state logic.
+   *
+   * This method logs the execution, waits for 3 seconds,
+   * increments the counter, and sets a string in the blackboard.
+   * The state will transition to either "outcome1" or "outcome2"
+   * based on the current value of the counter.
+   *
+   * @param blackboard Shared pointer to the blackboard for state communication.
+   * @return std::string The outcome of the execution: "outcome1" or "outcome2".
+   */
+  std::string
+  execute(std::shared_ptr<yasmin::blackboard::Blackboard> blackboard) override {
+    YASMIN_LOG_INFO("Executing state FOO");
+    std::this_thread::sleep_for(std::chrono::seconds(3));
+
+    if (this->counter < blackboard->get<int>("max_counter")) {
+      this->counter += 1;
+      blackboard->set<std::string>("foo_str",
+                                   blackboard->get<std::string>("counter_str") +
+                                       ": " + std::to_string(this->counter));
+      return "outcome1";
+
+    } else {
+      return "outcome2";
+    }
+  };
+};
+
+/**
+ * @brief Represents the "Bar" state in the state machine.
+ *
+ * This state logs the value from the blackboard and provides
+ * a single outcome to transition.
+ */
+class BarState : public yasmin::State {
+public:
+  /**
+   * @brief Constructs a BarState object.
+   */
+  BarState() : yasmin::State({"outcome3"}) {}
+
+  /**
+   * @brief Executes the Bar state logic.
+   *
+   * This method logs the execution, waits for 3 seconds,
+   * retrieves a string from the blackboard, and logs it.
+   *
+   * @param blackboard Shared pointer to the blackboard for state communication.
+   * @return std::string The outcome of the execution: "outcome3".
+   */
+  std::string
+  execute(std::shared_ptr<yasmin::blackboard::Blackboard> blackboard) override {
+    YASMIN_LOG_INFO("Executing state BAR");
+    std::this_thread::sleep_for(std::chrono::seconds(3));
+
+    YASMIN_LOG_INFO(blackboard->get<std::string>("foo_str").c_str());
+
+    return "outcome3";
+  }
+};
+
+/**
+ * @brief Main function that initializes the ROS 2 node and state machine.
+ *
+ * This function sets up the state machine, adds states, and handles
+ * the execution flow, including logging and cleanup.
+ *
+ * @param argc Argument count from the command line.
+ * @param argv Argument vector from the command line.
+ * @return int Exit status of the program. Returns 0 on success.
+ *
+ * @throws std::exception If there is an error during state machine execution.
+ */
+int main(int argc, char *argv[]) {
+  YASMIN_LOG_INFO("yasmin_parameters_demo");
+  rclcpp::init(argc, argv);
+
+  // Set ROS 2 logs
+  yasmin_ros::set_ros_loggers();
+
+  // Create a state machine
+  auto sm = std::make_shared<yasmin::StateMachine>(
+      std::initializer_list<std::string>{"outcome4"});
+
+  // Cancel state machine on ROS 2 shutdown
+  rclcpp::on_shutdown([sm]() {
+    if (sm->is_running()) {
+      sm->cancel_state();
+    }
+  });
+
+  // Add states to the state machine
+  sm->add_state("GETTING_PARAMETERS",
+                std::make_shared<yasmin_ros::GetParametersState>(
+                    std::map<std::string, std::any>{
+                        {"max_counter", 3},
+                        {"counter_str", std::string("Counter")},
+                    }),
+                {
+                    {yasmin_ros::basic_outcomes::SUCCEED, "FOO"},
+                    {yasmin_ros::basic_outcomes::ABORT, "outcome4"},
+                });
+  sm->add_state("FOO", std::make_shared<FooState>(),
+                {
+                    {"outcome1", "BAR"},
+                    {"outcome2", "outcome4"},
+                });
+  sm->add_state("BAR", std::make_shared<BarState>(),
+                {
+                    {"outcome3", "FOO"},
+                });
+
+  // Publish state machine updates
+  yasmin_viewer::YasminViewerPub yasmin_pub("YASMIN_PARAMETERS_DEMO", sm);
 
   // Execute the state machine
   try {

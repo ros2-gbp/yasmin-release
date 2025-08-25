@@ -15,7 +15,7 @@
 
 from typing import Set, List, Tuple, Dict, Any
 from typing import Union, Callable
-from threading import Lock
+from threading import Lock, Event
 
 import yasmin
 from yasmin import State
@@ -32,6 +32,7 @@ class StateMachine(State):
         _start_state (str): The name of the initial state of the state machine.
         __current_state (str): The name of the current state being executed.
         __current_state_lock (Lock): A threading lock to manage access to the current state.
+        __current_state_event (Event): An event to signal when the current state changes.
         _validated (bool): A flag indicating whether the state machine has been validated.
         __start_cbs (List[Tuple[Callable[[Blackboard, str, List[Any]], None], List[Any]]]): A list of callbacks to call when the state machine starts.
         __transition_cbs (List[Tuple[Callable[[Blackboard, str, List[Any]], None], List[Any]]]): A list of callbacks to call during state transitions.
@@ -55,6 +56,8 @@ class StateMachine(State):
         self.__current_state: str = None
         ## A threading lock to manage access to the current state.
         self.__current_state_lock: Lock = Lock()
+        ## An event to signal when the current state changes.
+        self.__current_state_event: Event = Event()
 
         ## A flag indicating whether the state machine has been validated.
         self._validated: bool = False
@@ -192,6 +195,17 @@ class StateMachine(State):
                 return self.__current_state
 
         return ""
+
+    def __set_current_state(self, state_name: str) -> None:
+        """
+        Sets the current state name.
+
+        Parameters:
+            state_name (str): The name of the state to set as the current state.
+        """
+        with self.__current_state_lock:
+            self.__current_state = state_name
+            self.__current_state_event.set()
 
     def add_start_cb(self, cb: Callable, args: List[Any] = None) -> None:
         """
@@ -377,8 +391,7 @@ class StateMachine(State):
         )
         self._call_start_cbs(blackboard, self._start_state)
 
-        with self.__current_state_lock:
-            self.__current_state: str = self._start_state
+        self.__set_current_state(self._start_state)
 
         while not self.is_canceled():
             state = self._states[self.get_current_state()]
@@ -400,8 +413,7 @@ class StateMachine(State):
 
             # Outcome is an outcome of the state machine
             if outcome in self.get_outcomes():
-                with self.__current_state_lock:
-                    self.__current_state: str = None
+                self.__set_current_state("")
 
                 yasmin.YASMIN_LOG_INFO(f"State machine ends with outcome '{outcome}'")
                 self._call_end_cbs(blackboard, outcome)
@@ -420,8 +432,7 @@ class StateMachine(State):
                     old_outcome,
                 )
 
-                with self.__current_state_lock:
-                    self.__current_state: str = outcome
+                self.__set_current_state(outcome)
 
             # Outcome is not in the state machine
             else:
@@ -438,9 +449,17 @@ class StateMachine(State):
         Overrides the cancel_state method from the parent State class.
         """
         super().cancel_state()
-        with self.__current_state_lock:
-            if self.__current_state:
-                self._states[self.__current_state]["state"].cancel_state()
+
+        if self.is_running():
+            current_state = self.get_current_state()
+
+            while not current_state:
+                self.__current_state_event.clear()
+                self.__current_state_event.wait()
+                current_state = self.get_current_state()
+
+            if current_state:
+                self._states[current_state]["state"].cancel_state()
 
     def __str__(self) -> str:
         """

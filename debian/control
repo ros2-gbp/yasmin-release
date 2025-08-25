@@ -1,0 +1,12 @@
+Source: ros-rolling-yasmin-ros
+Section: misc
+Priority: optional
+Maintainer: Miguel Ángel González Santamarta <mgons@unileon.es>
+Build-Depends: debhelper (>= 9.0.0), python3-pytest <!nocheck>, python3-pytest-cov <!nocheck>, ros-rolling-ament-cmake, ros-rolling-ament-cmake-python, ros-rolling-ament-copyright <!nocheck>, ros-rolling-ament-flake8 <!nocheck>, ros-rolling-ament-pep257 <!nocheck>, ros-rolling-rclcpp, ros-rolling-rclcpp-action, ros-rolling-rclpy, ros-rolling-ros-environment, ros-rolling-yasmin, ros-rolling-ros-workspace
+Homepage: 
+Standards-Version: 3.9.2
+
+Package: ros-rolling-yasmin-ros
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, ros-rolling-rclcpp, ros-rolling-rclcpp-action, ros-rolling-rclpy, ros-rolling-yasmin, ros-rolling-ros-workspace
+Description: YASMIN (Yet Another State MachINe) for ROS 2

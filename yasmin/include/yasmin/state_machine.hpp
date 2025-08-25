@@ -17,6 +17,7 @@
 #define YASMIN__STATE_MACHINE_HPP
 
 #include <atomic>
+#include <condition_variable>
 #include <functional>
 #include <map>
 #include <memory>
@@ -236,6 +237,8 @@ private:
   std::string current_state;
   /// Mutex for current state access
   std::unique_ptr<std::mutex> current_state_mutex;
+  /// Condition variable for current state changes
+  std::condition_variable current_state_cond;
 
   /// Flag to indicate if the state machine has been validated
   std::atomic_bool validated{false};
@@ -247,6 +250,13 @@ private:
       transition_cbs;
   /// End callbacks executed before the state machine
   std::vector<std::pair<EndCallbackType, std::vector<std::string>>> end_cbs;
+
+  /**
+   * @brief Sets the current state name.
+   *
+   * @param state_name The name of the state to set as the current state.
+   */
+  void set_current_state(std::string state_name);
 };
 
 } // namespace yasmin

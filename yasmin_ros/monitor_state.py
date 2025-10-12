@@ -13,8 +13,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-from typing import List, Set, Callable, Union, Type, Any
 from threading import Event
+from typing import List, Set, Callable, Union, Type, Any
 
 from rclpy.node import Node
 from rclpy.subscription import Subscription
@@ -26,24 +26,27 @@ from yasmin import State
 from yasmin import Blackboard
 from yasmin_ros.yasmin_node import YasminNode
 from yasmin_ros.basic_outcomes import TIMEOUT, CANCEL
+from yasmin_ros.ros_communications_cache import ROSCommunicationsCache
 
 
 class MonitorState(State):
     """
-    MonitorState is a state that monitors messages from a ROS topic.
+    Template class to monitor a ROS 2 topic and process incoming messages.
+
+    This class provides functionality to subscribe to a ROS 2 topic,
+    execute a custom monitoring handler, and return specific outcomes
+    based on the messages received.
 
     Attributes:
-        _node (Node): The ROS 2 node instance used for subscriptions.
-        _sub (Subscription): Subscription object for the specified topic.
-        _monitor_handler (Callable[[Blackboard, Any], None]): Function to handle incoming messages.
-        _topic_name (str): The name of the topic to monitor.
-        msg_list (List[Any]): A set of messages received from the topic.
-        msg_queue (int): The maximum number of messages to retain.
-        time_to_wait (float): Time to wait between checks for messages.
-        _timeout (int): Timeout duration for monitoring.
-
-    Exceptions:
-        None raised directly; timeout is managed via outcome handling.
+        _node (Node): Shared pointer to the ROS 2 node.
+        _sub (Subscription): Subscription to the ROS 2 topic.
+        _monitor_handler (Callable[[Blackboard, Any], str]): Function to handle incoming messages.
+        _topic_name (str): Name of the topic to monitor.
+        msg_list (List[Any]): List to store queued messages.
+        msg_queue (int): Maximum number of messages to queue.
+        _timeout (int): Timeout in seconds for message reception.
+        _maximum_retry (int): Maximum number of retries.
+        _msg_event (Event): Event for message reception.
     """
 
     def __init__(
@@ -57,58 +60,58 @@ class MonitorState(State):
         msg_queue: int = 10,
         node: Node = None,
         timeout: int = None,
+        maximum_retry: int = 3,
     ) -> None:
         """
-        Initializes the MonitorState.
+        Construct a new MonitorState with specific QoS, message queue, and timeout.
 
-        Parameters:
+        Args:
             msg_type (Type): The type of message to be monitored.
-            topic_name (str): The name of the topic to subscribe to.
-            outcomes (Set[str]): The set of possible outcomes from the state.
-            monitor_handler (Callable[[Blackboard, Any], None]): The function to call with the received messages.
-            qos (Union[QoSProfile, int], optional): Quality of Service profile or depth.
+            topic_name (str): The name of the topic to monitor.
+            outcomes (Set[str]): A set of possible outcomes for this state.
+            monitor_handler (Callable[[Blackboard, Any], str]): A callback handler to process incoming messages.
+            qos (Union[QoSProfile, int], optional): Quality of Service settings for the topic.
             callback_group (CallbackGroup, optional): The callback group for the subscription.
-            msg_queue (int, optional): Maximum number of messages to store. Default is 10.
-            node (Node, optional): The ROS node to use. If None, a default node is created.
-            timeout (int, optional): Timeout in seconds for monitoring before giving up.
-
-        Returns:
-            None
+            msg_queue (int, optional): The maximum number of messages to queue.
+            node (Node, optional): The ROS 2 node to use. If None, a default node is created.
+            timeout (int, optional): The time in seconds to wait for messages before timing out.
+            maximum_retry (int, optional): Maximum retries of the monitor if it returns timeout. Default is 3.
         """
 
         ## Function to handle incoming messages.
-        self._monitor_handler: Callable[[Blackboard, Any], None] = monitor_handler
-        ## A set of messages received from the topic.
+        self._monitor_handler: Callable[[Blackboard, Any], str] = monitor_handler
+        ## List to store queued messages.
         self.msg_list: List[Any] = []
-        ## The maximum number of messages to retain.
+        ## Maximum number of messages to queue.
         self.msg_queue: int = msg_queue
-        ## Time to wait between checks for messages.
+        ## Event for message reception.
         self._msg_event: Event = Event()
 
-        ## Timeout duration for monitoring.
+        ## Timeout in seconds for message reception.
         self._timeout: int = timeout
 
         if timeout is not None:
             outcomes = [TIMEOUT] + outcomes
         outcomes = [CANCEL] + outcomes
 
-        ## The ROS 2 node instance used for subscriptions.
+        ## Shared pointer to the ROS 2 node.
         self._node: Node = node
 
         if self._node is None:
             self._node = YasminNode.get_instance()
 
-        ## The name of the topic to monitor.
+        ## Name of the topic to monitor.
         self._topic_name: str = topic_name
 
-        ## Subscription object for the specified topic.
+        ## Subscription to the ROS 2 topic.
         self._sub: Subscription = None
         self._msg_type: Type = msg_type
         self._qos: Union[QoSProfile, int] = qos
         self._callback_group: CallbackGroup = callback_group
 
-        ## Subscription object for the specified topic.
-        self._sub: Subscription = self._node.create_subscription(
+        ## Subscription to the ROS 2 topic.
+        self._sub: Subscription = ROSCommunicationsCache.get_or_create_subscription(
+            self._node,
             self._msg_type,
             self._topic_name,
             self.__callback,
@@ -116,19 +119,19 @@ class MonitorState(State):
             callback_group=self._callback_group,
         )
 
+        ## Maximum number of retries.
+        self._maximum_retry: int = maximum_retry
+
         super().__init__(outcomes)
 
     def __callback(self, msg: Any) -> None:
         """
-        Callback function that handles incoming messages.
+        Callback function for receiving messages from the subscribed topic.
 
-        This method is called when a new message is received on the monitored topic.
+        Adds the message to msg_list maintaining a maximum queue size of msg_queue.
 
-        Parameters:
+        Args:
             msg: The message received from the topic.
-
-        Returns:
-            None
         """
         self.msg_list.append(msg)
 
@@ -139,36 +142,37 @@ class MonitorState(State):
 
     def execute(self, blackboard: Blackboard) -> str:
         """
-        Executes the monitoring state.
+        Execute the monitoring operation and process the first received message.
 
-        This method waits for messages from the monitored topic and processes them using
-        the specified monitor handler.
-
-        Parameters:
-            blackboard (Blackboard): The blackboard instance that holds shared data.
+        Args:
+            blackboard (Blackboard): A shared pointer to the blackboard for data storage.
 
         Returns:
-            str: The outcome of the monitoring process. Returns TIMEOUT if the monitoring
-            time exceeds the specified timeout.
-
-        Exceptions:
-            None raised directly; timeouts are handled gracefully.
+            str: A string outcome indicating the result of the monitoring operation.
         """
 
         # Wait until a message is received or timeout is reached
         self._msg_event.clear()
+        retry_count = 0
 
         while not self.msg_list:
-            flag = self._msg_event.wait(self._timeout)
+            timeout_flag = self._msg_event.wait(self._timeout)
 
             if self.is_canceled():
                 return CANCEL
 
-            if self._timeout is not None and not flag:
+            while self._timeout is not None and not timeout_flag:
                 yasmin.YASMIN_LOG_WARN(
                     f"Timeout reached, topic '{self._topic_name}' is not available"
                 )
-                return TIMEOUT
+
+                if retry_count < self._maximum_retry:
+                    retry_count += 1
+                    yasmin.YASMIN_LOG_WARN(
+                        f"Retrying to wait for topic '{self._topic_name}' ({retry_count}/{self._maximum_retry})"
+                    )
+                else:
+                    return TIMEOUT
 
         yasmin.YASMIN_LOG_INFO(f"Processing msg from topic '{self._topic_name}'")
         outcome = self._monitor_handler(blackboard, self.msg_list.pop(0))
@@ -182,5 +186,5 @@ class MonitorState(State):
         This method cancels the monitor if waiting for messages.
         """
 
-        super().cancel_state()
         self._msg_event.set()
+        super().cancel_state()

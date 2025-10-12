@@ -523,7 +523,7 @@ def main():
     Raises:
         KeyboardInterrupt: If the execution is interrupted by the user.
     """
-    yasmin.YASMIN_LOG_INFO("yasmin_concurrence_demo")
+    yasmin.YASMIN_LOG_INFO("CONCURRENCE_DEMO")
 
     # Initialize ROS 2
     rclpy.init()
@@ -540,11 +540,20 @@ def main():
 
     # Add concurrence state
     concurrence_state = Concurrence(
-        states=[foo_state, bar_state],
+        states={
+            "FOO": foo_state,
+            "BAR": bar_state,
+        },
         default_outcome="defaulted",
         outcome_map={
-            "outcome1": {foo_state: "outcome1", bar_state: "outcome3"},
-            "outcome2": {foo_state: "outcome2", bar_state: "outcome3"},
+            "outcome1": {
+                "FOO": "outcome1",
+                "BAR": "outcome3",
+            },
+            "outcome2": {
+                "FOO": "outcome2",
+                "BAR": "outcome3",
+            },
         },
     )
 
@@ -560,7 +569,7 @@ def main():
     )
 
     # Publish FSM information for visualization
-    YasminViewerPub("YASMIN_CONCURRENCE_DEMO", sm)
+    YasminViewerPub("yasmin_demo", sm)
 
     # Execute the FSM
     try:
@@ -814,7 +823,7 @@ class FibonacciState(ActionState):
         action. Initializes goal, response handler, and feedback
         processing callbacks.
 
-        Parameters:
+        Args:
             None
 
         Returns:
@@ -836,7 +845,7 @@ class FibonacciState(ActionState):
         This method retrieves the input value from the blackboard and
         populates the Fibonacci goal.
 
-        Parameters:
+        Args:
             blackboard (Blackboard): The blackboard containing the state
             information.
 
@@ -857,7 +866,7 @@ class FibonacciState(ActionState):
         This method processes the result of the Fibonacci action and
         stores it in the blackboard.
 
-        Parameters:
+        Args:
             blackboard (Blackboard): The blackboard to store the result.
             response (Fibonacci.Result): The result object from the Fibonacci action.
 
@@ -880,7 +889,7 @@ class FibonacciState(ActionState):
 
         This method logs the partial sequence received during the action.
 
-        Parameters:
+        Args:
             blackboard (Blackboard): The blackboard (not used in this method).
             feedback (Fibonacci.Feedback): The feedback object from the Fibonacci action.
 
@@ -899,7 +908,7 @@ def print_result(blackboard: Blackboard) -> str:
 
     This function logs the final result stored in the blackboard.
 
-    Parameters:
+    Args:
         blackboard (Blackboard): The blackboard containing the result.
 
     Returns:
@@ -919,7 +928,7 @@ def main():
     This function initializes the ROS 2 client, sets up the finite state
     machine, adds the states, and starts the action processing.
 
-    Parameters:
+    Args:
         None
 
     Returns:
@@ -1017,7 +1026,7 @@ class PrintOdometryState(MonitorState):
         times (int): The number of messages to monitor before transitioning
                      to the next outcome.
 
-    Parameters:
+    Args:
         times (int): The initial count of how many Odometry messages to
                      process before changing state.
 
@@ -1031,7 +1040,7 @@ class PrintOdometryState(MonitorState):
         """
         Initializes the PrintOdometryState.
 
-        Parameters:
+        Args:
             times (int): The number of Odometry messages to monitor before
                          transitioning to the next outcome.
         """
@@ -1054,7 +1063,7 @@ class PrintOdometryState(MonitorState):
         It logs the message, decrements the count of messages to process,
         and determines the next state outcome.
 
-        Parameters:
+        Args:
             blackboard (Blackboard): The shared data storage for states.
             msg (Odometry): The incoming Odometry message.
 
@@ -1193,7 +1202,7 @@ class PublishIntState(PublisherState):
         """
         Generates a std_msgs.msg.Int32 message with an incremented counter value.
 
-        Parameters:
+        Args:
             blackboard (Blackboard): The shared data store between states.
 
         Returns:
@@ -1217,7 +1226,7 @@ def check_count(blackboard: Blackboard) -> str:
     """
     Checks the current counter against a max threshold to determine state transition.
 
-    Parameters:
+    Args:
         blackboard (Blackboard): The shared data store between states.
 
     Returns:
@@ -1306,7 +1315,6 @@ if __name__ == "__main__":
 ```
 
 </details>
-
 
 #### Parameters Demo (FSM + ROS 2 Parameters)
 
@@ -1485,7 +1493,6 @@ if __name__ == "__main__":
 ```
 
 </details>
-
 
 #### Nav2 Demo (Hierarchical FSM + ROS 2 Action)
 
@@ -2188,12 +2195,14 @@ int main(int argc, char *argv[]) {
 
   // Create concurrent state
   auto concurrent_state = std::make_shared<Concurrence>(
-      std::set<std::shared_ptr<State>>{foo_state, bar_state}, "defaulted",
+      std::map<std::string, std::shared_ptr<State>>{{"FOO", foo_state},
+                                                    {"BAR", bar_state}},
+      "defaulted",
       Concurrence::OutcomeMap{
-          {"outcome1", Concurrence::StateMap{{foo_state, "outcome1"},
-                                             {bar_state, "outcome3"}}},
-          {"outcome2", Concurrence::StateMap{{foo_state, "outcome2"},
-                                             {bar_state, "outcome3"}}}});
+          {"outcome1", Concurrence::StateOutcomeMap{{"FOO", "outcome1"},
+                                                    {"BAR", "outcome3"}}},
+          {"outcome2", Concurrence::StateOutcomeMap{{"FOO", "outcome2"},
+                                                    {"BAR", "outcome3"}}}});
 
   // Add concurrent state to the state machine
   sm->add_state("CONCURRENCE", concurrent_state,
@@ -2281,7 +2290,9 @@ set_ints(std::shared_ptr<yasmin::blackboard::Blackboard> blackboard) {
  */
 std::string
 print_sum(std::shared_ptr<yasmin::blackboard::Blackboard> blackboard) {
-  fprintf(stderr, "Sum: %d\n", blackboard->get<int>("sum"));
+  std::stringstream ss;
+  ss << "Sum: " << blackboard->get<int>("sum");
+  YASMIN_LOG_INFO(ss.str().c_str());
   return yasmin_ros::basic_outcomes::SUCCEED;
 }
 
@@ -2467,15 +2478,19 @@ using namespace yasmin;
 std::string
 print_result(std::shared_ptr<yasmin::blackboard::Blackboard> blackboard) {
 
-  auto fibo_res = blackboard->get<std::vector<int>>("sum");
+  auto fibo_res = blackboard->get<std::vector<int>>("fibo_res");
 
-  fprintf(stderr, "Result received:");
-
-  for (auto ele : fibo_res) {
-    fprintf(stderr, " %d,", ele);
+  std::stringstream ss;
+  ss << "Result: [";
+  for (size_t i = 0; i < fibo_res.size(); i++) {
+    ss << fibo_res[i];
+    if (i < fibo_res.size() - 1) {
+      ss << ", ";
+    }
   }
+  ss << "]";
 
-  fprintf(stderr, "\n");
+  YASMIN_LOG_INFO(ss.str().c_str());
 
   return yasmin_ros::basic_outcomes::SUCCEED;
 }
@@ -2530,7 +2545,7 @@ public:
   response_handler(std::shared_ptr<yasmin::blackboard::Blackboard> blackboard,
                    Fibonacci::Result::SharedPtr response) {
 
-    blackboard->set<std::vector<int>>("sum", response->sequence);
+    blackboard->set<std::vector<int>>("fibo_res", response->sequence);
     return yasmin_ros::basic_outcomes::SUCCEED;
   };
 
@@ -2550,12 +2565,16 @@ public:
     (void)blackboard;
 
     std::stringstream ss;
-    ss << "Next number in sequence received: ";
-    for (auto number : feedback->sequence) {
-      ss << number << " ";
+    ss << "Received feedback: [";
+    for (size_t i = 0; i < feedback->sequence.size(); i++) {
+      ss << feedback->sequence[i];
+      if (i < feedback->sequence.size() - 1) {
+        ss << ", ";
+      }
     }
+    ss << "]";
 
-    fprintf(stderr, "%s\n", ss.str().c_str());
+    YASMIN_LOG_INFO(ss.str().c_str());
   };
 };
 

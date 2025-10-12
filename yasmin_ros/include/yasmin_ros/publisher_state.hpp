@@ -26,6 +26,7 @@
 #include "yasmin/logs.hpp"
 #include "yasmin/state.hpp"
 #include "yasmin_ros/basic_outcomes.hpp"
+#include "yasmin_ros/ros_communications_cache.hpp"
 #include "yasmin_ros/yasmin_node.hpp"
 
 namespace yasmin_ros {
@@ -84,11 +85,8 @@ public:
     }
 
     // create subscriber
-    rclcpp::PublisherOptions options;
-    options.callback_group = callback_group;
-
-    this->pub =
-        this->node_->template create_publisher<MsgT>(topic_name, qos, options);
+    this->pub = ROSCommunicationsCache::get_or_create_publisher<MsgT>(
+        this->node_, topic_name, qos, callback_group);
 
     if (this->create_message_handler == nullptr) {
       throw std::invalid_argument("create_message_handler is needed");
@@ -110,8 +108,11 @@ public:
     return basic_outcomes::SUCCEED;
   }
 
+protected:
+  /// Shared pointer to the ROS 2 node.
+  rclcpp::Node::SharedPtr node_;
+
 private:
-  rclcpp::Node::SharedPtr node_; /**< ROS 2 node pointer. */
   std::shared_ptr<rclcpp::Publisher<MsgT>>
       pub; /**< Publisher to the ROS 2 topic. */
 

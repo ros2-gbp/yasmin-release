@@ -13,9 +13,11 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+from threading import Event
 from typing import Set, Callable, Type, Any
 
 from rclpy.node import Node
+from rclpy.task import Future
 from rclpy.client import Client
 from rclpy.callback_groups import CallbackGroup
 
@@ -24,22 +26,28 @@ from yasmin import State
 from yasmin import Blackboard
 from yasmin_ros.yasmin_node import YasminNode
 from yasmin_ros.basic_outcomes import SUCCEED, ABORT, TIMEOUT
+from yasmin_ros.ros_communications_cache import ROSCommunicationsCache
 
 
 class ServiceState(State):
     """
-    A state representing a service call in a behavior tree.
+    A state class that interacts with a ROS 2 service.
 
-    This state manages the communication with a ROS service, creating and sending
-    requests, and handling responses. It can handle timeouts and custom outcomes.
+    This class manages communication with a specified ROS 2 service,
+    allowing it to send requests and handle responses. It extends
+    the base State class.
 
     Attributes:
-        _node (Node): The ROS node used to communicate with the service.
+        _node (Node): The ROS 2 node used to communicate with the service.
         _srv_name (str): The name of the service to call.
         _service_client (Client): The client used to call the service.
-        _create_request_handler (Callable[[Blackboard], Any]): A function that creates the service request.
-        _response_handler (Callable[[Blackboard, Any], str]): A function that processes the service response.
-        _timeout (float): Timeout duration for the service call.
+        _create_request_handler (Callable[[Blackboard], Any]): Function to create service requests.
+        _response (Any): The response received from the service.
+        _response_handler (Callable[[Blackboard, Any], str]): Function to handle service responses.
+        _wait_timeout (float): Maximum wait time for service availability.
+        _response_timeout (float): Timeout for the service response.
+        _maximum_retry (int): Maximum number of retries.
+        _response_received_event (Event): Event to signal when the service response is received.
     """
 
     def __init__(
@@ -51,99 +59,154 @@ class ServiceState(State):
         response_handler: Callable = None,
         callback_group: CallbackGroup = None,
         node: Node = None,
-        timeout: float = None,
+        wait_timeout: float = None,
+        response_timeout: float = None,
+        maximum_retry: int = 3,
     ) -> None:
         """
         Initializes the ServiceState with the provided parameters.
 
-        Parameters:
+        Args:
             srv_type (Type): The type of the service.
-            srv_name (str): The name of the service to be called.
-            create_request_handler (Callable[[Blackboard], Any]): A handler to create the request based on the blackboard data.
-            outcomes (Set[str], optional): A set of additional outcomes for this state.
-            response_handler (Callable[[Blackboard, Any], str], optional): A handler to process the service response.
-            callback_group (CallbackGroup, optional): The callback group for the client.
-            node (Node, optional): A ROS node instance; if None, a default instance is used.
-            timeout (float, optional): Timeout duration for waiting on the service.
+            srv_name (str): The name of the service to call.
+            create_request_handler (Callable[[Blackboard], Any]): Function to create a service request.
+            outcomes (Set[str], optional): A set of possible outcomes for this state.
+            response_handler (Callable[[Blackboard, Any], str], optional): Function to handle the service response.
+            callback_group (CallbackGroup, optional): The callback group for the service client.
+            node (Node, optional): A ROS 2 node instance; if None, a default instance is used.
+            wait_timeout (float, optional): Maximum time to wait for the service to become available. Default is None (wait indefinitely).
+            response_timeout (float, optional): Maximum time to wait for the service response. Default is None (wait indefinitely).
+            maximum_retry (int, optional): Maximum retries of the service if it returns timeout. Default is 3.
 
         Raises:
             ValueError: If the create_request_handler is not provided.
         """
 
-        ## A function that creates the service request.
+        ## Function to create service requests.
         self._create_request_handler: Callable[[Blackboard], Any] = create_request_handler
-        ## A function that processes the service response.
+        ## Function to handle service responses.
         self._response_handler: Callable[[Blackboard, Any], str] = response_handler
 
-        ## Timeout duration for the service call.
-        self._timeout: float = timeout
+        ## Maximum wait time for service availability.
+        self._wait_timeout: float = wait_timeout
+        ## Timeout for the service response.
+        self._response_timeout: float = response_timeout
 
         _outcomes = [SUCCEED, ABORT]
 
-        if self._timeout:
+        if self._wait_timeout or self._response_timeout:
             _outcomes.append(TIMEOUT)
 
         if outcomes:
             _outcomes = _outcomes + outcomes
 
-        ## The ROS node used to communicate with the service.
+        ## The ROS 2 node used to communicate with the service.
         self._node = node
 
         if self._node is None:
             self._node: Node = YasminNode.get_instance()
 
-        ## The name of the service to call.
+        ## Name of the service.
         self._srv_name: str = srv_name
 
-        ## The client used to call the service.
-        self._service_client: Client = self._node.create_client(
-            srv_type, srv_name, callback_group=callback_group
+        ## Shared pointer to the service client.
+        self._service_client: Client = (
+            ROSCommunicationsCache.get_or_create_service_client(
+                self._node,
+                srv_type,
+                srv_name,
+                callback_group=callback_group,
+            )
         )
+
+        ## The response received from the service.
+        self._response: Any = None
 
         if not self._create_request_handler:
             raise ValueError("create_request_handler is needed")
+
+        ## Maximum number of retries.
+        self._maximum_retry: int = maximum_retry
+
+        ## Event to signal when the service response is received.
+        self._response_received_event: Event = Event()
 
         super().__init__(_outcomes)
 
     def execute(self, blackboard: Blackboard) -> str:
         """
-        Executes the service call.
+        Execute the service call and handle the response.
 
-        This method prepares the request using the provided blackboard,
-        waits for the service to become available, and sends the request.
-        It also handles the response and can process outcomes based on the
-        response handler.
+        This method creates a request based on the blackboard data, waits for the
+        service to become available, sends the request asynchronously, and waits for
+        the response using a threading Event.
 
-        Parameters:
-            blackboard (Blackboard): The blackboard object that holds the data for request creation.
+        Args:
+            blackboard (Blackboard): A shared pointer to the blackboard containing data for
+                request creation.
 
         Returns:
-            str: The outcome of the state execution, which can be SUCCEED, ABORT, or TIMEOUT.
-
-        Exceptions:
-            Exception: Catches all exceptions during the service call and returns ABORT.
+            str: The outcome of the service call, which can be SUCCEED, ABORT, or TIMEOUT.
         """
         request = self._create_request_handler(blackboard)
+        retry_count = 0
 
         yasmin.YASMIN_LOG_INFO(f"Waiting for service '{self._srv_name}'")
-        srv_available = self._service_client.wait_for_service(timeout_sec=self._timeout)
 
-        if not srv_available:
+        while not self._service_client.wait_for_service(timeout_sec=self._wait_timeout):
             yasmin.YASMIN_LOG_WARN(
                 f"Timeout reached, service '{self._srv_name}' is not available"
             )
-            return TIMEOUT
+            if retry_count < self._maximum_retry:
+                retry_count += 1
+                yasmin.YASMIN_LOG_WARN(
+                    f"Retrying to connect to service '{self._srv_name}' ({retry_count}/{self._maximum_retry})"
+                )
+            else:
+                return TIMEOUT
 
         try:
             yasmin.YASMIN_LOG_INFO(f"Sending request to service '{self._srv_name}'")
-            response = self._service_client.call(request)
+
+            # Clear the event for this service call
+            self._response_received_event.clear()
+
+            future = self._service_client.call_async(request)
+            future.add_done_callback(self.response_callback)
+
+            # Wait for the future to complete with optional timeout
+            while not self._response_received_event.wait(self._response_timeout):
+                yasmin.YASMIN_LOG_WARN(
+                    f"Timeout reached while waiting for response from service '{self._srv_name}'"
+                )
+
+                if retry_count < self._maximum_retry:
+                    retry_count += 1
+                    yasmin.YASMIN_LOG_WARN(
+                        f"Retrying to wait for service '{self._srv_name}' response ({retry_count}/{self._maximum_retry})"
+                    )
+                else:
+                    return TIMEOUT
 
         except Exception as e:
             yasmin.YASMIN_LOG_WARN(f"Service call failed: {e}")
             return ABORT
 
         if self._response_handler:
-            outcome = self._response_handler(blackboard, response)
+            outcome = self._response_handler(blackboard, self._response)
             return outcome
 
         return SUCCEED
+
+    def response_callback(self, future: Future) -> None:
+        """
+        Callback function to process the service response.
+
+        This method is called when the service response is received. It stores
+        the response and signals the waiting thread by setting the event.
+
+        Args:
+            future (Future): The future object containing the service response.
+        """
+        self._response = future.result()
+        self._response_received_event.set()

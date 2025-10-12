@@ -16,8 +16,10 @@
 #ifndef YASMIN_ROS__SERVICE_STATE_HPP
 #define YASMIN_ROS__SERVICE_STATE_HPP
 
+#include <condition_variable>
 #include <functional>
 #include <memory>
+#include <mutex>
 #include <set>
 #include <string>
 
@@ -27,7 +29,10 @@
 #include "yasmin/logs.hpp"
 #include "yasmin/state.hpp"
 #include "yasmin_ros/basic_outcomes.hpp"
+#include "yasmin_ros/ros_communications_cache.hpp"
 #include "yasmin_ros/yasmin_node.hpp"
+
+using namespace std::placeholders;
 
 namespace yasmin_ros {
 
@@ -60,14 +65,19 @@ public:
    * @param srv_name The name of the service to call.
    * @param create_request_handler Function to create a service request.
    * @param outcomes A set of possible outcomes for this state.
-   * @param timeout Maximum time to wait for the service to become available, in
+   * @param wait_timeout Maximum time to wait for the service to become
+   * available, in seconds. Default is -1 (wait indefinitely).
+   * @param response_timeout Maximum time to wait for the service response, in
    * seconds. Default is -1 (wait indefinitely).
+   * @param maximum_retry (Optional) Maximum retries of the service if it
+   * returns timeout. Default is 3.
    */
   ServiceState(std::string srv_name,
                CreateRequestHandler create_request_handler,
-               std::set<std::string> outcomes, int timeout = -1.0)
+               std::set<std::string> outcomes, int wait_timeout = -1,
+               int response_timeout = -1, int maximum_retry = 3)
       : ServiceState(srv_name, create_request_handler, outcomes, nullptr,
-                     nullptr, timeout) {}
+                     nullptr, wait_timeout, response_timeout, maximum_retry) {}
 
   /**
    * @brief Construct a ServiceState with a request handler and outcomes.
@@ -76,16 +86,22 @@ public:
    * @param create_request_handler Function to create a service request.
    * @param outcomes A set of possible outcomes for this state.
    * @param callback_group (Optional) The callback group for the subscription.
-   * @param timeout Maximum time to wait for the service to become available, in
+   * @param wait_timeout Maximum time to wait for the service to become
+   * available, in seconds. Default is -1 (wait indefinitely).
+   * @param response_timeout Maximum time to wait for the service response, in
    * seconds. Default is -1 (wait indefinitely).
+   * @param maximum_retry (Optional) Maximum retries of the service if it
+   * returns timeout. Default is 3.
    */
   ServiceState(std::string srv_name,
                CreateRequestHandler create_request_handler,
                std::set<std::string> outcomes,
                rclcpp::CallbackGroup::SharedPtr callback_group = nullptr,
-               int timeout = -1.0)
+               int wait_timeout = -1, int response_timeout = -1,
+               int maximum_retry = 3)
       : ServiceState(srv_name, create_request_handler, outcomes, nullptr,
-                     callback_group, timeout) {}
+                     callback_group, wait_timeout, response_timeout,
+                     maximum_retry) {}
 
   /**
    * @brief Construct a ServiceState with a request handler and response
@@ -95,15 +111,21 @@ public:
    * @param create_request_handler Function to create a service request.
    * @param outcomes A set of possible outcomes for this state.
    * @param response_handler (Optional) Function to handle the service response.
-   * @param timeout Maximum time to wait for the service to become available, in
+   * @param wait_timeout Maximum time to wait for the service to become
+   * available, in seconds. Default is -1 (wait indefinitely).
+   * @param response_timeout Maximum time to wait for the service response, in
    * seconds. Default is -1 (wait indefinitely).
+   * @param maximum_retry (Optional) Maximum retries of the service if it
+   * returns timeout. Default is 3.
    */
   ServiceState(std::string srv_name,
                CreateRequestHandler create_request_handler,
                std::set<std::string> outcomes, ResponseHandler response_handler,
-               int timeout = -1.0)
+               int wait_timeout = -1, int response_timeout = -1,
+               int maximum_retry = 3)
       : ServiceState(nullptr, srv_name, create_request_handler, outcomes,
-                     response_handler, nullptr, timeout) {}
+                     response_handler, nullptr, wait_timeout, response_timeout,
+                     maximum_retry) {}
 
   /**
    * @brief Construct a ServiceState with a ROS 2 node and handlers.
@@ -114,8 +136,12 @@ public:
    * @param outcomes A set of possible outcomes for this state.
    * @param response_handler (Optional) Function to handle the service response.
    * @param callback_group (Optional) The callback group for the subscription.
-   * @param timeout Maximum time to wait for the service to become available, in
+   * @param wait_timeout Maximum time to wait for the service to become
+   * available, in seconds. Default is -1 (wait indefinitely).
+   * @param response_timeout Maximum time to wait for the service response, in
    * seconds. Default is -1 (wait indefinitely).
+   * @param maximum_retry (Optional) Maximum retries of the service if it
+   * returns timeout. Default is 3.
    *
    * @throws std::invalid_argument if the create_request_handler is nullptr.
    */
@@ -123,12 +149,14 @@ public:
                CreateRequestHandler create_request_handler,
                std::set<std::string> outcomes, ResponseHandler response_handler,
                rclcpp::CallbackGroup::SharedPtr callback_group = nullptr,
-               int timeout = -1.0)
-      : State({}), srv_name(srv_name), timeout(timeout) {
+               int wait_timeout = -1, int response_timeout = -1,
+               int maximum_retry = 3)
+      : State({}), srv_name(srv_name), wait_timeout(wait_timeout),
+        response_timeout(response_timeout), maximum_retry(maximum_retry) {
 
     this->outcomes = {basic_outcomes::SUCCEED, basic_outcomes::ABORT};
 
-    if (this->timeout >= 0) {
+    if (this->wait_timeout > 0 || this->response_timeout > 0) {
       this->outcomes.insert(basic_outcomes::TIMEOUT);
     }
 
@@ -144,20 +172,9 @@ public:
     }
 
     // Create a service client (compatible with different rclcpp versions)
-#if __has_include("rclcpp/version.h")
-#include "rclcpp/version.h"
-#if RCLCPP_VERSION_GTE(28, 1, 9)
-    auto qos = rclcpp::QoS(
-        rclcpp::QoSInitialization::from_rmw(rmw_qos_profile_services_default));
-#else
-    auto qos = rmw_qos_profile_services_default;
-#endif
-#else
-    auto qos = rmw_qos_profile_services_default;
-#endif
-
-    this->service_client = this->node_->template create_client<ServiceT>(
-        srv_name, qos, callback_group);
+    this->service_client =
+        ROSCommunicationsCache::get_or_create_service_client<ServiceT>(
+            this->node_, srv_name, callback_group);
 
     // Set the request and response handlers
     this->create_request_handler = create_request_handler;
@@ -182,31 +199,65 @@ public:
    */
   std::string
   execute(std::shared_ptr<yasmin::blackboard::Blackboard> blackboard) override {
-
     Request request = this->create_request(blackboard);
+    std::unique_lock<std::mutex> lock(this->response_done_mutex);
+    int retry_count = 0;
 
     // Wait for the service to become available
     YASMIN_LOG_INFO("Waiting for service '%s'", this->srv_name.c_str());
-    bool srv_available = this->service_client->wait_for_service(
-        std::chrono::duration<int64_t, std::ratio<1>>(this->timeout));
 
-    if (!srv_available) {
+    while (!this->service_client->wait_for_service(
+        std::chrono::duration<int64_t, std::ratio<1>>(this->wait_timeout))) {
       YASMIN_LOG_WARN("Timeout reached, service '%s' is not available",
                       this->srv_name.c_str());
-      return basic_outcomes::TIMEOUT;
+      if (retry_count < this->maximum_retry) {
+        retry_count++;
+        YASMIN_LOG_WARN("Retrying to connect to service '%s' "
+                        "(%d/%d)",
+                        this->srv_name.c_str(), retry_count,
+                        this->maximum_retry);
+      } else {
+        return basic_outcomes::TIMEOUT;
+      }
     }
 
     // Send the service request
     YASMIN_LOG_INFO("Sending request to service '%s'", this->srv_name.c_str());
-    auto future = this->service_client->async_send_request(request);
 
-    // Wait for the response
-    future.wait();
-    Response response = future.get();
+    // Send request with callback
+    this->service_client->async_send_request(
+        request, std::bind(&ServiceState::response_callback, this, _1));
 
-    if (response) {
+    // Wait for response with timeout
+    if (this->response_timeout > 0) {
+      while (this->response_done_cond.wait_for(
+                 lock, std::chrono::seconds(this->response_timeout)) ==
+             std::cv_status::timeout) {
+        YASMIN_LOG_WARN(
+            "Timeout reached while waiting for response from service '%s'",
+            this->srv_name.c_str());
+        if (retry_count < this->maximum_retry) {
+          retry_count++;
+          YASMIN_LOG_WARN("Retrying to wait for service '%s' response (%d/%d)",
+                          this->srv_name.c_str(), retry_count,
+                          this->maximum_retry);
+        } else {
+          return basic_outcomes::TIMEOUT;
+        }
+      }
+    } else {
+      this->response_done_cond.wait(lock);
+    }
+
+    if (this->is_canceled()) {
+      return basic_outcomes::CANCEL;
+    }
+
+    // Process the service response
+    if (this->service_response) {
       if (response_handler != nullptr) {
-        std::string outcome = this->response_handler(blackboard, response);
+        std::string outcome =
+            this->response_handler(blackboard, this->service_response);
         return outcome;
       }
       return basic_outcomes::SUCCEED;
@@ -215,9 +266,11 @@ public:
     }
   }
 
-private:
+protected:
   /// Shared pointer to the ROS 2 node
   rclcpp::Node::SharedPtr node_;
+
+private:
   /// Shared pointer to the service client.
   std::shared_ptr<rclcpp::Client<ServiceT>> service_client;
   /// Function to create service requests.
@@ -227,7 +280,18 @@ private:
   /// Name of the service.
   std::string srv_name;
   /// Maximum wait time for service availability.
-  int timeout;
+  int wait_timeout;
+  /// Timeout for the service response.
+  int response_timeout;
+  /// Maximum number of retries.
+  int maximum_retry;
+
+  /// Condition variable for response completion.
+  std::condition_variable response_done_cond;
+  /// Mutex for protecting response completion.
+  std::mutex response_done_mutex;
+  /// Shared pointer to the service response.
+  Response service_response;
 
   /**
    * @brief Create a service request based on the blackboard.
@@ -239,6 +303,21 @@ private:
   Request
   create_request(std::shared_ptr<yasmin::blackboard::Blackboard> blackboard) {
     return this->create_request_handler(blackboard);
+  }
+
+  /**
+   * @brief Callback for handling the service response.
+   *
+   * This function is called when the service response is received.
+   * It stores the response and signals the waiting thread.
+   *
+   * @param response The response received from the service.
+   */
+  void
+  response_callback(typename rclcpp::Client<ServiceT>::SharedFuture response) {
+    std::lock_guard<std::mutex> lock(this->response_done_mutex);
+    this->service_response = response.get();
+    this->response_done_cond.notify_one();
   }
 };
 

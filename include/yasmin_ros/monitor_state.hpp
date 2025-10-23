@@ -30,7 +30,6 @@
 #include "yasmin/logs.hpp"
 #include "yasmin/state.hpp"
 #include "yasmin_ros/basic_outcomes.hpp"
-#include "yasmin_ros/ros_communications_cache.hpp"
 #include "yasmin_ros/yasmin_node.hpp"
 
 using std::placeholders::_1;
@@ -113,16 +112,14 @@ public:
                rclcpp::QoS qos = 10,
                rclcpp::CallbackGroup::SharedPtr callback_group = nullptr,
                int msg_queue = 10, int timeout = -1, int maximum_retry = 3)
-      : State({}), topic_name(topic_name), monitor_handler(monitor_handler),
-        qos(qos), msg_queue(msg_queue), timeout(timeout),
-        maximum_retry(maximum_retry) {
+      : State({basic_outcomes::CANCEL}), topic_name(topic_name),
+        monitor_handler(monitor_handler), qos(qos), msg_queue(msg_queue),
+        timeout(timeout), maximum_retry(maximum_retry) {
+
     // set outcomes
     if (timeout > 0) {
       this->outcomes = {basic_outcomes::TIMEOUT};
-    } else {
-      this->outcomes = {};
     }
-    this->outcomes.insert(basic_outcomes::CANCEL);
 
     if (outcomes.size() > 0) {
       for (std::string outcome : outcomes) {
@@ -136,11 +133,12 @@ public:
       this->node_ = node;
     }
 
-    // Crate subscription
-    this->sub = ROSCommunicationsCache::get_or_create_subscription<MsgT>(
-        this->node_, this->topic_name,
-        std::bind(&MonitorState::callback, this, _1), this->qos,
-        callback_group);
+    // Create subscription
+    rclcpp::SubscriptionOptions options;
+    options.callback_group = callback_group;
+    this->sub = this->node_->create_subscription<MsgT>(
+        this->topic_name, this->qos,
+        std::bind(&MonitorState::callback, this, _1), options);
   }
 
   /**
@@ -182,6 +180,10 @@ public:
               lock, std::chrono::seconds(this->timeout));
         } else {
           return basic_outcomes::TIMEOUT;
+        }
+
+        if (this->is_canceled()) {
+          return basic_outcomes::CANCEL;
         }
       }
     }

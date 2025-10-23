@@ -26,7 +26,7 @@
 #include "yasmin/logs.hpp"
 #include "yasmin/state.hpp"
 #include "yasmin_ros/basic_outcomes.hpp"
-#include "yasmin_ros/ros_communications_cache.hpp"
+#include "yasmin_ros/ros_clients_cache.hpp"
 #include "yasmin_ros/yasmin_node.hpp"
 
 namespace yasmin_ros {
@@ -72,11 +72,9 @@ public:
                  CreateMessageHandler create_message_handler,
                  rclcpp::QoS qos = 10,
                  rclcpp::CallbackGroup::SharedPtr callback_group = nullptr)
-      : State({}), topic_name(topic_name),
+      : State({basic_outcomes::SUCCEED}), topic_name(topic_name),
         create_message_handler(create_message_handler) {
-
-    // set outcomes
-    this->outcomes = {basic_outcomes::SUCCEED};
+    ;
 
     if (node == nullptr) {
       this->node_ = YasminNode::get_instance();
@@ -85,7 +83,7 @@ public:
     }
 
     // create subscriber
-    this->pub = ROSCommunicationsCache::get_or_create_publisher<MsgT>(
+    this->pub = ROSClientsCache::get_or_create_publisher<MsgT>(
         this->node_, topic_name, qos, callback_group);
 
     if (this->create_message_handler == nullptr) {

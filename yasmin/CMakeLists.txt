@@ -10,6 +10,11 @@ endif()
 find_package(ament_cmake REQUIRED)
 find_package(ament_cmake_python REQUIRED)
 
+if(BUILD_TESTING)
+  find_package(ament_cmake_pytest REQUIRED)
+  find_package(ament_cmake_gtest REQUIRED)
+endif()
+
 # C++
 include_directories(src)
 include_directories(include)
@@ -50,14 +55,22 @@ ament_export_dependencies(${DEPENDENCIES_PACKAGE})
 ament_python_install_package(${PROJECT_NAME})
 
 # Tests
-install(
-  DIRECTORY tests/python/
-  DESTINATION pytests/${PROJECT_NAME}
-)
+if(BUILD_TESTING)
+  # Python tests
+  set(_pytest_tests
+    test_blackboard
+    test_cb_state
+    test_state
+    test_state_machine
+    test_concurrence
+  )
+  
+  foreach(_test_name ${_pytest_tests})
+    ament_add_pytest_test(${_test_name} test/${_test_name}.py)
+    ament_add_gtest(${_test_name}_cpp test/${_test_name}.cpp)
+    target_link_libraries(${_test_name}_cpp ${PROJECT_NAME})
+  endforeach()
 
-install(
-  PROGRAMS tests/run_pytests.sh
-  DESTINATION lib/${PROJECT_NAME}
-)
+endif()
 
 ament_package()

@@ -1,0 +1,12 @@
+Source: ros-humble-yasmin-viewer
+Section: misc
+Priority: optional
+Maintainer: miguel <mgons@unileon.es>
+Build-Depends: debhelper (>= 9.0.0), python3-pytest <!nocheck>, ros-humble-ament-cmake, ros-humble-ament-cmake-python, ros-humble-ament-copyright <!nocheck>, ros-humble-ament-flake8 <!nocheck>, ros-humble-ament-pep257 <!nocheck>, ros-humble-rclcpp, ros-humble-rclpy, ros-humble-yasmin, ros-humble-yasmin-msgs, ros-humble-yasmin-ros, ros-humble-ros-workspace
+Homepage: 
+Standards-Version: 3.9.2
+
+Package: ros-humble-yasmin-viewer
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, python3-expiringdict, python3-flask, python3-waitress, ros-humble-rclcpp, ros-humble-rclpy, ros-humble-yasmin, ros-humble-yasmin-msgs, ros-humble-yasmin-ros, ros-humble-ros-workspace
+Description: YASMIN viewer for FSM

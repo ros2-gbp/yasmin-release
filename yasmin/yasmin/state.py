@@ -69,7 +69,7 @@ class State(ABC):
             self._outcomes.update(outcomes)
             self._outcomes: Set = sorted(self._outcomes)
         else:
-            raise ValueError("There must be at least one outcome")
+            raise ValueError("A state must have at least one possible outcome.")
 
     def get_status(self) -> StateStatus:
         """
@@ -98,6 +98,7 @@ class State(ABC):
         Returns:
             bool: True if the state is idle, otherwise False.
         """
+        return self.get_status() == StateStatus.IDLE
 
     def is_running(self) -> bool:
         """
@@ -106,6 +107,7 @@ class State(ABC):
         Returns:
             bool: True if the state is running, otherwise False.
         """
+        return self.get_status() == StateStatus.RUNNING
 
     def is_canceled(self) -> bool:
         """
@@ -114,6 +116,7 @@ class State(ABC):
         Returns:
             bool: True if the state is canceled, otherwise False.
         """
+        return self.get_status() == StateStatus.CANCELED
 
     def is_completed(self) -> bool:
         """
@@ -122,6 +125,7 @@ class State(ABC):
         Returns:
             bool: True if the state is completed, otherwise False.
         """
+        return self.get_status() == StateStatus.COMPLETED
 
     def __call__(self, blackboard: Blackboard = None) -> str:
         """

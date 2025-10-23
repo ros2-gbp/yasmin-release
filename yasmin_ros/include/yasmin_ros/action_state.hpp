@@ -29,7 +29,7 @@
 #include "yasmin/logs.hpp"
 #include "yasmin/state.hpp"
 #include "yasmin_ros/basic_outcomes.hpp"
-#include "yasmin_ros/ros_communications_cache.hpp"
+#include "yasmin_ros/ros_clients_cache.hpp"
 #include "yasmin_ros/yasmin_node.hpp"
 
 using namespace std::placeholders;
@@ -218,13 +218,12 @@ public:
               rclcpp::CallbackGroup::SharedPtr callback_group = nullptr,
               int wait_timeout = -1, int response_timeout = -1,
               int maximum_retry = 3)
-      : State({}), action_name(action_name),
-        create_goal_handler(create_goal_handler),
+      : State({basic_outcomes::SUCCEED, basic_outcomes::ABORT,
+               basic_outcomes::CANCEL}),
+        action_name(action_name), create_goal_handler(create_goal_handler),
         result_handler(result_handler), feedback_handler(feedback_handler),
         wait_timeout(wait_timeout), response_timeout(response_timeout),
         maximum_retry(maximum_retry) {
-    this->outcomes = {basic_outcomes::SUCCEED, basic_outcomes::ABORT,
-                      basic_outcomes::CANCEL};
 
     if (this->wait_timeout > 0 || this->response_timeout > 0) {
       this->outcomes.insert(basic_outcomes::TIMEOUT);
@@ -242,9 +241,8 @@ public:
       this->node_ = node;
     }
 
-    this->action_client =
-        ROSCommunicationsCache::get_or_create_action_client<ActionT>(
-            this->node_, action_name, callback_group);
+    this->action_client = ROSClientsCache::get_or_create_action_client<ActionT>(
+        this->node_, action_name, callback_group);
 
     if (this->create_goal_handler == nullptr) {
       throw std::invalid_argument("create_goal_handler is needed");

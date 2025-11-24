@@ -1,0 +1,12 @@
+Source: ros-humble-yasmin-editor
+Section: misc
+Priority: optional
+Maintainer: Miguel Ángel González Santamarta <mgons@unileon.es>
+Build-Depends: debhelper (>= 9.0.0), ros-humble-ament-cmake, ros-humble-ament-cmake-python, ros-humble-rclpy, ros-humble-ros-environment, ros-humble-yasmin, ros-humble-yasmin-factory, ros-humble-ros-workspace
+Homepage: 
+Standards-Version: 3.9.2
+
+Package: ros-humble-yasmin-editor
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, pyqt5-dev, python3-lxml, python3-pyqt5, python3-pyqt5.qtsvg, python3-sip-dev, python3-tqdm, ros-humble-rclpy, ros-humble-yasmin, ros-humble-yasmin-factory, ros-humble-ros-workspace
+Description: Editor for YASMIN (Yet Another State MachINe)

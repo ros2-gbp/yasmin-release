@@ -29,7 +29,6 @@
 
 using std::placeholders::_1;
 using std::placeholders::_2;
-using namespace yasmin;
 
 /**
  * @class PrintOdometryState
@@ -99,20 +98,6 @@ public:
   };
 };
 
-/**
- * @brief Main function initializing ROS 2 and setting up the state machine.
- *
- * Initializes ROS 2, configures loggers, sets up the state machine with states
- * and transitions, and starts monitoring odometry data. The state machine will
- * cancel upon ROS 2 shutdown.
- *
- * @param argc Argument count.
- * @param argv Argument vector.
- * @return int Exit code.
- *
- * @exception std::exception Catches and logs any exceptions thrown by the state
- * machine.
- */
 int main(int argc, char *argv[]) {
 
   YASMIN_LOG_INFO("yasmin_monitor_demo");
@@ -145,7 +130,7 @@ int main(int argc, char *argv[]) {
       });
 
   // Publisher for visualizing the state machine's status
-  yasmin_viewer::YasminViewerPub yasmin_pub("YASMIN_MONITOR_DEMO", sm);
+  yasmin_viewer::YasminViewerPub yasmin_pub(sm, "YASMIN_MONITOR_DEMO");
 
   // Execute the state machine
   try {

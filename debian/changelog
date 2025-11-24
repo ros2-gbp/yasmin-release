@@ -1,0 +1,148 @@
+ros-jazzy-yasmin-msgs (4.0.0-1noble) noble; urgency=high
+
+  * Merge pull request #70 <https://github.com/uleroboticsgroup/yasmin/issues/70> from uleroboticsgroup/pybinding
+    [New Greate Version] Pybinding + Plugins + Editor
+  * fixing license name in package.xml files
+  * Contributors: Miguel Ángel González Santamarta
+
+ -- Miguel Ángel González Santamarta <mgons@unileon.es>  Sun, 23 Nov 2025 23:00:00 -0000
+
+ros-jazzy-yasmin-msgs (3.5.1-1noble) noble; urgency=high
+
+
+
+ -- Miguel Ángel González Santamarta <mgons@unileon.es>  Wed, 22 Oct 2025 22:00:00 -0000
+
+ros-jazzy-yasmin-msgs (3.5.0-1noble) noble; urgency=high
+
+
+
+ -- Miguel Ángel González Santamarta <mgons@unileon.es>  Sat, 11 Oct 2025 22:00:00 -0000
+
+ros-jazzy-yasmin-msgs (3.4.0-1noble) noble; urgency=high
+
+
+
+ -- Miguel Ángel González Santamarta <mgons@unileon.es>  Sun, 24 Aug 2025 22:00:00 -0000
+
+ros-jazzy-yasmin-msgs (3.3.0-1noble) noble; urgency=high
+
+
+
+ -- Miguel Ángel González Santamarta <mgons@unileon.es>  Fri, 27 Jun 2025 22:00:00 -0000
+
+ros-jazzy-yasmin-msgs (3.2.0-1noble) noble; urgency=high
+
+
+
+ -- Miguel Ángel González Santamarta <mgons@unileon.es>  Thu, 10 Apr 2025 22:00:00 -0000
+
+ros-jazzy-yasmin-msgs (3.1.0-1noble) noble; urgency=high
+
+
+
+ -- Miguel Ángel González Santamarta <mgons@unileon.es>  Tue, 04 Feb 2025 23:00:00 -0000
+
+ros-jazzy-yasmin-msgs (3.0.3-1noble) noble; urgency=high
+
+
+
+ -- Miguel Ángel González Santamarta <mgons@unileon.es>  Mon, 16 Dec 2024 23:00:00 -0000
+
+ros-jazzy-yasmin-msgs (3.0.2-1noble) noble; urgency=high
+
+  * fixing msgs package.xml
+  * Contributors: Miguel Ángel González Santamarta
+
+ -- Miguel Ángel González Santamarta <mgons@unileon.es>  Sun, 15 Dec 2024 23:00:00 -0000
+
+ros-jazzy-yasmin-msgs (3.0.1-1noble) noble; urgency=high
+
+
+
+ -- Miguel Ángel González Santamarta <mgons@unileon.es>  Sat, 30 Nov 2024 23:00:00 -0000
+
+ros-jazzy-yasmin-msgs (3.0.0-1noble) noble; urgency=high
+
+  * fixing CMakeLists format
+  * comments for msgs
+  * Contributors: Miguel Ángel González Santamarta
+
+ -- Miguel Ángel González Santamarta <mgons@unileon.es>  Sat, 23 Nov 2024 23:00:00 -0000
+
+ros-jazzy-yasmin-msgs (2.4.2-1noble) noble; urgency=high
+
+
+
+ -- Miguel Ángel González Santamarta <mgons@unileon.es>  Wed, 02 Oct 2024 22:00:00 -0000
+
+ros-jazzy-yasmin-msgs (2.4.1-1noble) noble; urgency=high
+
+
+
+ -- Miguel Ángel González Santamarta <mgons@unileon.es>  Fri, 09 Aug 2024 13:27:00 -0000
+
+ros-jazzy-yasmin-msgs (2.4.0-1noble) noble; urgency=high
+
+
+
+ -- Miguel Ángel González Santamarta <mgons@unileon.es>  Fri, 09 Aug 2024 11:22:00 -0000
+
+ros-jazzy-yasmin-msgs (2.3.1-1noble) noble; urgency=high
+
+  * package version added
+  * Contributors: Miguel Ángel González Santamarta
+
+ -- Miguel Ángel González Santamarta <mgons@unileon.es>  Sun, 21 Jul 2024 22:00:00 -0000
+
+ros-jazzy-yasmin-msgs (2.3.0-1noble) noble; urgency=high
+
+
+
+ -- Miguel Ángel González Santamarta <mgons@unileon.es>  Fri, 12 Jul 2024 22:00:00 -0000
+
+ros-jazzy-yasmin-msgs (2.2.0-1noble) noble; urgency=high
+
+
+
+ -- Miguel Ángel González Santamarta <mgons@unileon.es>  Sat, 29 Jun 2024 22:00:00 -0000
+
+ros-jazzy-yasmin-msgs (2.1.1-1noble) noble; urgency=high
+
+
+
+ -- Miguel Ángel González Santamarta <mgons@unileon.es>  Fri, 07 Jun 2024 22:00:00 -0000
+
+ros-jazzy-yasmin-msgs (2.1.0-1noble) noble; urgency=high
+
+
+
+ -- Miguel Ángel González Santamarta <mgons@unileon.es>  Tue, 04 Jun 2024 22:00:00 -0000
+
+ros-jazzy-yasmin-msgs (2.0.2-1noble) noble; urgency=high
+
+
+
+ -- Miguel Ángel González Santamarta <mgons@unileon.es>  Sat, 04 May 2024 22:00:00 -0000
+
+ros-jazzy-yasmin-msgs (2.0.1-1noble) noble; urgency=high
+
+
+
+ -- Miguel Ángel González Santamarta <mgons@unileon.es>  Tue, 16 Apr 2024 14:57:56 +0200
+
+ros-jazzy-yasmin-msgs (2.0.0-1noble) noble; urgency=high
+
+
+
+ -- Miguel Ángel González Santamarta <mgons@unileon.es>  Tue, 16 Apr 2024 14:57:56 +0200
+
+ros-jazzy-yasmin-msgs (1.0.0-1noble) noble; urgency=high
+
+  * license added to files
+  * interfaces to msgs
+  * Contributors: Miguel Ángel González Santamarta
+
+ -- Miguel Ángel González Santamarta <mgons@unileon.es>  Tue, 05 Dec 2023 23:00:00 -0000
+
+

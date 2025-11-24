@@ -13,7 +13,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-from typing import Dict, List
+from typing import Any, Dict, List
 from rclpy.node import Node
 import yasmin
 from yasmin import StateMachine, State, Concurrence
@@ -25,28 +25,15 @@ from yasmin_msgs.msg import (
 )
 
 
-class YasminViewerPub:
+class YasminViewerPub(object):
     """
     A class to publish the state of a Finite State Machine (FSM) for visualization.
-
-    Attributes:
-        _node (Node): The ROS 2 node instance used for publishing.
-        _fsm (StateMachine): The finite state machine to be published.
-        _fsm_name (str): The name of the finite state machine.
-        pub: The publisher for the state machine messages.
-        _timer: A timer to periodically publish the FSM state.
-
-    Methods:
-        parse_transitions(transitions): Converts a dictionary of transitions to a list of TransitionMsg.
-        parse_state(state_name, state_info, states_list, parent): Parses a state and its children recursively.
-        parse_concurrence_transitions(concurrence): Converts a concurrence outcome map into transition-like information.
-        _publish_data(): Publishes the current state of the FSM.
     """
 
     def __init__(
         self,
-        fsm_name: str,
         fsm: StateMachine,
+        fsm_name: str = "",
         rate: int = 4,
         node: Node = None,
     ) -> None:
@@ -63,26 +50,41 @@ class YasminViewerPub:
             ValueError: If fsm_name is empty.
         """
 
-        if not fsm_name:
-            raise ValueError("FSM name cannot be empty.")
-
-        ## The finite state machine to be published.
-        self._fsm: StateMachine = fsm
-
-        ## The name of the finite state machine.
-        self._fsm_name: str = fsm_name
-
         ## The ROS 2 node instance used for publishing.
         self._node = node
 
         if self._node is None:
             self._node: Node = YasminNode.get_instance()
 
+        ## The name of the finite state machine.
+        self._fsm_name: str = fsm_name
+
+        if not self._fsm_name and not fsm.get_name():
+            self._fsm_name = "Unnamed_FSM"
+        elif not self._fsm_name:
+            self._fsm_name = fsm.get_name()
+
+        ## The finite state machine to be published.
+        self._fsm: StateMachine = fsm
+
         ## The publisher for the state machine messages.
-        self.pub = self._node.create_publisher(StateMachineMsg, "/fsm_viewer", 10)
+        self._pub = self._node.create_publisher(StateMachineMsg, "/fsm_viewer", 10)
 
         ## A timer to periodically publish the FSM state.
         self._timer = self._node.create_timer(1 / rate, self._publish_data)
+
+    def cleanup(self) -> None:
+        """
+        Cleans up resources used by the YasminViewerPub instance.
+        """
+        if self._timer is not None:
+            self._timer.cancel()
+            self._node.destroy_timer(self._timer)
+        del self._timer
+        if self._pub is not None:
+            self._node.destroy_publisher(self._pub)
+        del self._pub
+        self._fsm = None
 
     def parse_transitions(self, transitions: Dict[str, str]) -> List[TransitionMsg]:
         """
@@ -107,7 +109,7 @@ class YasminViewerPub:
     def parse_state(
         self,
         state_name: str,
-        state_info: Dict[str, str],
+        state_info: Dict[str, Any],
         states_list: List[StateMsg],
         parent: int = -1,
     ) -> None:
@@ -250,7 +252,7 @@ class YasminViewerPub:
             yasmin.YASMIN_LOG_DEBUG(
                 f"Publishing data of state machine '{self._fsm_name}'"
             )
-            self.pub.publish(state_machine_msg)
+            self._pub.publish(state_machine_msg)
 
         except Exception as e:
             yasmin.YASMIN_LOG_ERROR(

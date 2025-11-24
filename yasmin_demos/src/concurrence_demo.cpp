@@ -27,8 +27,6 @@
 #include "yasmin_ros/ros_logs.hpp"
 #include "yasmin_viewer/yasmin_viewer_pub.hpp"
 
-using namespace yasmin;
-
 /**
  * @brief Represents the "Foo" state in the state machine.
  *
@@ -44,7 +42,7 @@ public:
    * @brief Constructs a FooState object, initializing the counter.
    */
   FooState()
-      : yasmin::State({"outcome1", "outcome2", "outcome3"}), counter(0){};
+      : yasmin::State({"outcome1", "outcome2", "outcome3"}), counter(0) {};
 
   /**
    * @brief Executes the Foo state logic.
@@ -120,18 +118,6 @@ public:
   }
 };
 
-/**
- * @brief Main function that initializes the ROS 2 node and state machine.
- *
- * This function sets up the state machine, adds states, and handles
- * the execution flow, including logging and cleanup.
- *
- * @param argc Argument count from the command line.
- * @param argv Argument vector from the command line.
- * @return int Exit status of the program. Returns 0 on success.
- *
- * @throws std::exception If there is an error during state machine execution.
- */
 int main(int argc, char *argv[]) {
   YASMIN_LOG_INFO("yasmin_concurrence_demo");
   rclcpp::init(argc, argv);
@@ -155,15 +141,16 @@ int main(int argc, char *argv[]) {
   auto bar_state = std::make_shared<BarState>();
 
   // Create concurrent state
-  auto concurrent_state = std::make_shared<Concurrence>(
-      std::map<std::string, std::shared_ptr<State>>{{"FOO", foo_state},
-                                                    {"BAR", bar_state}},
+  auto concurrent_state = std::make_shared<yasmin::Concurrence>(
+      std::map<std::string, std::shared_ptr<yasmin::State>>{{"FOO", foo_state},
+                                                            {"BAR", bar_state}},
       "defaulted",
-      Concurrence::OutcomeMap{
-          {"outcome1", Concurrence::StateOutcomeMap{{"FOO", "outcome1"},
-                                                    {"BAR", "outcome3"}}},
-          {"outcome2", Concurrence::StateOutcomeMap{{"FOO", "outcome2"},
-                                                    {"BAR", "outcome3"}}}});
+      yasmin::Concurrence::OutcomeMap{
+          {"outcome1",
+           yasmin::Concurrence::StateOutcomeMap{{"FOO", "outcome1"},
+                                                {"BAR", "outcome3"}}},
+          {"outcome2", yasmin::Concurrence::StateOutcomeMap{
+                           {"FOO", "outcome2"}, {"BAR", "outcome3"}}}});
 
   // Add concurrent state to the state machine
   sm->add_state("CONCURRENCE", concurrent_state,
@@ -174,7 +161,7 @@ int main(int argc, char *argv[]) {
                 });
 
   // Publish state machine updates
-  yasmin_viewer::YasminViewerPub yasmin_pub("YASMIN_CONCURRENCE_DEMO", sm);
+  yasmin_viewer::YasminViewerPub yasmin_pub(sm, "YASMIN_CONCURRENCE_DEMO");
 
   // Execute the state machine
   try {

@@ -20,15 +20,10 @@ import rclpy
 from std_msgs.msg import Int32
 
 import yasmin
-from yasmin.cb_state import CbState
-from yasmin.state_machine import StateMachine
-from yasmin.blackboard import Blackboard
-
+from yasmin import CbState, StateMachine, Blackboard
+from yasmin_ros import PublisherState, set_ros_loggers
 from yasmin_ros.basic_outcomes import SUCCEED
-from yasmin_ros import PublisherState
-from yasmin_ros.ros_logs import set_ros_loggers
-
-from yasmin_viewer.yasmin_viewer_pub import YasminViewerPub
+from yasmin_viewer import YasminViewerPub
 
 
 class PublishIntState(PublisherState):
@@ -43,7 +38,7 @@ class PublishIntState(PublisherState):
         """
         Initializes the PublishIntState with the topic 'count' and a message creation callback.
         """
-        super().__init__("count", self.create_int_msg)
+        super().__init__(Int32, "count", self.create_int_msg)
 
     def create_int_msg(self, blackboard: Blackboard) -> Int32:
         """
@@ -56,7 +51,7 @@ class PublishIntState(PublisherState):
             Int32: A ROS message containing the updated counter.
         """
         # Get and increment the counter from the blackboard
-        counter = blackboard.get("counter", 0)
+        counter = blackboard.get("counter")
         counter += 1
         blackboard.set("counter", counter)
 
@@ -83,8 +78,8 @@ def check_count(blackboard: Blackboard) -> str:
     time.sleep(1)
 
     # Retrieve the counter and max value from blackboard
-    count = blackboard.get("counter", 0)
-    max_count = blackboard.get("max_count", 10)
+    count = blackboard.get("counter")
+    max_count = blackboard.get("max_count")
 
     yasmin.YASMIN_LOG_INFO(f"Checking count: {count}")
 
@@ -95,7 +90,7 @@ def check_count(blackboard: Blackboard) -> str:
         return "outcome2"
 
 
-def main(args=None):
+def main() -> None:
     """
     Main function to initialize ROS 2, configure logging, build the YASMIN state machine,
     and execute it until the max_count is reached.
@@ -104,7 +99,7 @@ def main(args=None):
         args (list, optional): Command-line arguments passed to rclpy.init().
     """
     yasmin.YASMIN_LOG_INFO("yasmin_monitor_demo")
-    rclpy.init(args=args)
+    rclpy.init()
 
     # Configure YASMIN to use ROS-based logging
     set_ros_loggers()
@@ -139,7 +134,7 @@ def main(args=None):
     )
 
     # Launch YASMIN Viewer publisher for state visualization
-    YasminViewerPub("YASMIN_PUBLISHER_DEMO", sm)
+    viewer = YasminViewerPub(sm, "YASMIN_PUBLISHER_DEMO")
 
     # Initialize blackboard with counter values
     blackboard = Blackboard()
@@ -152,9 +147,13 @@ def main(args=None):
         yasmin.YASMIN_LOG_INFO(outcome)
     except Exception as e:
         yasmin.YASMIN_LOG_INFO(str(e))
+    finally:
+        viewer.cleanup()
+        del sm
 
-    # Shutdown ROS
-    rclpy.shutdown()
+        # Shutdown ROS 2 if it's running
+        if rclpy.ok():
+            rclpy.shutdown()
 
 
 if __name__ == "__main__":

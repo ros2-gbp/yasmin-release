@@ -1,0 +1,12 @@
+Source: ros-humble-yasmin-demos
+Section: misc
+Priority: optional
+Maintainer: Miguel Ángel González Santamarta <mgons@unileon.es>
+Build-Depends: debhelper (>= 9.0.0), python3-pytest <!nocheck>, ros-humble-ament-cmake, ros-humble-ament-cmake-python, ros-humble-ament-copyright <!nocheck>, ros-humble-ament-flake8 <!nocheck>, ros-humble-ament-pep257 <!nocheck>, ros-humble-example-interfaces, ros-humble-nav-msgs, ros-humble-rclcpp, ros-humble-rclpy, ros-humble-ros-environment, ros-humble-yasmin, ros-humble-yasmin-factory, ros-humble-yasmin-ros, ros-humble-yasmin-viewer, ros-humble-ros-workspace
+Homepage: 
+Standards-Version: 3.9.2
+
+Package: ros-humble-yasmin-demos
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, ros-humble-example-interfaces, ros-humble-nav-msgs, ros-humble-rclcpp, ros-humble-rclpy, ros-humble-yasmin, ros-humble-yasmin-factory, ros-humble-yasmin-ros, ros-humble-yasmin-viewer, ros-humble-ros-workspace
+Description: Demos of YASMIN (Yet Another State MachINe)

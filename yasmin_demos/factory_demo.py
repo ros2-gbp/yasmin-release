@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# Copyright (C) 2025 Pedro Edom Nunes
+# Copyright (C) 2025 Miguel Ángel González Santamarta
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -15,16 +15,17 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+import os
 import rclpy
 import yasmin
-from yasmin import StateMachine
 from yasmin_ros import set_ros_loggers
 from yasmin_viewer import YasminViewerPub
-from yasmin_demos import FooState, BarState
+from yasmin_factory import YasminFactory
+from ament_index_python import get_package_share_directory
 
 
 def main() -> None:
-    yasmin.YASMIN_LOG_INFO("yasmin_multiple_states_demo")
+    yasmin.YASMIN_LOG_INFO("YASMIN_FACTORY_DEMO")
 
     # Initialize ROS 2
     rclpy.init()
@@ -33,27 +34,15 @@ def main() -> None:
     set_ros_loggers()
 
     # Create a finite state machine (FSM)
-    sm = StateMachine(outcomes=["outcome4"])
-
-    # Add states to the FSM
-    sm.add_state(
-        "FOO",
-        FooState(),
-        transitions={
-            "outcome1": "BAR",
-            "outcome2": "outcome4",
-        },
-    )
-    sm.add_state(
-        "BAR",
-        BarState(),
-        transitions={
-            "outcome3": "FOO",
-        },
+    factory = YasminFactory()
+    sm = factory.create_sm_from_file(
+        os.path.join(
+            get_package_share_directory("yasmin_demos"), "state_machines", "demo_1.xml"
+        )
     )
 
     # Publish FSM information for visualization
-    viewer = YasminViewerPub(sm, "YASMIN_MULTIPLE_STATES_DEMO")
+    viewer = YasminViewerPub(sm, "plugin_demo")
 
     # Execute the FSM
     try:

@@ -19,9 +19,7 @@ import time
 import rclpy
 
 import yasmin
-from yasmin import State
-from yasmin import Blackboard
-from yasmin import StateMachine
+from yasmin import State, Blackboard, StateMachine
 from yasmin_ros import set_ros_loggers
 from yasmin_ros import GetParametersState
 from yasmin_ros.basic_outcomes import SUCCEED, ABORT
@@ -107,17 +105,7 @@ class BarState(State):
         return "outcome3"
 
 
-# Main function to initialize and run the state machine
-def main():
-    """
-    The main entry point of the application.
-
-    Initializes the ROS 2 environment, sets up the state machine,
-    and handles execution and termination.
-
-    Raises:
-        KeyboardInterrupt: If the execution is interrupted by the user.
-    """
+def main() -> None:
     yasmin.YASMIN_LOG_INFO("yasmin_parameters_demo")
 
     # Initialize ROS 2
@@ -161,7 +149,7 @@ def main():
     )
 
     # Publish FSM information for visualization
-    YasminViewerPub("yasmin_parameters_demo", sm)
+    viewer = YasminViewerPub(sm, "YASMIN_PARAMETERS_DEMO")
 
     # Execute the FSM
     try:
@@ -170,10 +158,13 @@ def main():
     except KeyboardInterrupt:
         if sm.is_running():
             sm.cancel_state()
+    finally:
+        viewer.cleanup()
+        del sm
 
-    # Shutdown ROS 2 if it's running
-    if rclpy.ok():
-        rclpy.shutdown()
+        # Shutdown ROS 2 if it's running
+        if rclpy.ok():
+            rclpy.shutdown()
 
 
 if __name__ == "__main__":

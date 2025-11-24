@@ -26,8 +26,6 @@
 #include "yasmin_ros/ros_logs.hpp"
 #include "yasmin_viewer/yasmin_viewer_pub.hpp"
 
-using namespace yasmin;
-
 /**
  * @brief Represents the "Foo" state in the state machine.
  */
@@ -36,7 +34,7 @@ public:
   /**
    * @brief Constructs a FooState object, initializing the counter.
    */
-  FooState() : yasmin::State({yasmin_ros::basic_outcomes::SUCCEED}){};
+  FooState() : yasmin::State({yasmin_ros::basic_outcomes::SUCCEED}) {};
 
   /**
    * @brief Executes the Foo state logic.
@@ -81,18 +79,6 @@ public:
   }
 };
 
-/**
- * @brief Main function that initializes the ROS 2 node and state machine.
- *
- * This function sets up the state machine, adds states, and handles
- * the execution flow, including logging and cleanup.
- *
- * @param argc Argument count from the command line.
- * @param argv Argument vector from the command line.
- * @return int Exit status of the program. Returns 0 on success.
- *
- * @throws std::exception If there is an error during state machine execution.
- */
 int main(int argc, char *argv[]) {
   YASMIN_LOG_INFO("yasmin_remapping_demo");
   rclcpp::init(argc, argv);
@@ -141,7 +127,7 @@ int main(int argc, char *argv[]) {
                 });
 
   // Publish state machine updates
-  yasmin_viewer::YasminViewerPub yasmin_pub("YASMIN_REMAPPING_DEMO", sm);
+  yasmin_viewer::YasminViewerPub yasmin_pub(sm, "YASMIN_REMAPPING_DEMO");
 
   // Execute the state machine
   try {

@@ -19,17 +19,17 @@
 [![Contributors](https://img.shields.io/github/contributors/uleroboticsgroup/yasmin.svg)](https://github.com/uleroboticsgroup/yasmin/graphs/contributors)
 
 [![Python Formatter Check](https://github.com/uleroboticsgroup/yasmin/actions/workflows/python-formatter.yml/badge.svg?branch=main)](https://github.com/uleroboticsgroup/yasmin/actions/workflows/python-formatter.yml?branch=main)
-[![C++ Formatter Check](https://github.com/uleroboticsgroup/yasmin/actions/workflows/cpp-formatter.yml/badge.svg?branch=main)](https://github.com/uleroboticsgroup/yasmin/actions/workflows/cpp-formatter.yml?branch=main)
+[![C++ Formatter Check](https://github.com/uleroboticsgroup/yasmin/actions/workflows/cpp-formatter.yml/badge.svg?branch=main)](https://github.com/uleroboticsgroup/yasmin/actions/workflows/cpp-formatter.yml?branch=main) [![Documentation Deployment](https://github.com/uleroboticsgroup/yasmin/actions/workflows/documentation-deployment.yml/badge.svg)](https://uleroboticsgroup.github.io/yasmin)
 
-| ROS 2 Distro |                             Branch                             |                                                                                                            Build and Test                                                                                                            |                                                               Docker Image                                                                | Documentation                                                                                                                                                            |
-| :----------: | :------------------------------------------------------------: | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------: | :---------------------------------------------------------------------------------------------------------------------------------------: | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-|   **Foxy**   | [`main`](https://github.com/uleroboticsgroup/yasmin/tree/main) |        [![Foxy Build](https://github.com/uleroboticsgroup/yasmin/actions/workflows/foxy-build-test.yml/badge.svg?branch=main)](https://github.com/uleroboticsgroup/yasmin/actions/workflows/foxy-build-test.yml?branch=main)         |     [![Docker Image](https://img.shields.io/badge/Docker%20Image%20-foxy-blue)](https://hub.docker.com/r/mgons/yasmin/tags?name=foxy)     | [![Doxygen Deployment](https://github.com/uleroboticsgroup/yasmin/actions/workflows/doxygen-deployment.yml/badge.svg)](https://uleroboticsgroup.github.io/yasmin/latest) |
-| **Galatic**  | [`main`](https://github.com/uleroboticsgroup/yasmin/tree/main) |  [![Galactic Build](https://github.com/uleroboticsgroup/yasmin/actions/workflows/galactic-build-test.yml/badge.svg?branch=main)](https://github.com/uleroboticsgroup/yasmin/actions/workflows/galactic-build-test.yml?branch=main)   | [![Docker Image](https://img.shields.io/badge/Docker%20Image%20-galactic-blue)](https://hub.docker.com/r/mgons/yasmin/tags?name=galactic) | [![Doxygen Deployment](https://github.com/uleroboticsgroup/yasmin/actions/workflows/doxygen-deployment.yml/badge.svg)](https://uleroboticsgroup.github.io/yasmin/latest) |
-|  **Humble**  | [`main`](https://github.com/uleroboticsgroup/yasmin/tree/main) | [![Humble Build and Test](https://github.com/uleroboticsgroup/yasmin/actions/workflows/humble-build-test.yml/badge.svg?branch=main)](https://github.com/uleroboticsgroup/yasmin/actions/workflows/humble-build-test.yml?branch=main) |   [![Docker Image](https://img.shields.io/badge/Docker%20Image%20-humble-blue)](https://hub.docker.com/r/mgons/yasmin/tags?name=humble)   | [![Doxygen Deployment](https://github.com/uleroboticsgroup/yasmin/actions/workflows/doxygen-deployment.yml/badge.svg)](https://uleroboticsgroup.github.io/yasmin/latest) |
-|   **Iron**   | [`main`](https://github.com/uleroboticsgroup/yasmin/tree/main) |        [![Iron Build](https://github.com/uleroboticsgroup/yasmin/actions/workflows/iron-build-test.yml/badge.svg?branch=main)](https://github.com/uleroboticsgroup/yasmin/actions/workflows/iron-build-test.yml?branch=main)         |     [![Docker Image](https://img.shields.io/badge/Docker%20Image%20-iron-blue)](https://hub.docker.com/r/mgons/yasmin/tags?name=iron)     | [![Doxygen Deployment](https://github.com/uleroboticsgroup/yasmin/actions/workflows/doxygen-deployment.yml/badge.svg)](https://uleroboticsgroup.github.io/yasmin/latest) |
-|  **Jazzy**   | [`main`](https://github.com/uleroboticsgroup/yasmin/tree/main) |       [![Jazzy Build](https://github.com/uleroboticsgroup/yasmin/actions/workflows/jazzy-build-test.yml/badge.svg?branch=main)](https://github.com/uleroboticsgroup/yasmin/actions/workflows/jazzy-build-test.yml?branch=main)       |    [![Docker Image](https://img.shields.io/badge/Docker%20Image%20-jazzy-blue)](https://hub.docker.com/r/mgons/yasmin/tags?name=jazzy)    | [![Doxygen Deployment](https://github.com/uleroboticsgroup/yasmin/actions/workflows/doxygen-deployment.yml/badge.svg)](https://uleroboticsgroup.github.io/yasmin/latest) |
-|  **Kilted**  | [`main`](https://github.com/uleroboticsgroup/yasmin/tree/main) |     [![Kilted Build](https://github.com/uleroboticsgroup/yasmin/actions/workflows/kilted-build-test.yml/badge.svg?branch=main)](https://github.com/uleroboticsgroup/yasmin/actions/workflows/kilted-build-test.yml?branch=main)      |   [![Docker Image](https://img.shields.io/badge/Docker%20Image%20-kilted-blue)](https://hub.docker.com/r/mgons/yasmin/tags?name=kilted)   | [![Doxygen Deployment](https://github.com/uleroboticsgroup/yasmin/actions/workflows/doxygen-deployment.yml/badge.svg)](https://uleroboticsgroup.github.io/yasmin/latest) |
-| **Rolling**  | [`main`](https://github.com/uleroboticsgroup/yasmin/tree/main) |    [![Rolling Build](https://github.com/uleroboticsgroup/yasmin/actions/workflows/rolling-build-test.yml/badge.svg?branch=main)](https://github.com/uleroboticsgroup/yasmin/actions/workflows/rolling-build-test.yml?branch=main)    |  [![Docker Image](https://img.shields.io/badge/Docker%20Image%20-rolling-blue)](https://hub.docker.com/r/mgons/yasmin/tags?name=rolling)  | [![Doxygen Deployment](https://github.com/uleroboticsgroup/yasmin/actions/workflows/doxygen-deployment.yml/badge.svg)](https://uleroboticsgroup.github.io/yasmin/latest) |
+| ROS 2 Distro |                                                                                                            Build and Test                                                                                                            |                                                               Docker Image                                                                |
+| :----------: | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------: | :---------------------------------------------------------------------------------------------------------------------------------------: |
+|   **Foxy**   |        [![Foxy Build](https://github.com/uleroboticsgroup/yasmin/actions/workflows/foxy-build-test.yml/badge.svg?branch=main)](https://github.com/uleroboticsgroup/yasmin/actions/workflows/foxy-build-test.yml?branch=main)         |     [![Docker Image](https://img.shields.io/badge/Docker%20Image%20-foxy-blue)](https://hub.docker.com/r/mgons/yasmin/tags?name=foxy)     |
+| **Galatic**  |  [![Galactic Build](https://github.com/uleroboticsgroup/yasmin/actions/workflows/galactic-build-test.yml/badge.svg?branch=main)](https://github.com/uleroboticsgroup/yasmin/actions/workflows/galactic-build-test.yml?branch=main)   | [![Docker Image](https://img.shields.io/badge/Docker%20Image%20-galactic-blue)](https://hub.docker.com/r/mgons/yasmin/tags?name=galactic) |
+|  **Humble**  | [![Humble Build and Test](https://github.com/uleroboticsgroup/yasmin/actions/workflows/humble-build-test.yml/badge.svg?branch=main)](https://github.com/uleroboticsgroup/yasmin/actions/workflows/humble-build-test.yml?branch=main) |   [![Docker Image](https://img.shields.io/badge/Docker%20Image%20-humble-blue)](https://hub.docker.com/r/mgons/yasmin/tags?name=humble)   |
+|   **Iron**   |        [![Iron Build](https://github.com/uleroboticsgroup/yasmin/actions/workflows/iron-build-test.yml/badge.svg?branch=main)](https://github.com/uleroboticsgroup/yasmin/actions/workflows/iron-build-test.yml?branch=main)         |     [![Docker Image](https://img.shields.io/badge/Docker%20Image%20-iron-blue)](https://hub.docker.com/r/mgons/yasmin/tags?name=iron)     |
+|  **Jazzy**   |       [![Jazzy Build](https://github.com/uleroboticsgroup/yasmin/actions/workflows/jazzy-build-test.yml/badge.svg?branch=main)](https://github.com/uleroboticsgroup/yasmin/actions/workflows/jazzy-build-test.yml?branch=main)       |    [![Docker Image](https://img.shields.io/badge/Docker%20Image%20-jazzy-blue)](https://hub.docker.com/r/mgons/yasmin/tags?name=jazzy)    |
+|  **Kilted**  |     [![Kilted Build](https://github.com/uleroboticsgroup/yasmin/actions/workflows/kilted-build-test.yml/badge.svg?branch=main)](https://github.com/uleroboticsgroup/yasmin/actions/workflows/kilted-build-test.yml?branch=main)      |   [![Docker Image](https://img.shields.io/badge/Docker%20Image%20-kilted-blue)](https://hub.docker.com/r/mgons/yasmin/tags?name=kilted)   |
+| **Rolling**  |    [![Rolling Build](https://github.com/uleroboticsgroup/yasmin/actions/workflows/rolling-build-test.yml/badge.svg?branch=main)](https://github.com/uleroboticsgroup/yasmin/actions/workflows/rolling-build-test.yml?branch=main)    |  [![Docker Image](https://img.shields.io/badge/Docker%20Image%20-rolling-blue)](https://hub.docker.com/r/mgons/yasmin/tags?name=rolling)  |
 
 </div>
 
@@ -37,11 +37,17 @@
 
 1. [Features](#features)
 2. [Installation](#installation)
-3. [Docker](#docker)
-4. [Demos](#demos)
+   - [Debian Packages](#debian-packages)
+   - [Building from Source](#building-from-source)
+   - [Docker](#docker)
+3. [Demos](#demos)
    - [Python](#python)
    - [Cpp](#cpp)
+4. [YASMIN Editor](#yasmin-editor)
+   - [Getting Started](#getting-started)
 5. [YASMIN Viewer](#yasmin-viewer)
+   - [Getting Started](#getting-started-1)
+   - [Custom Host and Port](#custom-host-and-port)
 6. [Citations](#citations)
 
 ## Key Features
@@ -80,17 +86,11 @@ colcon build
 Then, you can run the tests as follow:
 
 ```shell
-colcon test --packages-select yasmin yasmin_ros
+colcon test --packages-select yasmin yasmin_ros yasmin_factory
 colcon test-result --verbose
 ```
 
-To see the coverage report you have to run the tests with pytest directly:
-
-```shell
-python3 -m pytest ~/ros2_ws/src/yasmin/yasmin/test ~/ros2_ws/src/yasmin/yasmin_ros/test --cov=yasmin --cov=yasmin_ros --cov-report=html --cov-report=term-missing
-```
-
-## Docker
+### Docker
 
 If your operating system doesn't support ROS 2, docker is a great alternative. You can use an image from [Dockerhub](https://hub.docker.com/r/mgons/yasmin/) or create your own images. First of all, to build the image you have to use the following command:
 
@@ -127,10 +127,6 @@ There are some examples, for both Python and C++, that can be found in [yasmin_d
 
 #### Vanilla Demo (FSM)
 
-```shell
-ros2 run yasmin_demos yasmin_demo.py
-```
-
 <p align="center">
   <img src="./docs/demo.gif" width="65%" />
 </p>
@@ -138,14 +134,16 @@ ros2 run yasmin_demos yasmin_demo.py
 <details>
 <summary>Click to expand</summary>
 
+```shell
+ros2 run yasmin_demos yasmin_demo.py
+```
+
 ```python
 import time
 import rclpy
 
 import yasmin
-from yasmin import State
-from yasmin import Blackboard
-from yasmin import StateMachine
+from yasmin import State, Blackboard, StateMachine
 from yasmin_ros import set_ros_loggers
 from yasmin_viewer import YasminViewerPub
 
@@ -229,17 +227,7 @@ class BarState(State):
         return "outcome3"
 
 
-# Main function to initialize and run the state machine
-def main():
-    """
-    The main entry point of the application.
-
-    Initializes the ROS 2 environment, sets up the state machine,
-    and handles execution and termination.
-
-    Raises:
-        KeyboardInterrupt: If the execution is interrupted by the user.
-    """
+def main() -> None:
     yasmin.YASMIN_LOG_INFO("yasmin_demo")
 
     # Initialize ROS 2
@@ -269,7 +257,7 @@ def main():
     )
 
     # Publish FSM information for visualization
-    YasminViewerPub("YASMIN_DEMO", sm)
+    viewer = YasminViewerPub(sm, "YASMIN_DEMO")
 
     # Execute the FSM
     try:
@@ -278,10 +266,13 @@ def main():
     except KeyboardInterrupt:
         if sm.is_running():
             sm.cancel_state()
+    finally:
+        viewer.cleanup()
+        del sm
 
-    # Shutdown ROS 2 if it's running
-    if rclpy.ok():
-        rclpy.shutdown()
+        # Shutdown ROS 2 if it's running
+        if rclpy.ok():
+            rclpy.shutdown()
 
 
 if __name__ == "__main__":
@@ -292,19 +283,21 @@ if __name__ == "__main__":
 
 #### Blackboard Remapping Demo
 
+<details>
+<summary>Click to expand</summary>
+
 ```shell
 ros2 run yasmin_demos remap_demo.py
 ```
 
-<details>
-<summary>Click to expand</summary>
-
 ```python
+import rclpy
+
 import yasmin
-from yasmin import State
-from yasmin import Blackboard
-from yasmin import StateMachine
+from yasmin import State, Blackboard, StateMachine
+from yasmin_ros import set_ros_loggers
 from yasmin_ros.basic_outcomes import SUCCEED
+from yasmin_viewer import YasminViewerPub
 
 
 class Foo(State):
@@ -373,16 +366,11 @@ class BarState(State):
         return SUCCEED
 
 
-if __name__ == "__main__":
-    """
-    The main entry point of the application.
+def main() -> None:
+    yasmin.YASMIN_LOG_INFO("yasmin_remapping_demo")
+    rclpy.init()
+    set_ros_loggers()
 
-    Initializes the ROS 2 environment, sets up the state machine,
-    and handles execution and termination.
-
-    Raises:
-        KeyboardInterrupt: If the execution is interrupted by the user.
-    """
     bb = Blackboard()
     bb["msg1"] = "test1"
     bb["msg2"] = "test2"
@@ -407,29 +395,46 @@ if __name__ == "__main__":
         remappings={"bar_data": "foo_out_data"},
     )
 
-    sm.execute(bb)
+    # Launch YASMIN Viewer publisher for state visualization
+    viewer = YasminViewerPub(sm, "YASMIN_REMAPPING_DEMO")
+
+    # Execute the FSM
+    try:
+        outcome = sm(bb)
+        yasmin.YASMIN_LOG_INFO(outcome)
+    except KeyboardInterrupt:
+        if sm.is_running():
+            sm.cancel_state()
+    finally:
+        viewer.cleanup()
+        del sm
+
+        # Shutdown ROS 2 if it's running
+        if rclpy.ok():
+            rclpy.shutdown()
+
+
+if __name__ == "__main__":
+    main()
 ```
 
 </details>
 
 #### Concurrence Demo
 
+<details>
+<summary>Click to expand</summary>
+
 ```shell
 ros2 run yasmin_demos concurrence_demo.py
 ```
-
-<details>
-<summary>Click to expand</summary>
 
 ```python
 import time
 import rclpy
 
 import yasmin
-from yasmin import State
-from yasmin import Concurrence
-from yasmin import Blackboard
-from yasmin import StateMachine
+from yasmin import State, Concurrence, Blackboard, StateMachine
 from yasmin_ros import set_ros_loggers
 from yasmin_viewer import YasminViewerPub
 
@@ -528,17 +533,7 @@ class BarState(State):
         return "outcome3"
 
 
-# Main function to initialize and run the state machine
-def main():
-    """
-    The main entry point of the application.
-
-    Initializes the ROS 2 environment, sets up the state machine,
-    and handles execution and termination.
-
-    Raises:
-        KeyboardInterrupt: If the execution is interrupted by the user.
-    """
+def main() -> None:
     yasmin.YASMIN_LOG_INFO("CONCURRENCE_DEMO")
 
     # Initialize ROS 2
@@ -585,7 +580,7 @@ def main():
     )
 
     # Publish FSM information for visualization
-    YasminViewerPub("yasmin_demo", sm)
+    viewer = YasminViewerPub(sm, "YASMIN_CONCURRENCE_DEMO")
 
     # Execute the FSM
     try:
@@ -594,10 +589,13 @@ def main():
     except KeyboardInterrupt:
         if sm.is_running():
             sm.cancel_state()
+    finally:
+        viewer.cleanup()
+        del sm
 
-    # Shutdown ROS 2 if it's running
-    if rclpy.ok():
-        rclpy.shutdown()
+        # Shutdown ROS 2 if it's running
+        if rclpy.ok():
+            rclpy.shutdown()
 
 
 if __name__ == "__main__":
@@ -608,6 +606,9 @@ if __name__ == "__main__":
 
 #### Service Demo (FSM + ROS 2 Service Client)
 
+<details>
+<summary>Click to expand</summary>
+
 ```shell
 ros2 run yasmin_demos add_two_ints_server
 ```
@@ -616,17 +617,12 @@ ros2 run yasmin_demos add_two_ints_server
 ros2 run yasmin_demos service_client_demo.py
 ```
 
-<details>
-<summary>Click to expand</summary>
-
 ```python
 import rclpy
 from example_interfaces.srv import AddTwoInts
 
 import yasmin
-from yasmin import CbState
-from yasmin import Blackboard
-from yasmin import StateMachine
+from yasmin import CbState, Blackboard, StateMachine
 from yasmin_ros import ServiceState
 from yasmin_ros import set_ros_loggers
 from yasmin_ros.basic_outcomes import SUCCEED, ABORT
@@ -729,16 +725,7 @@ def print_sum(blackboard: Blackboard) -> str:
     return SUCCEED
 
 
-def main():
-    """
-    The main function to execute the finite state machine (FSM).
-
-    This function initializes the ROS 2 environment, sets up logging,
-    creates the FSM with defined states, and executes the FSM.
-
-    Raises:
-        KeyboardInterrupt: If the user interrupts the program.
-    """
+def main() -> None:
     yasmin.YASMIN_LOG_INFO("yasmin_service_client_demo")
 
     # Init ROS 2
@@ -774,7 +761,7 @@ def main():
     )
 
     # Publish FSM info
-    YasminViewerPub("YASMIN_SERVICE_CLIENT_DEMO", sm)
+    viewer = YasminViewerPub(sm, "YASMIN_SERVICE_CLIENT_DEMO")
 
     # Execute FSM
     try:
@@ -783,10 +770,13 @@ def main():
     except KeyboardInterrupt:
         if sm.is_running():
             sm.cancel_state()
+    finally:
+        viewer.cleanup()
+        del sm
 
-    # Shutdown ROS 2
-    if rclpy.ok():
-        rclpy.shutdown()
+        # Shutdown ROS 2 if it's running
+        if rclpy.ok():
+            rclpy.shutdown()
 
 
 if __name__ == "__main__":
@@ -797,6 +787,9 @@ if __name__ == "__main__":
 
 #### Action Demo (FSM + ROS 2 Action)
 
+<details>
+<summary>Click to expand</summary>
+
 ```shell
 ros2 run yasmin_demos fibonacci_action_server
 ```
@@ -804,9 +797,6 @@ ros2 run yasmin_demos fibonacci_action_server
 ```shell
 ros2 run yasmin_demos action_client_demo.py
 ```
-
-<details>
-<summary>Click to expand</summary>
 
 ```python
 import rclpy
@@ -937,22 +927,7 @@ def print_result(blackboard: Blackboard) -> str:
     return SUCCEED
 
 
-def main():
-    """
-    Main function to execute the ROS 2 action client demo.
-
-    This function initializes the ROS 2 client, sets up the finite state
-    machine, adds the states, and starts the action processing.
-
-    Args:
-        None
-
-    Returns:
-        None
-
-    Raises:
-        KeyboardInterrupt: If the user interrupts the execution.
-    """
+def main() -> None:
     yasmin.YASMIN_LOG_INFO("yasmin_action_client_demo")
 
     # Initialize ROS 2
@@ -983,7 +958,7 @@ def main():
     )
 
     # Publish FSM information
-    YasminViewerPub("YASMIN_ACTION_CLIENT_DEMO", sm)
+    viewer = YasminViewerPub(sm, "YASMIN_ACTION_CLIENT_DEMO")
 
     # Create an initial blackboard with the input value
     blackboard = Blackboard()
@@ -996,10 +971,13 @@ def main():
     except KeyboardInterrupt:
         if sm.is_running():
             sm.cancel_state()  # Cancel the state if interrupted
+    finally:
+        viewer.cleanup()
+        del sm
 
-    # Shutdown ROS 2
-    if rclpy.ok():
-        rclpy.shutdown()
+        # Shutdown ROS 2 if it's running
+        if rclpy.ok():
+            rclpy.shutdown()
 
 
 if __name__ == "__main__":
@@ -1010,12 +988,12 @@ if __name__ == "__main__":
 
 #### Monitor Demo (FSM + ROS 2 Subscriber)
 
+<details>
+<summary>Click to expand</summary>
+
 ```shell
 ros2 run yasmin_demos monitor_demo.py
 ```
-
-<details>
-<summary>Click to expand</summary>
 
 ```python
 import rclpy
@@ -1023,8 +1001,7 @@ from rclpy.qos import qos_profile_sensor_data
 from nav_msgs.msg import Odometry
 
 import yasmin
-from yasmin import Blackboard
-from yasmin import StateMachine
+from yasmin import Blackboard, StateMachine
 from yasmin_ros import MonitorState
 from yasmin_ros import set_ros_loggers
 from yasmin_ros.basic_outcomes import TIMEOUT
@@ -1100,18 +1077,7 @@ class PrintOdometryState(MonitorState):
         return "outcome1"
 
 
-def main():
-    """
-    Main function to initialize and run the ROS 2 state machine.
-
-    This function initializes ROS 2, sets up logging, creates a finite state
-    machine (FSM), adds states to the FSM, and executes the FSM. It handles
-    cleanup and shutdown of ROS 2 gracefully.
-
-    Exceptions:
-        KeyboardInterrupt: Caught to allow graceful cancellation of the
-                          state machine during execution.
-    """
+def main() -> None:
     yasmin.YASMIN_LOG_INFO("yasmin_monitor_demo")
 
     # Initialize ROS 2
@@ -1136,7 +1102,7 @@ def main():
     )
 
     # Publish FSM information
-    YasminViewerPub("YASMIN_MONITOR_DEMO", sm)
+    viewer = YasminViewerPub(sm, "YASMIN_MONITOR_DEMO")
 
     # Execute FSM
     try:
@@ -1145,10 +1111,13 @@ def main():
     except KeyboardInterrupt:
         if sm.is_running():
             sm.cancel_state()
+    finally:
+        viewer.cleanup()
+        del sm
 
-    # Shutdown ROS 2
-    if rclpy.ok():
-        rclpy.shutdown()
+        # Shutdown ROS 2 if it's running
+        if rclpy.ok():
+            rclpy.shutdown()
 
 
 if __name__ == "__main__":
@@ -1159,45 +1128,23 @@ if __name__ == "__main__":
 
 #### Publisher Demo (FSM + ROS 2 Publisher)
 
+<details>
+<summary>Click to expand</summary>
+
 ```shell
 ros2 run yasmin_demos publisher_demo.py
 ```
 
-<details>
-<summary>Click to expand</summary>
-
 ```python
-#!/usr/bin/env python3
-
-# Copyright (C) 2025 Miguel Ángel González Santamarta
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <https://www.gnu.org/licenses/>.
-
 import time
 import rclpy
 from std_msgs.msg import Int32
 
 import yasmin
-from yasmin.cb_state import CbState
-from yasmin.state_machine import StateMachine
-from yasmin.blackboard import Blackboard
-
+from yasmin import CbState, StateMachine, Blackboard
+from yasmin_ros import PublisherState, set_ros_loggers
 from yasmin_ros.basic_outcomes import SUCCEED
-from yasmin_ros import PublisherState
-from yasmin_ros.ros_logs import set_ros_loggers
-
-from yasmin_viewer.yasmin_viewer_pub import YasminViewerPub
+from yasmin_viewer import YasminViewerPub
 
 
 class PublishIntState(PublisherState):
@@ -1212,7 +1159,7 @@ class PublishIntState(PublisherState):
         """
         Initializes the PublishIntState with the topic 'count' and a message creation callback.
         """
-        super().__init__("count", self.create_int_msg)
+        super().__init__(Int32, "count", self.create_int_msg)
 
     def create_int_msg(self, blackboard: Blackboard) -> Int32:
         """
@@ -1225,7 +1172,7 @@ class PublishIntState(PublisherState):
             Int32: A ROS message containing the updated counter.
         """
         # Get and increment the counter from the blackboard
-        counter = blackboard.get("counter", 0)
+        counter = blackboard.get("counter")
         counter += 1
         blackboard.set("counter", counter)
 
@@ -1252,8 +1199,8 @@ def check_count(blackboard: Blackboard) -> str:
     time.sleep(1)
 
     # Retrieve the counter and max value from blackboard
-    count = blackboard.get("counter", 0)
-    max_count = blackboard.get("max_count", 10)
+    count = blackboard.get("counter")
+    max_count = blackboard.get("max_count")
 
     yasmin.YASMIN_LOG_INFO(f"Checking count: {count}")
 
@@ -1264,16 +1211,9 @@ def check_count(blackboard: Blackboard) -> str:
         return "outcome2"
 
 
-def main(args=None):
-    """
-    Main function to initialize ROS 2, configure logging, build the YASMIN state machine,
-    and execute it until the max_count is reached.
-
-    Args:
-        args (list, optional): Command-line arguments passed to rclpy.init().
-    """
+def main() -> None:
     yasmin.YASMIN_LOG_INFO("yasmin_monitor_demo")
-    rclpy.init(args=args)
+    rclpy.init()
 
     # Configure YASMIN to use ROS-based logging
     set_ros_loggers()
@@ -1308,7 +1248,7 @@ def main(args=None):
     )
 
     # Launch YASMIN Viewer publisher for state visualization
-    YasminViewerPub("YASMIN_PUBLISHER_DEMO", sm)
+    viewer = YasminViewerPub(sm, "YASMIN_PUBLISHER_DEMO")
 
     # Initialize blackboard with counter values
     blackboard = Blackboard()
@@ -1321,9 +1261,13 @@ def main(args=None):
         yasmin.YASMIN_LOG_INFO(outcome)
     except Exception as e:
         yasmin.YASMIN_LOG_INFO(str(e))
+    finally:
+        viewer.cleanup()
+        del sm
 
-    # Shutdown ROS
-    rclpy.shutdown()
+        # Shutdown ROS 2 if it's running
+        if rclpy.ok():
+            rclpy.shutdown()
 
 
 if __name__ == "__main__":
@@ -1334,21 +1278,19 @@ if __name__ == "__main__":
 
 #### Parameters Demo (FSM + ROS 2 Parameters)
 
+<details>
+<summary>Click to expand</summary>
+
 ```shell
 ros2 run yasmin_demos parameters_demo.py --ros-args -p max_counter:=5
 ```
-
-<details>
-<summary>Click to expand</summary>
 
 ```python
 import time
 import rclpy
 
 import yasmin
-from yasmin import State
-from yasmin import Blackboard
-from yasmin import StateMachine
+from yasmin import State, Blackboard, StateMachine
 from yasmin_ros import set_ros_loggers
 from yasmin_ros import GetParametersState
 from yasmin_ros.basic_outcomes import SUCCEED, ABORT
@@ -1434,17 +1376,7 @@ class BarState(State):
         return "outcome3"
 
 
-# Main function to initialize and run the state machine
-def main():
-    """
-    The main entry point of the application.
-
-    Initializes the ROS 2 environment, sets up the state machine,
-    and handles execution and termination.
-
-    Raises:
-        KeyboardInterrupt: If the execution is interrupted by the user.
-    """
+def main() -> None:
     yasmin.YASMIN_LOG_INFO("yasmin_parameters_demo")
 
     # Initialize ROS 2
@@ -1488,7 +1420,7 @@ def main():
     )
 
     # Publish FSM information for visualization
-    YasminViewerPub("YASMIN_PARAMETERS_DEMO", sm)
+    viewer = YasminViewerPub(sm, "YASMIN_PARAMETERS_DEMO")
 
     # Execute the FSM
     try:
@@ -1497,24 +1429,22 @@ def main():
     except KeyboardInterrupt:
         if sm.is_running():
             sm.cancel_state()
+    finally:
+        viewer.cleanup()
+        del sm
 
-    # Shutdown ROS 2 if it's running
-    if rclpy.ok():
-        rclpy.shutdown()
+        # Shutdown ROS 2 if it's running
+        if rclpy.ok():
+            rclpy.shutdown()
 
 
 if __name__ == "__main__":
     main()
-
 ```
 
 </details>
 
 #### Nav2 Demo (Hierarchical FSM + ROS 2 Action)
-
-```shell
-ros2 run yasmin_demos nav_demo.py
-```
 
 <details>
 <summary>Click to expand</summary>
@@ -1526,9 +1456,7 @@ from geometry_msgs.msg import Pose
 from nav2_msgs.action import NavigateToPose
 
 import yasmin
-from yasmin import CbState
-from yasmin import Blackboard
-from yasmin import StateMachine
+from yasmin import CbState, Blackboard, StateMachine
 from yasmin_ros import ActionState
 from yasmin_ros import set_ros_loggers
 from yasmin_ros.basic_outcomes import SUCCEED, ABORT, CANCEL
@@ -1652,13 +1580,7 @@ def get_next_waypoint(blackboard: Blackboard) -> str:
     return HAS_NEXT
 
 
-# main function
 def main() -> None:
-    """
-    Initializes the ROS 2 node, sets up state machines for navigation, and executes the FSM.
-
-    Handles cleanup and shutdown of the ROS 2 node upon completion.
-    """
     yasmin.YASMIN_LOG_INFO("yasmin_nav2_demo")
 
     # Initialize ROS 2
@@ -1716,7 +1638,7 @@ def main() -> None:
     )
 
     # Publish FSM information for visualization
-    YasminViewerPub("YASMIN_NAV2_DEMO", sm)
+    viewer = YasminViewerPub(sm, "YASMIN_NAV2_DEMO")
 
     # Execute the state machine
     blackboard = Blackboard()
@@ -1727,10 +1649,86 @@ def main() -> None:
         yasmin.YASMIN_LOG_INFO(outcome)
     except KeyboardInterrupt:
         sm.cancel_state()  # Handle manual interruption
+    finally:
+        viewer.cleanup()
+        del sm
 
-    # Shutdown ROS 2
-    if rclpy.ok():
+        # Shutdown ROS 2 if it's running
+        if rclpy.ok():
+            rclpy.shutdown()
+
+if __name__ == "__main__":
+    main()
+```
+
+</details>
+
+#### Factory Demo (Plugins)
+
+<details>
+<summary>Click to expand</summary>
+
+> **Note:** When mixing Python and C++ states in the same state machine, they can communicate through the blackboard, but only with primitive data types: `int`, `float`, `bool`, and `string`. Complex objects or ROS messages cannot be directly shared between Python and C++ states.
+
+```shell
+ros2 run yasmin_demos factory_demo.py
+```
+
+```xml
+<StateMachine outcomes="outcome4">
+    <State name="Foo" type="cpp" class="yasmin_demos/FooState">
+        <Transition from="outcome1" to="Bar"/>
+        <Transition from="outcome2" to="outcome4"/>
+    </State>
+    <State name="Bar" type="py" module="yasmin_demos.bar_state" class="BarState">
+        <Transition from="outcome3" to="Foo"/>
+    </State>
+</StateMachine>
+```
+
+```python
+import os
+import rclpy
+import yasmin
+from yasmin_ros import set_ros_loggers
+from yasmin_viewer import YasminViewerPub
+from yasmin_factory import YasminFactory
+from ament_index_python import get_package_share_directory
+
+
+def main() -> None:
+    yasmin.YASMIN_LOG_INFO("yasmin_demo")
+
+    # Initialize ROS 2
+    rclpy.init()
+
+    # Set ROS 2 loggers
+    set_ros_loggers()
+
+    # Create a finite state machine (FSM)
+    factory = YasminFactory()
+    sm = factory.create_sm_from_file(
+        os.path.join(
+            get_package_share_directory("yasmin_demos"), "state_machines", "demo_1.xml"
+        )
+    )
+
+    # Publish FSM information for visualization
+    viewer = YasminViewerPub(sm, "plugin_demo")
+
+    # Execute the FSM
+    try:
+        outcome = sm()
+        yasmin.YASMIN_LOG_INFO(outcome)
+    except KeyboardInterrupt:
         if sm.is_running():
+            sm.cancel_state()
+    finally:
+        viewer.cleanup()
+        del sm
+
+        # Shutdown ROS 2 if it's running
+        if rclpy.ok():
             rclpy.shutdown()
 
 
@@ -1744,12 +1742,12 @@ if __name__ == "__main__":
 
 #### Vanilla Demo
 
+<details>
+<summary>Click to expand</summary>
+
 ```shell
 ros2 run yasmin_demos yasmin_demo
 ```
-
-<details>
-<summary>Click to expand</summary>
 
 ```cpp
 #include <chrono>
@@ -1763,8 +1761,6 @@ ros2 run yasmin_demos yasmin_demo
 #include "yasmin/state_machine.hpp"
 #include "yasmin_ros/ros_logs.hpp"
 #include "yasmin_viewer/yasmin_viewer_pub.hpp"
-
-using namespace yasmin;
 
 /**
  * @brief Represents the "Foo" state in the state machine.
@@ -1843,18 +1839,6 @@ public:
   }
 };
 
-/**
- * @brief Main function that initializes the ROS 2 node and state machine.
- *
- * This function sets up the state machine, adds states, and handles
- * the execution flow, including logging and cleanup.
- *
- * @param argc Argument count from the command line.
- * @param argv Argument vector from the command line.
- * @return int Exit status of the program. Returns 0 on success.
- *
- * @throws std::exception If there is an error during state machine execution.
- */
 int main(int argc, char *argv[]) {
   YASMIN_LOG_INFO("yasmin_demo");
   rclcpp::init(argc, argv);
@@ -1885,7 +1869,7 @@ int main(int argc, char *argv[]) {
                 });
 
   // Publish state machine updates
-  yasmin_viewer::YasminViewerPub yasmin_pub("YASMIN_DEMO", sm);
+  yasmin_viewer::YasminViewerPub yasmin_pub(sm, "YASMIN_DEMO");
 
   // Execute the state machine
   try {
@@ -1905,12 +1889,12 @@ int main(int argc, char *argv[]) {
 
 #### Blackboard Remapping Demo
 
+<details>
+<summary>Click to expand</summary>
+
 ```shell
 ros2 run yasmin_demos remap_demo
 ```
-
-<details>
-<summary>Click to expand</summary>
 
 ```cpp
 #include <chrono>
@@ -1925,8 +1909,6 @@ ros2 run yasmin_demos remap_demo
 #include "yasmin_ros/basic_outcomes.hpp"
 #include "yasmin_ros/ros_logs.hpp"
 #include "yasmin_viewer/yasmin_viewer_pub.hpp"
-
-using namespace yasmin;
 
 /**
  * @brief Represents the "Foo" state in the state machine.
@@ -1981,18 +1963,6 @@ public:
   }
 };
 
-/**
- * @brief Main function that initializes the ROS 2 node and state machine.
- *
- * This function sets up the state machine, adds states, and handles
- * the execution flow, including logging and cleanup.
- *
- * @param argc Argument count from the command line.
- * @param argv Argument vector from the command line.
- * @return int Exit status of the program. Returns 0 on success.
- *
- * @throws std::exception If there is an error during state machine execution.
- */
 int main(int argc, char *argv[]) {
   YASMIN_LOG_INFO("yasmin_remapping_demo");
   rclcpp::init(argc, argv);
@@ -2041,7 +2011,7 @@ int main(int argc, char *argv[]) {
                 });
 
   // Publish state machine updates
-  yasmin_viewer::YasminViewerPub yasmin_pub("YASMIN_REMAPPING_DEMO", sm);
+  yasmin_viewer::YasminViewerPub yasmin_pub(sm, "YASMIN_REMAPPING_DEMO");
 
   // Execute the state machine
   try {
@@ -2061,12 +2031,12 @@ int main(int argc, char *argv[]) {
 
 #### Concurrence Demo
 
+<details>
+<summary>Click to expand</summary>
+
 ```shell
 ros2 run yasmin_demos concurrence_demo
 ```
-
-<details>
-<summary>Click to expand</summary>
 
 ```cpp
 #include <chrono>
@@ -2081,8 +2051,6 @@ ros2 run yasmin_demos concurrence_demo
 #include "yasmin/state_machine.hpp"
 #include "yasmin_ros/ros_logs.hpp"
 #include "yasmin_viewer/yasmin_viewer_pub.hpp"
-
-using namespace yasmin;
 
 /**
  * @brief Represents the "Foo" state in the state machine.
@@ -2175,18 +2143,6 @@ public:
   }
 };
 
-/**
- * @brief Main function that initializes the ROS 2 node and state machine.
- *
- * This function sets up the state machine, adds states, and handles
- * the execution flow, including logging and cleanup.
- *
- * @param argc Argument count from the command line.
- * @param argv Argument vector from the command line.
- * @return int Exit status of the program. Returns 0 on success.
- *
- * @throws std::exception If there is an error during state machine execution.
- */
 int main(int argc, char *argv[]) {
   YASMIN_LOG_INFO("yasmin_concurrence_demo");
   rclcpp::init(argc, argv);
@@ -2210,15 +2166,16 @@ int main(int argc, char *argv[]) {
   auto bar_state = std::make_shared<BarState>();
 
   // Create concurrent state
-  auto concurrent_state = std::make_shared<Concurrence>(
-      std::map<std::string, std::shared_ptr<State>>{{"FOO", foo_state},
-                                                    {"BAR", bar_state}},
+  auto concurrent_state = std::make_shared<yasmin::Concurrence>(
+      std::map<std::string, std::shared_ptr<yasmin::State>>{{"FOO", foo_state},
+                                                            {"BAR", bar_state}},
       "defaulted",
-      Concurrence::OutcomeMap{
-          {"outcome1", Concurrence::StateOutcomeMap{{"FOO", "outcome1"},
-                                                    {"BAR", "outcome3"}}},
-          {"outcome2", Concurrence::StateOutcomeMap{{"FOO", "outcome2"},
-                                                    {"BAR", "outcome3"}}}});
+      yasmin::Concurrence::OutcomeMap{
+          {"outcome1",
+           yasmin::Concurrence::StateOutcomeMap{{"FOO", "outcome1"},
+                                                {"BAR", "outcome3"}}},
+          {"outcome2", yasmin::Concurrence::StateOutcomeMap{
+                           {"FOO", "outcome2"}, {"BAR", "outcome3"}}}});
 
   // Add concurrent state to the state machine
   sm->add_state("CONCURRENCE", concurrent_state,
@@ -2229,7 +2186,7 @@ int main(int argc, char *argv[]) {
                 });
 
   // Publish state machine updates
-  yasmin_viewer::YasminViewerPub yasmin_pub("YASMIN_CONCURRENCE_DEMO", sm);
+  yasmin_viewer::YasminViewerPub yasmin_pub(sm, "YASMIN_CONCURRENCE_DEMO");
 
   // Execute the state machine
   try {
@@ -2249,6 +2206,9 @@ int main(int argc, char *argv[]) {
 
 #### Service Demo (FSM + ROS 2 Service Client)
 
+<details>
+<summary>Click to expand</summary>
+
 ```shell
 ros2 run yasmin_demos add_two_ints_server
 ```
@@ -2256,9 +2216,6 @@ ros2 run yasmin_demos add_two_ints_server
 ```shell
 ros2 run yasmin_demos service_client_demo
 ```
-
-<details>
-<summary>Click to expand</summary>
 
 ```cpp
 #include <iostream>
@@ -2278,7 +2235,6 @@ ros2 run yasmin_demos service_client_demo
 
 using std::placeholders::_1;
 using std::placeholders::_2;
-using namespace yasmin;
 
 /**
  * @brief Sets two integer values in the blackboard.
@@ -2376,16 +2332,6 @@ public:
   };
 };
 
-/**
- * @brief Main function to initialize and run the state machine.
- *
- * Sets up logging, initializes ROS 2, and defines a state machine with three
- * states.
- *
- * @param argc Argument count.
- * @param argv Argument vector.
- * @return int Exit code indicating success or failure.
- */
 int main(int argc, char *argv[]) {
   YASMIN_LOG_INFO("yasmin_service_client_demo");
   rclcpp::init(argc, argv);
@@ -2429,7 +2375,7 @@ int main(int argc, char *argv[]) {
                 });
 
   // Publish state machine visualization.
-  yasmin_viewer::YasminViewerPub yasmin_pub("YASMIN_SERVICE_CLIENT_DEMO", sm);
+  yasmin_viewer::YasminViewerPub yasmin_pub(sm, "YASMIN_SERVICE_CLIENT_DEMO");
 
   // Execute the state machine.
   try {
@@ -2449,6 +2395,9 @@ int main(int argc, char *argv[]) {
 
 #### Action Demo (FSM + ROS 2 Action)
 
+<details>
+<summary>Click to expand</summary>
+
 ```shell
 ros2 run yasmin_demos fibonacci_action_server
 ```
@@ -2456,9 +2405,6 @@ ros2 run yasmin_demos fibonacci_action_server
 ```shell
 ros2 run yasmin_demos action_client_demo
 ```
-
-<details>
-<summary>Click to expand</summary>
 
 ```cpp
 #include <iostream>
@@ -2479,7 +2425,6 @@ ros2 run yasmin_demos action_client_demo
 using std::placeholders::_1;
 using std::placeholders::_2;
 using Fibonacci = example_interfaces::action::Fibonacci;
-using namespace yasmin;
 
 /**
  * @brief Prints the result of the Fibonacci action.
@@ -2594,17 +2539,6 @@ public:
   };
 };
 
-/**
- * @brief Main function for the Fibonacci action client.
- *
- * Initializes ROS 2, sets up logging, creates a state machine to manage action
- * states, and executes the Fibonacci action.
- *
- * @param argc Argument count.
- * @param argv Argument values.
- * @return Execution status code.
- * @exception std::exception if there is an error during execution.
- */
 int main(int argc, char *argv[]) {
 
   YASMIN_LOG_INFO("yasmin_action_client_demo");
@@ -2641,7 +2575,7 @@ int main(int argc, char *argv[]) {
                 });
 
   // Publisher for visualizing the state machine
-  yasmin_viewer::YasminViewerPub yasmin_pub("YASMIN_ACTION_CLIENT_DEMO", sm);
+  yasmin_viewer::YasminViewerPub yasmin_pub(sm, "YASMIN_ACTION_CLIENT_DEMO");
 
   // Create an initial blackboard and set the Fibonacci order
   std::shared_ptr<yasmin::blackboard::Blackboard> blackboard =
@@ -2666,12 +2600,12 @@ int main(int argc, char *argv[]) {
 
 #### Monitor Demo (FSM + ROS 2 Subscriber)
 
+<details>
+<summary>Click to expand</summary>
+
 ```shell
 ros2 run yasmin_demos monitor_demo
 ```
-
-<details>
-<summary>Click to expand</summary>
 
 ```cpp
 #include <iostream>
@@ -2690,7 +2624,6 @@ ros2 run yasmin_demos monitor_demo
 
 using std::placeholders::_1;
 using std::placeholders::_2;
-using namespace yasmin;
 
 /**
  * @class PrintOdometryState
@@ -2760,20 +2693,6 @@ public:
   };
 };
 
-/**
- * @brief Main function initializing ROS 2 and setting up the state machine.
- *
- * Initializes ROS 2, configures loggers, sets up the state machine with states
- * and transitions, and starts monitoring odometry data. The state machine will
- * cancel upon ROS 2 shutdown.
- *
- * @param argc Argument count.
- * @param argv Argument vector.
- * @return int Exit code.
- *
- * @exception std::exception Catches and logs any exceptions thrown by the state
- * machine.
- */
 int main(int argc, char *argv[]) {
 
   YASMIN_LOG_INFO("yasmin_monitor_demo");
@@ -2805,7 +2724,7 @@ int main(int argc, char *argv[]) {
       });
 
   // Publisher for visualizing the state machine's status
-  yasmin_viewer::YasminViewerPub yasmin_pub("YASMIN_MONITOR_DEMO", sm);
+  yasmin_viewer::YasminViewerPub yasmin_pub(sm, "YASMIN_MONITOR_DEMO");
 
   // Execute the state machine
   try {
@@ -2825,12 +2744,12 @@ int main(int argc, char *argv[]) {
 
 #### Publisher Demo (FSM + ROS 2 Publisher)
 
+<details>
+<summary>Click to expand</summary>
+
 ```shell
 ros2 run yasmin_demos publisher_demo
 ```
-
-<details>
-<summary>Click to expand</summary>
 
 ```cpp
 #include <iostream>
@@ -2850,7 +2769,6 @@ ros2 run yasmin_demos publisher_demo
 
 using std::placeholders::_1;
 using std::placeholders::_2;
-using namespace yasmin;
 
 /**
  * @class PublishIntState
@@ -2919,20 +2837,6 @@ check_count(std::shared_ptr<yasmin::blackboard::Blackboard> blackboard) {
   }
 }
 
-/**
- * @brief Main function initializing ROS 2 and setting up the state machine.
- *
- * Initializes ROS 2, configures loggers, sets up the state machine with states
- * and transitions, and starts monitoring odometry data. The state machine will
- * cancel upon ROS 2 shutdown.
- *
- * @param argc Argument count.
- * @param argv Argument vector.
- * @return int Exit code.
- *
- * @exception std::exception Catches and logs any exceptions thrown by the state
- * machine.
- */
 int main(int argc, char *argv[]) {
 
   YASMIN_LOG_INFO("yasmin_publisher_demo");
@@ -2966,7 +2870,7 @@ int main(int argc, char *argv[]) {
                  {"outcome2", "PUBLISHING_INT"}});
 
   // Publisher for visualizing the state machine's status
-  yasmin_viewer::YasminViewerPub yasmin_pub("YASMIN_PUBLISHER_DEMO", sm);
+  yasmin_viewer::YasminViewerPub yasmin_pub(sm, "YASMIN_PUBLISHER_DEMO");
 
   // Execute the state machine
   std::shared_ptr<yasmin::blackboard::Blackboard> blackboard =
@@ -2990,12 +2894,12 @@ int main(int argc, char *argv[]) {
 
 #### Parameters Demo (FSM + ROS 2 Parameters)
 
+<details>
+<summary>Click to expand</summary>
+
 ```shell
 ros2 run yasmin_demos parameters_demo --ros-args -p max_counter:=5
 ```
-
-<details>
-<summary>Click to expand</summary>
 
 ```cpp
 #include <chrono>
@@ -3011,8 +2915,6 @@ ros2 run yasmin_demos parameters_demo --ros-args -p max_counter:=5
 #include "yasmin_ros/get_parameters_state.hpp"
 #include "yasmin_ros/ros_logs.hpp"
 #include "yasmin_viewer/yasmin_viewer_pub.hpp"
-
-using namespace yasmin;
 
 /**
  * @brief Represents the "Foo" state in the state machine.
@@ -3092,18 +2994,6 @@ public:
   }
 };
 
-/**
- * @brief Main function that initializes the ROS 2 node and state machine.
- *
- * This function sets up the state machine, adds states, and handles
- * the execution flow, including logging and cleanup.
- *
- * @param argc Argument count from the command line.
- * @param argv Argument vector from the command line.
- * @return int Exit status of the program. Returns 0 on success.
- *
- * @throws std::exception If there is an error during state machine execution.
- */
 int main(int argc, char *argv[]) {
   YASMIN_LOG_INFO("yasmin_parameters_demo");
   rclcpp::init(argc, argv);
@@ -3144,7 +3034,7 @@ int main(int argc, char *argv[]) {
                 });
 
   // Publish state machine updates
-  yasmin_viewer::YasminViewerPub yasmin_pub("YASMIN_PARAMETERS_DEMO", sm);
+  yasmin_viewer::YasminViewerPub yasmin_pub(sm, "YASMIN_PARAMETERS_DEMO");
 
   // Execute the state machine
   try {
@@ -3162,13 +3052,353 @@ int main(int argc, char *argv[]) {
 
 </details>
 
-<a name="#YASMIN-Viewer"></a>
+#### Nav2 Demo (Hierarchical FSM + ROS 2 Action)
+
+<details>
+<summary>Click to expand</summary>
+
+```cpp
+#include <algorithm>
+#include <iostream>
+#include <map>
+#include <memory>
+#include <random>
+#include <string>
+#include <vector>
+
+#include "geometry_msgs/msg/pose.hpp"
+#include "nav2_msgs/action/navigate_to_pose.hpp"
+
+#include "yasmin/blackboard/blackboard.hpp"
+#include "yasmin/cb_state.hpp"
+#include "yasmin/logs.hpp"
+#include "yasmin/state_machine.hpp"
+#include "yasmin_ros/action_state.hpp"
+#include "yasmin_ros/basic_outcomes.hpp"
+#include "yasmin_ros/ros_logs.hpp"
+#include "yasmin_viewer/yasmin_viewer_pub.hpp"
+
+using std::placeholders::_1;
+using std::placeholders::_2;
+using NavigateToPose = nav2_msgs::action::NavigateToPose;
+using Pose = geometry_msgs::msg::Pose;
+
+// Constants for state outcomes
+const std::string HAS_NEXT = "has_next"; ///< Indicates there are more waypoints
+const std::string END = "end";           ///< Indicates no more waypoints
+
+/**
+ * @class Nav2State
+ * @brief ActionState for navigating to a specified pose using ROS 2 Navigation.
+ */
+class Nav2State : public yasmin_ros::ActionState<NavigateToPose> {
+public:
+  /**
+   * @brief Constructs a Nav2State object.
+   *
+   * Initializes the action state with the NavigateToPose action type,
+   * action name, and goal creation callback.
+   */
+  Nav2State()
+      : yasmin_ros::ActionState<NavigateToPose>(
+            "/navigate_to_pose",
+            std::bind(&Nav2State::create_goal_handler, this, _1)) {}
+
+  /**
+   * @brief Creates a goal for navigation based on the current pose in the
+   * blackboard.
+   *
+   * @param blackboard Shared pointer to the blackboard instance holding current
+   * state data.
+   * @return NavigateToPose::Goal The constructed goal for the navigation
+   * action.
+   */
+  NavigateToPose::Goal create_goal_handler(
+      std::shared_ptr<yasmin::blackboard::Blackboard> blackboard) {
+    NavigateToPose::Goal goal;
+    goal.pose.pose = blackboard->get<Pose>("pose");
+    goal.pose.header.frame_id = "map"; // Set the reference frame to 'map'
+    return goal;
+  }
+};
+
+/**
+ * @brief Initializes waypoints in the blackboard for navigation.
+ *
+ * @param blackboard Shared pointer to the blackboard instance to store
+ * waypoints.
+ * @return std::string Outcome indicating success (SUCCEED).
+ */
+std::string
+create_waypoints(std::shared_ptr<yasmin::blackboard::Blackboard> blackboard) {
+  std::map<std::string, std::vector<double>> waypoints = {
+      {"entrance", {1.25, 6.30, -0.78, 0.67}},
+      {"bathroom", {4.89, 1.64, 0.0, 1.0}},
+      {"livingroom", {1.55, 4.03, -0.69, 0.72}},
+      {"kitchen", {3.79, 6.77, 0.99, 0.12}},
+      {"bedroom", {7.50, 4.89, 0.76, 0.65}}};
+  blackboard->set<std::map<std::string, std::vector<double>>>("waypoints",
+                                                              waypoints);
+  return yasmin_ros::basic_outcomes::SUCCEED;
+}
+
+/**
+ * @brief Selects a random set of waypoints from the available waypoints.
+ *
+ * @param blackboard Shared pointer to the blackboard instance to store random
+ * waypoints.
+ * @return std::string Outcome indicating success (SUCCEED).
+ */
+std::string take_random_waypoint(
+    std::shared_ptr<yasmin::blackboard::Blackboard> blackboard) {
+  auto waypoints =
+      blackboard->get<std::map<std::string, std::vector<double>>>("waypoints");
+  int waypoints_num = blackboard->get<int>("waypoints_num");
+
+  std::vector<std::string> waypoint_names;
+  for (const auto &pair : waypoints) {
+    waypoint_names.push_back(pair.first);
+  }
+
+  // Randomly select waypoints_num waypoints
+  std::random_device rd;
+  std::mt19937 g(rd());
+  std::shuffle(waypoint_names.begin(), waypoint_names.end(), g);
+  std::vector<std::string> random_waypoints(
+      waypoint_names.begin(), waypoint_names.begin() + waypoints_num);
+
+  blackboard->set<std::vector<std::string>>("random_waypoints",
+                                            random_waypoints);
+  return yasmin_ros::basic_outcomes::SUCCEED;
+}
+
+/**
+ * @brief Retrieves the next waypoint from the list of random waypoints.
+ *
+ * Updates the blackboard with the pose of the next waypoint.
+ *
+ * @param blackboard Shared pointer to the blackboard instance holding current
+ * state data.
+ * @return std::string Outcome indicating whether there is a next waypoint
+ * (HAS_NEXT) or if navigation is complete (END).
+ */
+std::string
+get_next_waypoint(std::shared_ptr<yasmin::blackboard::Blackboard> blackboard) {
+  auto random_waypoints =
+      blackboard->get<std::vector<std::string>>("random_waypoints");
+  auto waypoints =
+      blackboard->get<std::map<std::string, std::vector<double>>>("waypoints");
+
+  if (random_waypoints.empty()) {
+    return END;
+  }
+
+  std::string wp_name = random_waypoints.back();
+  random_waypoints.pop_back();
+  blackboard->set<std::vector<std::string>>("random_waypoints",
+                                            random_waypoints);
+
+  auto wp = waypoints.at(wp_name);
+
+  Pose pose;
+  pose.position.x = wp[0];
+  pose.position.y = wp[1];
+  pose.orientation.z = wp[2];
+  pose.orientation.w = wp[3];
+
+  blackboard->set<Pose>("pose", pose);
+  blackboard->set<std::string>("text", "I have reached waypoint " + wp_name);
+
+  return HAS_NEXT;
+}
+
+int main(int argc, char *argv[]) {
+  YASMIN_LOG_INFO("yasmin_nav2_demo");
+  rclcpp::init(argc, argv);
+
+  // Set ROS 2 logs
+  yasmin_ros::set_ros_loggers();
+
+  // Create state machines
+  auto sm = std::make_shared<yasmin::StateMachine>(
+      std::initializer_list<std::string>{yasmin_ros::basic_outcomes::SUCCEED,
+                                         yasmin_ros::basic_outcomes::ABORT,
+                                         yasmin_ros::basic_outcomes::CANCEL});
+  auto nav_sm = std::make_shared<yasmin::StateMachine>(
+      std::initializer_list<std::string>{yasmin_ros::basic_outcomes::SUCCEED,
+                                         yasmin_ros::basic_outcomes::ABORT,
+                                         yasmin_ros::basic_outcomes::CANCEL});
+
+  // Cancel state machines on ROS 2 shutdown
+  rclcpp::on_shutdown([sm, nav_sm]() {
+    if (sm->is_running()) {
+      sm->cancel_state();
+    }
+    if (nav_sm->is_running()) {
+      nav_sm->cancel_state();
+    }
+  });
+
+  // Add states to the state machine
+  sm->add_state(
+      "CREATING_WAYPOINTS",
+      std::make_shared<yasmin::CbState>(
+          std::initializer_list<std::string>{
+              yasmin_ros::basic_outcomes::SUCCEED},
+          create_waypoints),
+      std::map<std::string, std::string>{
+          {yasmin_ros::basic_outcomes::SUCCEED, "TAKING_RANDOM_WAYPOINTS"}});
+  sm->add_state("TAKING_RANDOM_WAYPOINTS",
+                std::make_shared<yasmin::CbState>(
+                    std::initializer_list<std::string>{
+                        yasmin_ros::basic_outcomes::SUCCEED},
+                    take_random_waypoint),
+                std::map<std::string, std::string>{
+                    {yasmin_ros::basic_outcomes::SUCCEED, "NAVIGATING"}});
+
+  nav_sm->add_state(
+      "GETTING_NEXT_WAYPOINT",
+      std::make_shared<yasmin::CbState>(
+          std::initializer_list<std::string>{END, HAS_NEXT}, get_next_waypoint),
+      std::map<std::string, std::string>{
+          {END, yasmin_ros::basic_outcomes::SUCCEED},
+          {HAS_NEXT, "NAVIGATING"}});
+  nav_sm->add_state(
+      "NAVIGATING", std::make_shared<Nav2State>(),
+      std::map<std::string, std::string>{
+          {yasmin_ros::basic_outcomes::SUCCEED, "GETTING_NEXT_WAYPOINT"},
+          {yasmin_ros::basic_outcomes::CANCEL,
+           yasmin_ros::basic_outcomes::CANCEL},
+          {yasmin_ros::basic_outcomes::ABORT,
+           yasmin_ros::basic_outcomes::ABORT}});
+
+  sm->add_state(
+      "NAVIGATING", nav_sm,
+      std::map<std::string, std::string>{{yasmin_ros::basic_outcomes::SUCCEED,
+                                          yasmin_ros::basic_outcomes::SUCCEED},
+                                         {yasmin_ros::basic_outcomes::CANCEL,
+                                          yasmin_ros::basic_outcomes::CANCEL},
+                                         {yasmin_ros::basic_outcomes::ABORT,
+                                          yasmin_ros::basic_outcomes::ABORT}});
+
+  // Publish FSM information for visualization
+  yasmin_viewer::YasminViewerPub yasmin_pub(sm, "YASMIN_NAV2_DEMO");
+
+  // Execute the state machine
+  auto blackboard = std::make_shared<yasmin::blackboard::Blackboard>();
+  blackboard->set<int>("waypoints_num",
+                       2); // Set the number of waypoints to navigate
+
+  try {
+    std::string outcome = (*sm.get())(blackboard);
+    YASMIN_LOG_INFO(outcome.c_str());
+  } catch (const std::exception &e) {
+    YASMIN_LOG_WARN(e.what());
+  }
+
+  rclcpp::shutdown();
+
+  return 0;
+}
+```
+
+</details>
+
+#### Factory Demo (Plugins)
+
+<details>
+<summary>Click to expand</summary>
+
+> **Note:** When mixing Python and C++ states in the same state machine, they can communicate through the blackboard, but only with primitive data types: `int`, `float`, `bool`, and `string`. Complex objects or ROS messages cannot be directly shared between Python and C++ states.
+
+```shell
+ros2 run yasmin_demos factory_demo
+```
+
+```xml
+<StateMachine outcomes="outcome4">
+    <State name="Foo" type="py" module="yasmin_demos.foo_state" class="FooState">
+        <Transition from="outcome1" to="Bar"/>
+        <Transition from="outcome2" to="outcome4"/>
+    </State>
+    <State name="Bar" type="cpp" class="yasmin_demos/BarState">
+        <Transition from="outcome3" to="Foo"/>
+    </State>
+</StateMachine>
+```
+
+```cpp
+#include <iostream>
+#include <memory>
+#include <string>
+
+#include "ament_index_cpp/get_package_share_directory.hpp"
+#include "rclcpp/rclcpp.hpp"
+#include "yasmin/state_machine.hpp"
+#include "yasmin_factory/yasmin_factory.hpp"
+#include "yasmin_ros/ros_logs.hpp"
+
+int main(int argc, char *argv[]) {
+  YASMIN_LOG_INFO("yasmin_factory_demo");
+  rclcpp::init(argc, argv);
+
+  // Set up ROS 2 loggers
+  yasmin_ros::set_ros_loggers();
+
+  std::string outcome;
+
+  // Create the factory in a scope
+  yasmin_factory::YasminFactory factory;
+
+  // Load state machine from XML file
+  std::string xml_file =
+      ament_index_cpp::get_package_share_directory("yasmin_demos") +
+      "/state_machines/demo_2.xml";
+
+  // Create the state machine from the XML file
+  auto sm = factory.create_sm_from_file(xml_file);
+
+  // Execute the state machine
+  try {
+    std::string outcome = (*sm.get())();
+    YASMIN_LOG_INFO(outcome.c_str());
+  } catch (const std::exception &e) {
+    YASMIN_LOG_WARN(e.what());
+  }
+
+  // Shutdown ROS 2
+  rclcpp::shutdown();
+  return 0;
+}
+```
+
+</details>
+
+# YASMIN Editor
+
+The **YASMIN Editor** is a graphical user interface application for building YASMIN state machines using state plugins. It enables intuitive creation of state machines through drag-and-drop functionality, allowing you to:
+
+- Load Python and C++ states
+- Load XML state machines
+- Define transitions between states
+- Create outcomes
+- Visualize state machine structure
+
+State machines can be exported and saved in XML format for reuse and sharing.
+
+![YASMIN Editor Interface](./docs/editor.png)
+
+### Getting Started
+
+```shell
+ros2 run yasmin_editor yasmin_editor
+```
 
 ## YASMIN Viewer
 
 The **YASMIN Viewer** provides a convenient way to monitor **YASMIN**'s Finite State Machines (FSM). It is built using **Flask** and **ReactJS** and includes a filter to focus on a single FSM at a time.
 
-![](./docs/viewer.gif)
+![YASMIN Viewer](./docs/viewer.gif)
 
 ### Getting Started
 
@@ -3210,7 +3440,6 @@ pages="528--539",
 abstract="State machines are a common mechanism for defining behaviors in robots where each behavior is based on identifiable stages. There are several libraries available for easing the implementation of state machines in ROS 1, however, the community was focused on SMACH or SMACC. Although these tools are still predominant, there are fewer alternatives for ROS 2. Besides, Behavior Trees are spreading fast, but there is a niche for using State Machines. Here, YASMIN is presented as yet another library specifically designed for ROS 2 for easing the design of robotic behaviors using state machines. It is available in C++ and Python, and provides some default states to speed up the development, in addition to a web viewer for monitoring the execution of the system and helping in the debugging.",
 isbn="978-3-031-21062-4"
 }
-
 ```
 
 ```bibtex

@@ -20,6 +20,7 @@ from threading import Thread
 from typing import List, Dict
 
 from flask import Flask
+from flask_socketio import SocketIO
 from waitress import serve
 from expiringdict import ExpiringDict
 
@@ -31,30 +32,18 @@ import ament_index_python
 from yasmin_msgs.msg import StateMachine, State, Transition
 
 
-class YasminFsmViewerNode(Node):
+class YasminViewerNode(Node):
     """
     A ROS 2 node that serves as a viewer for the finite state machines (FSMs)
     using a Flask web server.
 
     This class subscribes to FSM updates and serves them over HTTP. It utilizes
     a dictionary with expiring entries to manage the FSM data.
-
-    Attributes:
-        __fsm_dict (ExpiringDict): A dictionary that stores FSM data with
-                                    automatic expiration.
-
-    Methods:
-        start_backend_server(): Initializes and starts the Flask server.
-        start_subscriber(): Subscribes to the FSM state updates.
-        transition_msg_to_list(tansitions): Converts a list of transitions to a dictionary.
-        state_msg_to_dict(msg): Converts a State message to a dictionary.
-        msg_to_dict(msg): Converts a StateMachine message to a list of dictionaries.
-        fsm_viewer_cb(msg): Callback function for processing FSM updates.
     """
 
     def __init__(self) -> None:
         """
-        Initializes the YasminFsmViewerNode node.
+        Initializes the YasminViewerNode node.
 
         Declares parameters for the host and port, sets up the expiring dictionary,
         starts the subscriber thread, and initializes the backend server.
@@ -70,14 +59,17 @@ class YasminFsmViewerNode(Node):
             parameters=[
                 ("host", "localhost"),
                 ("port", 5000),
+                ("msg_per_second", 30),
             ],
         )
 
         # Start the subscriber in a separate thread
-        thread_subscriber = Thread(target=self.start_subscriber)
+        self.emit_timer = None
+        thread_subscriber = Thread(target=self.start_ros)
         thread_subscriber.start()
 
         # Start the backend server to serve FSM data
+        self.socketio: SocketIO = None
         self.start_backend_server()
 
     def start_backend_server(self) -> None:
@@ -95,28 +87,21 @@ class YasminFsmViewerNode(Node):
             static_url_path="/",
         )
 
+        # Initialize SocketIO
+        self.socketio = SocketIO(app, cors_allowed_origins="*")
+
         @app.route("/")
         def index():
             """Serves the index.html file."""
             return app.send_static_file("index.html")
 
-        @app.route("/get_fsms", methods=["GET"])
-        def get_fsms():
-            """Returns the current FSMs as JSON."""
-            return json.dumps(self.__fsm_dict)
+        @self.socketio.on("connect")
+        def handle_connect():
+            self.get_logger().info("Client connected")
 
-        @app.route("/get_fsm/<fsm_name>", methods=["GET"])
-        def get_fsm(fsm_name):
-            """
-            Returns the specified FSM's data as JSON.
-
-            :param fsm_name: The name of the FSM to retrieve.
-            :return: JSON representation of the FSM data or an empty JSON object.
-            """
-            if fsm_name in self.__fsm_dict:
-                return json.dumps(self.__fsm_dict[fsm_name])
-
-            return json.dumps({})
+        @self.socketio.on("disconnect")
+        def handle_disconnect():
+            self.get_logger().info("Client disconnected")
 
         _host = str(self.get_parameter("host").value)
         _port = int(self.get_parameter("port").value)
@@ -124,7 +109,7 @@ class YasminFsmViewerNode(Node):
         self.get_logger().info(f"Started Yasmin viewer on http://{_host}:{str(_port)}")
         serve(app, host=_host, port=_port)
 
-    def start_subscriber(self) -> None:
+    def start_ros(self) -> None:
         """
         Subscribes to the FSM state updates and starts the ROS spinning.
 
@@ -134,6 +119,9 @@ class YasminFsmViewerNode(Node):
         :raises ExternalShutdownException: If the ROS 2 node is externally shutdown.
         """
         self.create_subscription(StateMachine, "/fsm_viewer", self.fsm_viewer_cb, 10)
+        self.emit_timer = self.create_timer(
+            1 / self.get_parameter("msg_per_second").value, self.emit_fsm_data
+        )
 
         try:
             rclpy.spin(self)
@@ -191,16 +179,18 @@ class YasminFsmViewerNode(Node):
         if msg.states:
             self.__fsm_dict[msg.states[0].name] = self.msg_to_dict(msg)
 
+    def emit_fsm_data(self) -> None:
+        """
+        Emits the current FSM data to connected clients via socket.io.
+        """
+        if self.socketio:
+            self.socketio.emit("fsms_update", json.dumps(self.__fsm_dict))
+
 
 def main() -> None:
-    """
-    Main entry point for the YasminFsmViewerNode node.
-
-    Initializes the ROS 2 communication and creates an instance of
-    YasminFsmViewerNode.
-    """
     rclpy.init()
-    YasminFsmViewerNode()
+    node = YasminViewerNode()
+    node.destroy_node()
 
 
 if __name__ == "__main__":

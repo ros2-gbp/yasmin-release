@@ -19,9 +19,7 @@ import rclpy
 from example_interfaces.srv import AddTwoInts
 
 import yasmin
-from yasmin import CbState
-from yasmin import Blackboard
-from yasmin import StateMachine
+from yasmin import CbState, Blackboard, StateMachine
 from yasmin_ros import ServiceState
 from yasmin_ros import set_ros_loggers
 from yasmin_ros.basic_outcomes import SUCCEED, ABORT
@@ -124,16 +122,7 @@ def print_sum(blackboard: Blackboard) -> str:
     return SUCCEED
 
 
-def main():
-    """
-    The main function to execute the finite state machine (FSM).
-
-    This function initializes the ROS 2 environment, sets up logging,
-    creates the FSM with defined states, and executes the FSM.
-
-    Raises:
-        KeyboardInterrupt: If the user interrupts the program.
-    """
+def main() -> None:
     yasmin.YASMIN_LOG_INFO("yasmin_service_client_demo")
 
     # Init ROS 2
@@ -169,7 +158,7 @@ def main():
     )
 
     # Publish FSM info
-    YasminViewerPub("YASMIN_SERVICE_CLIENT_DEMO", sm)
+    viewer = YasminViewerPub(sm, "YASMIN_SERVICE_CLIENT_DEMO")
 
     # Execute FSM
     try:
@@ -178,10 +167,13 @@ def main():
     except KeyboardInterrupt:
         if sm.is_running():
             sm.cancel_state()
+    finally:
+        viewer.cleanup()
+        del sm
 
-    # Shutdown ROS 2
-    if rclpy.ok():
-        rclpy.shutdown()
+        # Shutdown ROS 2 if it's running
+        if rclpy.ok():
+            rclpy.shutdown()
 
 
 if __name__ == "__main__":

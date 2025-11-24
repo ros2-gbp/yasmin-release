@@ -20,8 +20,7 @@ from rclpy.qos import qos_profile_sensor_data
 from nav_msgs.msg import Odometry
 
 import yasmin
-from yasmin import Blackboard
-from yasmin import StateMachine
+from yasmin import Blackboard, StateMachine
 from yasmin_ros import MonitorState
 from yasmin_ros import set_ros_loggers
 from yasmin_ros.basic_outcomes import TIMEOUT, CANCEL
@@ -34,19 +33,6 @@ class PrintOdometryState(MonitorState):
 
     This state monitors Odometry messages from the specified ROS topic,
     logging them and transitioning based on the number of messages received.
-
-    Attributes:
-        times (int): The number of messages to monitor before transitioning
-                     to the next outcome.
-
-    Args:
-        times (int): The initial count of how many Odometry messages to
-                     process before changing state.
-
-    Methods:
-        monitor_handler(blackboard: Blackboard, msg: Odometry) -> str:
-            Handles incoming Odometry messages, logging the message and
-            returning the appropriate outcome based on the remaining count.
     """
 
     def __init__(self, times: int) -> None:
@@ -97,18 +83,7 @@ class PrintOdometryState(MonitorState):
         return "outcome1"
 
 
-def main():
-    """
-    Main function to initialize and run the ROS 2 state machine.
-
-    This function initializes ROS 2, sets up logging, creates a finite state
-    machine (FSM), adds states to the FSM, and executes the FSM. It handles
-    cleanup and shutdown of ROS 2 gracefully.
-
-    Exceptions:
-        KeyboardInterrupt: Caught to allow graceful cancellation of the
-                          state machine during execution.
-    """
+def main() -> None:
     yasmin.YASMIN_LOG_INFO("yasmin_monitor_demo")
 
     # Initialize ROS 2
@@ -133,7 +108,7 @@ def main():
     )
 
     # Publish FSM information
-    YasminViewerPub("YASMIN_MONITOR_DEMO", sm)
+    viewer = YasminViewerPub(sm, "YASMIN_MONITOR_DEMO")
 
     # Execute FSM
     try:
@@ -142,10 +117,13 @@ def main():
     except KeyboardInterrupt:
         if sm.is_running():
             sm.cancel_state()
+    finally:
+        viewer.cleanup()
+        del sm
 
-    # Shutdown ROS 2
-    if rclpy.ok():
-        rclpy.shutdown()
+        # Shutdown ROS 2 if it's running
+        if rclpy.ok():
+            rclpy.shutdown()
 
 
 if __name__ == "__main__":

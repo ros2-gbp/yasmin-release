@@ -1,0 +1,12 @@
+Source: ros-jazzy-yasmin-editor
+Section: misc
+Priority: optional
+Maintainer: Miguel Ángel González Santamarta <mgons@unileon.es>
+Build-Depends: debhelper (>= 9.0.0), ros-jazzy-ament-cmake, ros-jazzy-ament-cmake-python, ros-jazzy-rclpy, ros-jazzy-ros-environment, ros-jazzy-yasmin, ros-jazzy-yasmin-factory, ros-jazzy-ros-workspace
+Homepage: 
+Standards-Version: 3.9.2
+
+Package: ros-jazzy-yasmin-editor
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, pyqt5-dev, python3-lxml, python3-pyqt5, python3-pyqt5.qtsvg, python3-sip-dev, python3-tqdm, ros-jazzy-rclpy, ros-jazzy-yasmin, ros-jazzy-yasmin-factory, ros-jazzy-ros-workspace
+Description: Editor for YASMIN (Yet Another State MachINe)

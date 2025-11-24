@@ -143,22 +143,7 @@ def print_result(blackboard: Blackboard) -> str:
     return SUCCEED
 
 
-def main():
-    """
-    Main function to execute the ROS 2 action client demo.
-
-    This function initializes the ROS 2 client, sets up the finite state
-    machine, adds the states, and starts the action processing.
-
-    Args:
-        None
-
-    Returns:
-        None
-
-    Raises:
-        KeyboardInterrupt: If the user interrupts the execution.
-    """
+def main() -> None:
     yasmin.YASMIN_LOG_INFO("yasmin_action_client_demo")
 
     # Initialize ROS 2
@@ -189,7 +174,7 @@ def main():
     )
 
     # Publish FSM information
-    YasminViewerPub("YASMIN_ACTION_CLIENT_DEMO", sm)
+    viewer = YasminViewerPub(sm, "YASMIN_ACTION_CLIENT_DEMO")
 
     # Create an initial blackboard with the input value
     blackboard = Blackboard()
@@ -202,10 +187,13 @@ def main():
     except KeyboardInterrupt:
         if sm.is_running():
             sm.cancel_state()  # Cancel the state if interrupted
+    finally:
+        viewer.cleanup()
+        del sm
 
-    # Shutdown ROS 2
-    if rclpy.ok():
-        rclpy.shutdown()
+        # Shutdown ROS 2 if it's running
+        if rclpy.ok():
+            rclpy.shutdown()
 
 
 if __name__ == "__main__":

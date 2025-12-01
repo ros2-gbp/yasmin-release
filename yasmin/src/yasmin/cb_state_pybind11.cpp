@@ -17,14 +17,14 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 
-#include "yasmin/blackboard/blackboard_pywrapper.hpp"
+#include "yasmin/blackboard_pywrapper.hpp"
 #include "yasmin/cb_state.hpp"
 #include "yasmin/pybind11_utils.hpp"
 
 namespace py = pybind11;
 
 // Declare that BlackboardPyWrapper is defined in another module
-PYBIND11_MAKE_OPAQUE(yasmin::blackboard::BlackboardPyWrapper);
+PYBIND11_MAKE_OPAQUE(yasmin::BlackboardPyWrapper);
 
 PYBIND11_MODULE(cb_state, m) {
   m.doc() = "Python bindings for yasmin::CbState";
@@ -55,9 +55,11 @@ PYBIND11_MODULE(cb_state, m) {
            py::arg("outcomes"), py::arg("callback"),
            "Constructs a CbState object with outcomes (list) and a callback "
            "function")
+      // Execute method
       .def("execute", &yasmin::CbState::execute,
            "Execute the callback function with the provided blackboard",
            py::arg("blackboard"))
+      // String representation
       .def("to_string", &yasmin::CbState::to_string,
            "Convert the CbState to a string representation")
       .def("__str__", &yasmin::CbState::to_string);

@@ -1,0 +1,12 @@
+Source: ros-jazzy-yasmin-viewer
+Section: misc
+Priority: optional
+Maintainer: miguel <mgons@unileon.es>
+Build-Depends: debhelper (>= 9.0.0), python3-pytest <!nocheck>, ros-jazzy-ament-cmake, ros-jazzy-ament-cmake-python, ros-jazzy-ament-copyright <!nocheck>, ros-jazzy-ament-flake8 <!nocheck>, ros-jazzy-ament-pep257 <!nocheck>, ros-jazzy-rclcpp, ros-jazzy-rclpy, ros-jazzy-yasmin, ros-jazzy-yasmin-msgs, ros-jazzy-yasmin-ros, ros-jazzy-ros-workspace
+Homepage: 
+Standards-Version: 3.9.2
+
+Package: ros-jazzy-yasmin-viewer
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, python3-expiringdict, python3-flask, python3-flask-socketio, python3-waitress, ros-jazzy-rclcpp, ros-jazzy-rclpy, ros-jazzy-yasmin, ros-jazzy-yasmin-msgs, ros-jazzy-yasmin-ros, ros-jazzy-ros-workspace
+Description: YASMIN viewer for FSM

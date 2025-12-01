@@ -15,7 +15,7 @@
 
 #include "yasmin_factory/yasmin_factory.hpp"
 
-#include "yasmin/blackboard/blackboard_pywrapper.hpp"
+#include "yasmin/blackboard_pywrapper.hpp"
 #include <algorithm>
 #include <cctype>
 #include <filesystem>
@@ -35,8 +35,8 @@ PythonStateHolder::PythonStateHolder(std::shared_ptr<yasmin::State> cpp_state,
     : yasmin::State(cpp_state->get_outcomes()), cpp_state_(cpp_state),
       py_state_(py_state) {}
 
-std::string PythonStateHolder::execute(
-    std::shared_ptr<yasmin::blackboard::Blackboard> blackboard) {
+std::string
+PythonStateHolder::execute(std::shared_ptr<yasmin::Blackboard> blackboard) {
   return this->cpp_state_->execute(blackboard);
 }
 
@@ -72,7 +72,8 @@ void YasminFactory::initialize_python() {
     // Import sys to ensure Python path is set up
     try {
       py::gil_scoped_acquire acquire;
-#if __has_include("rclcpp/version.h")
+#if PYBIND11_VERSION_MAJOR > 2 ||                                              \
+    (PYBIND11_VERSION_MAJOR == 2 && PYBIND11_VERSION_MINOR >= 6)
       py::module_::import("sys");
 #else
       py::module::import("sys");
@@ -90,7 +91,8 @@ YasminFactory::create_python_state(const std::string &module_name,
   try {
     py::gil_scoped_acquire acquire;
     // Import the yasmin.state module to ensure the State class is registered
-#if __has_include("rclcpp/version.h")
+#if PYBIND11_VERSION_MAJOR > 2 ||                                              \
+    (PYBIND11_VERSION_MAJOR == 2 && PYBIND11_VERSION_MINOR >= 6)
     py::module_::import("yasmin.state");
     py::module_ module = py::module_::import(module_name.c_str());
 #else

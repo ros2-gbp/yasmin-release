@@ -152,9 +152,6 @@ from yasmin_viewer import YasminViewerPub
 class FooState(State):
     """
     Represents the Foo state in the state machine.
-
-    Attributes:
-        counter (int): Counter to track the number of executions of this state.
     """
 
     def __init__(self) -> None:
@@ -443,9 +440,6 @@ from yasmin_viewer import YasminViewerPub
 class FooState(State):
     """
     Represents the Foo state in the state machine.
-
-    Attributes:
-        counter (int): Counter to track the number of executions of this state.
     """
 
     def __init__(self) -> None:
@@ -636,11 +630,6 @@ class AddTwoIntsState(ServiceState):
     This class is a state in a finite state machine that sends a request
     to the AddTwoInts service, retrieves the response, and updates the
     blackboard with the result.
-
-    Attributes:
-        service_type (type): The service type being used (AddTwoInts).
-        service_name (str): The name of the service.
-        outcomes (list): The list of possible outcomes for this state.
     """
 
     def __init__(self) -> None:
@@ -816,9 +805,6 @@ class FibonacciState(ActionState):
 
     Inherits from ActionState and implements methods to handle the
     Fibonacci action in a finite state machine.
-
-    Attributes:
-        None
     """
 
     def __init__(self) -> None:
@@ -828,12 +814,6 @@ class FibonacciState(ActionState):
         Sets up the action type and the action name for the Fibonacci
         action. Initializes goal, response handler, and feedback
         processing callbacks.
-
-        Args:
-            None
-
-        Returns:
-            None
         """
         super().__init__(
             Fibonacci,  # action type
@@ -1014,19 +994,6 @@ class PrintOdometryState(MonitorState):
 
     This state monitors Odometry messages from the specified ROS topic,
     logging them and transitioning based on the number of messages received.
-
-    Attributes:
-        times (int): The number of messages to monitor before transitioning
-                     to the next outcome.
-
-    Args:
-        times (int): The initial count of how many Odometry messages to
-                     process before changing state.
-
-    Methods:
-        monitor_handler(blackboard: Blackboard, msg: Odometry) -> str:
-            Handles incoming Odometry messages, logging the message and
-            returning the appropriate outcome based on the remaining count.
     """
 
     def __init__(self, times: int) -> None:
@@ -1301,9 +1268,6 @@ from yasmin_viewer import YasminViewerPub
 class FooState(State):
     """
     Represents the Foo state in the state machine.
-
-    Attributes:
-        counter (int): Counter to track the number of executions of this state.
     """
 
     def __init__(self) -> None:
@@ -1470,13 +1434,6 @@ END = "end"  ##< Indicates no more waypoints
 class Nav2State(ActionState):
     """
     ActionState for navigating to a specified pose using ROS 2 Navigation.
-
-    Attributes:
-        None
-
-    Methods:
-        create_goal_handler(blackboard: Blackboard) -> NavigateToPose.Goal:
-            Creates the navigation goal from the blackboard.
     """
 
     def __init__(self) -> None:
@@ -1790,7 +1747,7 @@ public:
    * @return std::string The outcome of the execution: "outcome1" or "outcome2".
    */
   std::string
-  execute(std::shared_ptr<yasmin::blackboard::Blackboard> blackboard) override {
+  execute(std::shared_ptr<yasmin::Blackboard> blackboard) override {
     YASMIN_LOG_INFO("Executing state FOO");
     std::this_thread::sleep_for(std::chrono::seconds(3));
 
@@ -1829,7 +1786,7 @@ public:
    * @return std::string The outcome of the execution: "outcome3".
    */
   std::string
-  execute(std::shared_ptr<yasmin::blackboard::Blackboard> blackboard) override {
+  execute(std::shared_ptr<yasmin::Blackboard> blackboard) override {
     YASMIN_LOG_INFO("Executing state BAR");
     std::this_thread::sleep_for(std::chrono::seconds(3));
 
@@ -1929,7 +1886,7 @@ public:
    * @return std::string The outcome of the execution, which can be SUCCEED.
    */
   std::string
-  execute(std::shared_ptr<yasmin::blackboard::Blackboard> blackboard) override {
+  execute(std::shared_ptr<yasmin::Blackboard> blackboard) override {
     std::string data = blackboard->get<std::string>("foo_data");
     YASMIN_LOG_INFO("%s", data.c_str());
     blackboard->set<std::string>("foo_out_data", data);
@@ -1956,7 +1913,7 @@ public:
    * @return std::string The outcome of the execution: "outcome3".
    */
   std::string
-  execute(std::shared_ptr<yasmin::blackboard::Blackboard> blackboard) override {
+  execute(std::shared_ptr<yasmin::Blackboard> blackboard) override {
     std::string datga = blackboard->get<std::string>("bar_data");
     YASMIN_LOG_INFO("%s", datga.c_str());
     return yasmin_ros::basic_outcomes::SUCCEED;
@@ -1971,7 +1928,7 @@ int main(int argc, char *argv[]) {
   yasmin_ros::set_ros_loggers();
 
   // Create blackboard
-  auto blackboard = std::make_shared<yasmin::blackboard::Blackboard>();
+  auto blackboard = std::make_shared<yasmin::Blackboard>();
   blackboard->set<std::string>("msg1", "test1");
   blackboard->set<std::string>("msg2", "test2");
 
@@ -2081,7 +2038,7 @@ public:
    * @return std::string The outcome of the execution: "outcome1" or "outcome2".
    */
   std::string
-  execute(std::shared_ptr<yasmin::blackboard::Blackboard> blackboard) override {
+  execute(std::shared_ptr<yasmin::Blackboard> blackboard) override {
     YASMIN_LOG_INFO("Executing state FOO");
     std::this_thread::sleep_for(std::chrono::seconds(2));
 
@@ -2127,7 +2084,7 @@ public:
    * @return std::string The outcome of the execution: "outcome3".
    */
   std::string
-  execute(std::shared_ptr<yasmin::blackboard::Blackboard> blackboard) override {
+  execute(std::shared_ptr<yasmin::Blackboard> blackboard) override {
     YASMIN_LOG_INFO("Executing state BAR");
     std::this_thread::sleep_for(std::chrono::seconds(4));
 
@@ -2246,7 +2203,7 @@ using std::placeholders::_2;
  * @return std::string Outcome indicating success or failure.
  */
 std::string
-set_ints(std::shared_ptr<yasmin::blackboard::Blackboard> blackboard) {
+set_ints(std::shared_ptr<yasmin::Blackboard> blackboard) {
   blackboard->set<int>("a", 10);
   blackboard->set<int>("b", 5);
   return yasmin_ros::basic_outcomes::SUCCEED;
@@ -2261,7 +2218,7 @@ set_ints(std::shared_ptr<yasmin::blackboard::Blackboard> blackboard) {
  * @return std::string Outcome indicating success.
  */
 std::string
-print_sum(std::shared_ptr<yasmin::blackboard::Blackboard> blackboard) {
+print_sum(std::shared_ptr<yasmin::Blackboard> blackboard) {
   std::stringstream ss;
   ss << "Sum: " << blackboard->get<int>("sum");
   YASMIN_LOG_INFO(ss.str().c_str());
@@ -2303,7 +2260,7 @@ public:
    */
   example_interfaces::srv::AddTwoInts::Request::SharedPtr
   create_request_handler(
-      std::shared_ptr<yasmin::blackboard::Blackboard> blackboard) {
+      std::shared_ptr<yasmin::Blackboard> blackboard) {
 
     auto request =
         std::make_shared<example_interfaces::srv::AddTwoInts::Request>();
@@ -2324,7 +2281,7 @@ public:
    * @return std::string Outcome indicating success.
    */
   std::string response_handler(
-      std::shared_ptr<yasmin::blackboard::Blackboard> blackboard,
+      std::shared_ptr<yasmin::Blackboard> blackboard,
       example_interfaces::srv::AddTwoInts::Response::SharedPtr response) {
 
     blackboard->set<int>("sum", response->sum);
@@ -2437,7 +2394,7 @@ using Fibonacci = example_interfaces::action::Fibonacci;
  * @return The outcome status indicating success.
  */
 std::string
-print_result(std::shared_ptr<yasmin::blackboard::Blackboard> blackboard) {
+print_result(std::shared_ptr<yasmin::Blackboard> blackboard) {
 
   auto fibo_res = blackboard->get<std::vector<int>>("fibo_res");
 
@@ -2485,7 +2442,7 @@ public:
    * @return The Fibonacci goal with the specified order.
    */
   Fibonacci::Goal create_goal_handler(
-      std::shared_ptr<yasmin::blackboard::Blackboard> blackboard) {
+      std::shared_ptr<yasmin::Blackboard> blackboard) {
 
     auto goal = Fibonacci::Goal();
     goal.order = blackboard->get<int>("n");
@@ -2503,7 +2460,7 @@ public:
    * @return The outcome status indicating success.
    */
   std::string
-  response_handler(std::shared_ptr<yasmin::blackboard::Blackboard> blackboard,
+  response_handler(std::shared_ptr<yasmin::Blackboard> blackboard,
                    Fibonacci::Result::SharedPtr response) {
 
     blackboard->set<std::vector<int>>("fibo_res", response->sequence);
@@ -2521,7 +2478,7 @@ public:
    * sequence.
    */
   void
-  print_feedback(std::shared_ptr<yasmin::blackboard::Blackboard> blackboard,
+  print_feedback(std::shared_ptr<yasmin::Blackboard> blackboard,
                  std::shared_ptr<const Fibonacci::Feedback> feedback) {
     (void)blackboard;
 
@@ -2578,8 +2535,8 @@ int main(int argc, char *argv[]) {
   yasmin_viewer::YasminViewerPub yasmin_pub(sm, "YASMIN_ACTION_CLIENT_DEMO");
 
   // Create an initial blackboard and set the Fibonacci order
-  std::shared_ptr<yasmin::blackboard::Blackboard> blackboard =
-      std::make_shared<yasmin::blackboard::Blackboard>();
+  std::shared_ptr<yasmin::Blackboard> blackboard =
+      std::make_shared<yasmin::Blackboard>();
   blackboard->set<int>("n", 10);
 
   // Execute the state machine
@@ -2673,7 +2630,7 @@ public:
    *         or "outcome2" to transition out of the state.
    */
   std::string
-  monitor_handler(std::shared_ptr<yasmin::blackboard::Blackboard> blackboard,
+  monitor_handler(std::shared_ptr<yasmin::Blackboard> blackboard,
                   std::shared_ptr<nav_msgs::msg::Odometry> msg) {
 
     (void)blackboard; // blackboard is not used in this implementation
@@ -2800,7 +2757,7 @@ public:
    * @return A new Int message.
    */
   std_msgs::msg::Int32
-  create_int_msg(std::shared_ptr<yasmin::blackboard::Blackboard> blackboard) {
+  create_int_msg(std::shared_ptr<yasmin::Blackboard> blackboard) {
 
     int counter = blackboard->get<int>("counter");
     counter++;
@@ -2824,7 +2781,7 @@ public:
  * @return A string representing the outcome.
  */
 std::string
-check_count(std::shared_ptr<yasmin::blackboard::Blackboard> blackboard) {
+check_count(std::shared_ptr<yasmin::Blackboard> blackboard) {
 
   // Sleep for 1 second to simulate some processing time
   rclcpp::sleep_for(std::chrono::seconds(1));
@@ -2873,8 +2830,8 @@ int main(int argc, char *argv[]) {
   yasmin_viewer::YasminViewerPub yasmin_pub(sm, "YASMIN_PUBLISHER_DEMO");
 
   // Execute the state machine
-  std::shared_ptr<yasmin::blackboard::Blackboard> blackboard =
-      std::make_shared<yasmin::blackboard::Blackboard>();
+  std::shared_ptr<yasmin::Blackboard> blackboard =
+      std::make_shared<yasmin::Blackboard>();
   blackboard->set<int>("counter", 0);
   blackboard->set<int>("max_count", 10);
   try {
@@ -2944,7 +2901,7 @@ public:
    * @return std::string The outcome of the execution: "outcome1" or "outcome2".
    */
   std::string
-  execute(std::shared_ptr<yasmin::blackboard::Blackboard> blackboard) override {
+  execute(std::shared_ptr<yasmin::Blackboard> blackboard) override {
     YASMIN_LOG_INFO("Executing state FOO");
     std::this_thread::sleep_for(std::chrono::seconds(3));
 
@@ -2984,7 +2941,7 @@ public:
    * @return std::string The outcome of the execution: "outcome3".
    */
   std::string
-  execute(std::shared_ptr<yasmin::blackboard::Blackboard> blackboard) override {
+  execute(std::shared_ptr<yasmin::Blackboard> blackboard) override {
     YASMIN_LOG_INFO("Executing state BAR");
     std::this_thread::sleep_for(std::chrono::seconds(3));
 
@@ -3069,7 +3026,7 @@ int main(int argc, char *argv[]) {
 #include "geometry_msgs/msg/pose.hpp"
 #include "nav2_msgs/action/navigate_to_pose.hpp"
 
-#include "yasmin/blackboard/blackboard.hpp"
+#include "yasmin/blackboard.hpp"
 #include "yasmin/cb_state.hpp"
 #include "yasmin/logs.hpp"
 #include "yasmin/state_machine.hpp"
@@ -3114,7 +3071,7 @@ public:
    * action.
    */
   NavigateToPose::Goal create_goal_handler(
-      std::shared_ptr<yasmin::blackboard::Blackboard> blackboard) {
+      std::shared_ptr<yasmin::Blackboard> blackboard) {
     NavigateToPose::Goal goal;
     goal.pose.pose = blackboard->get<Pose>("pose");
     goal.pose.header.frame_id = "map"; // Set the reference frame to 'map'
@@ -3130,7 +3087,7 @@ public:
  * @return std::string Outcome indicating success (SUCCEED).
  */
 std::string
-create_waypoints(std::shared_ptr<yasmin::blackboard::Blackboard> blackboard) {
+create_waypoints(std::shared_ptr<yasmin::Blackboard> blackboard) {
   std::map<std::string, std::vector<double>> waypoints = {
       {"entrance", {1.25, 6.30, -0.78, 0.67}},
       {"bathroom", {4.89, 1.64, 0.0, 1.0}},
@@ -3150,7 +3107,7 @@ create_waypoints(std::shared_ptr<yasmin::blackboard::Blackboard> blackboard) {
  * @return std::string Outcome indicating success (SUCCEED).
  */
 std::string take_random_waypoint(
-    std::shared_ptr<yasmin::blackboard::Blackboard> blackboard) {
+    std::shared_ptr<yasmin::Blackboard> blackboard) {
   auto waypoints =
       blackboard->get<std::map<std::string, std::vector<double>>>("waypoints");
   int waypoints_num = blackboard->get<int>("waypoints_num");
@@ -3183,7 +3140,7 @@ std::string take_random_waypoint(
  * (HAS_NEXT) or if navigation is complete (END).
  */
 std::string
-get_next_waypoint(std::shared_ptr<yasmin::blackboard::Blackboard> blackboard) {
+get_next_waypoint(std::shared_ptr<yasmin::Blackboard> blackboard) {
   auto random_waypoints =
       blackboard->get<std::vector<std::string>>("random_waypoints");
   auto waypoints =
@@ -3285,7 +3242,7 @@ int main(int argc, char *argv[]) {
   yasmin_viewer::YasminViewerPub yasmin_pub(sm, "YASMIN_NAV2_DEMO");
 
   // Execute the state machine
-  auto blackboard = std::make_shared<yasmin::blackboard::Blackboard>();
+  auto blackboard = std::make_shared<yasmin::Blackboard>();
   blackboard->set<int>("waypoints_num",
                        2); // Set the number of waypoints to navigate
 

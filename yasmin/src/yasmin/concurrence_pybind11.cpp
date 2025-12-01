@@ -16,14 +16,14 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 
-#include "yasmin/blackboard/blackboard_pywrapper.hpp"
+#include "yasmin/blackboard_pywrapper.hpp"
 #include "yasmin/concurrence.hpp"
 #include "yasmin/pybind11_utils.hpp"
 
 namespace py = pybind11;
 
 // Declare that BlackboardPyWrapper is defined in another module
-PYBIND11_MAKE_OPAQUE(yasmin::blackboard::BlackboardPyWrapper);
+PYBIND11_MAKE_OPAQUE(yasmin::BlackboardPyWrapper);
 
 PYBIND11_MODULE(concurrence, m) {
   m.doc() = "Python bindings for yasmin::Concurrence";
@@ -41,6 +41,7 @@ PYBIND11_MODULE(concurrence, m) {
            py::arg("outcome_map") = yasmin::Concurrence::OutcomeMap(),
            py::keep_alive<1, 2>()) // Keep states (arg 2) alive as long as self
                                    // (arg 1) is alive
+      // Getters for states, outcome_map, and default_outcome
       .def("get_states", &yasmin::Concurrence::get_states,
            "Get all states in the concurrence",
            py::return_value_policy::reference_internal)
@@ -49,8 +50,10 @@ PYBIND11_MODULE(concurrence, m) {
            py::return_value_policy::reference_internal)
       .def("get_default_outcome", &yasmin::Concurrence::get_default_outcome,
            "Get the default outcome for this concurrence state")
+      // Cancel state method
       .def("cancel_state", &yasmin::Concurrence::cancel_state,
            "Cancel the current state execution")
+      // String representation
       .def("to_string", &yasmin::Concurrence::to_string,
            "Convert the concurrence to a string representation")
       .def("__str__", &yasmin::Concurrence::to_string);

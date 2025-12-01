@@ -26,7 +26,7 @@
 
 #include "rclcpp/rclcpp.hpp"
 
-#include "yasmin/blackboard/blackboard.hpp"
+#include "yasmin/blackboard.hpp"
 #include "yasmin/logs.hpp"
 #include "yasmin/state.hpp"
 #include "yasmin_ros/basic_outcomes.hpp"
@@ -49,7 +49,7 @@ template <typename MsgT> class MonitorState : public yasmin::State {
 
   /// Function type for handling messages from topic.
   using MonitorHandler = std::function<std::string(
-      std::shared_ptr<yasmin::blackboard::Blackboard>, std::shared_ptr<MsgT>)>;
+      std::shared_ptr<yasmin::Blackboard>, std::shared_ptr<MsgT>)>;
 
 public:
   /**
@@ -151,8 +151,7 @@ public:
    * @param blackboard A shared pointer to the blackboard for data storage.
    * @return A string outcome indicating the result of the monitoring operation.
    */
-  std::string
-  execute(std::shared_ptr<yasmin::blackboard::Blackboard> blackboard) override {
+  std::string execute(std::shared_ptr<yasmin::Blackboard> blackboard) override {
     int retry_count = 0;
 
     while (this->msg_list.empty()) {
@@ -214,19 +213,24 @@ protected:
   rclcpp::Node::SharedPtr node_;
 
 private:
-  std::shared_ptr<rclcpp::Subscription<MsgT>>
-      sub; /**< Subscription to the ROS 2 topic. */
+  /// Subscription to the ROS 2 topic.
+  std::shared_ptr<rclcpp::Subscription<MsgT>> sub;
 
-  std::string topic_name; /**< Name of the topic to monitor. */
-  rclcpp::QoS qos;        /**< Quality of Service settings for the topic. */
+  /// Name of the topic to monitor.
+  std::string topic_name;
+  /// Quality of Service settings for the topic.
+  rclcpp::QoS qos;
 
-  std::vector<std::shared_ptr<MsgT>>
-      msg_list; /**< List to store queued messages. */
-  MonitorHandler
-      monitor_handler; /**< Callback function to handle incoming messages. */
-  int msg_queue;       /**< Maximum number of messages to queue. */
-  int timeout;         /**< Timeout in seconds for message reception. */
-  int maximum_retry;   /**< Maximum number of retries. */
+  /// List to store queued messages.
+  std::vector<std::shared_ptr<MsgT>> msg_list;
+  /// Callback function to handle incoming messages.
+  MonitorHandler monitor_handler;
+  /// Maximum number of messages to queue.
+  int msg_queue;
+  /// Timeout in seconds for message reception.
+  int timeout;
+  /// Maximum number of retries.
+  int maximum_retry;
 
   /// Condition variable for action completion.
   std::condition_variable msg_cond;

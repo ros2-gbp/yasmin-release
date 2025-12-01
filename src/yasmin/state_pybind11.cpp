@@ -16,7 +16,7 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 
-#include "yasmin/blackboard/blackboard_pywrapper.hpp"
+#include "yasmin/blackboard_pywrapper.hpp"
 #include "yasmin/pybind11_utils.hpp"
 #include "yasmin/state.hpp"
 
@@ -24,7 +24,7 @@ namespace py = pybind11;
 
 // Declare that BlackboardPyWrapper is defined in another module
 // This allows us to use it without re-registering it
-PYBIND11_MAKE_OPAQUE(yasmin::blackboard::BlackboardPyWrapper);
+PYBIND11_MAKE_OPAQUE(yasmin::BlackboardPyWrapper);
 
 namespace yasmin {
 
@@ -45,15 +45,15 @@ public:
    * We wrap the C++ Blackboard in BlackboardPyWrapper before passing to Python.
    * The GIL must be acquired before calling into Python.
    */
-  std::string
-  execute(std::shared_ptr<blackboard::Blackboard> blackboard) override {
+  std::string execute(std::shared_ptr<yasmin::Blackboard> blackboard) override {
     // Acquire GIL before calling Python code
     py::gil_scoped_acquire acquire;
 
     // Wrap the C++ Blackboard in BlackboardPyWrapper for Python
-    blackboard::BlackboardPyWrapper wrapper(blackboard);
+    yasmin::BlackboardPyWrapper wrapper(blackboard);
 
-#if __has_include("rclcpp/version.h")
+#if PYBIND11_VERSION_MAJOR > 2 ||                                              \
+    (PYBIND11_VERSION_MAJOR == 2 && PYBIND11_VERSION_MINOR >= 6)
     PYBIND11_OVERRIDE_PURE(std::string, // Return type
                            State,       // Parent class
                            execute,     // Method name
@@ -76,7 +76,8 @@ public:
     // Acquire GIL before calling Python code
     py::gil_scoped_acquire acquire;
 
-#if __has_include("rclcpp/version.h")
+#if PYBIND11_VERSION_MAJOR > 2 ||                                              \
+    (PYBIND11_VERSION_MAJOR == 2 && PYBIND11_VERSION_MINOR >= 6)
     PYBIND11_OVERRIDE(void,        // Return type
                       State,       // Parent class
                       cancel_state // Method name (no arguments)
@@ -109,7 +110,8 @@ PYBIND11_MODULE(state, m) {
 
   // Import BlackboardPyWrapper from blackboard module
   // This allows us to use it without re-registering the type
-#if __has_include("rclcpp/version.h")
+#if PYBIND11_VERSION_MAJOR > 2 ||                                              \
+    (PYBIND11_VERSION_MAJOR == 2 && PYBIND11_VERSION_MINOR >= 6)
   py::module_ blackboard_module = py::module_::import("yasmin.blackboard");
 #else
   py::module blackboard_module = py::module::import("yasmin.blackboard");
@@ -133,6 +135,7 @@ PYBIND11_MODULE(state, m) {
                  std::set<std::string>(outcomes.begin(), outcomes.end()));
            }),
            py::arg("outcomes"))
+      // Status methods
       .def("get_status", &yasmin::State::get_status,
            "Gets the current status of the state")
       .def("is_idle", &yasmin::State::is_idle, "Checks if the state is idle")
@@ -142,13 +145,16 @@ PYBIND11_MODULE(state, m) {
            "Checks if the state has been canceled")
       .def("is_completed", &yasmin::State::is_completed,
            "Checks if the state has completed execution")
+      // Execute and cancel methods
       .def("execute", &yasmin::State::execute,
            "Execute the state's specific logic (override in subclass)",
            py::arg("blackboard"))
       .def("cancel_state", &yasmin::State::cancel_state,
            "Cancel the current state execution")
+      // Get outcomes method
       .def("get_outcomes", &yasmin::State::get_outcomes,
            "Get the set of possible outcomes for this state")
+      // String representation
       .def("to_string", &yasmin::State::to_string,
            "Convert the state to a string representation")
       .def("__str__", &yasmin::State::to_string);

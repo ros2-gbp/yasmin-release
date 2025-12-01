@@ -22,7 +22,7 @@
 
 #include "rclcpp/rclcpp.hpp"
 
-#include "yasmin/blackboard/blackboard.hpp"
+#include "yasmin/blackboard.hpp"
 #include "yasmin/state.hpp"
 #include "yasmin_ros/basic_outcomes.hpp"
 
@@ -81,7 +81,16 @@ public:
 
 private:
   /// Executor for managing multiple threads.
+#if __has_include("rclcpp/version.h")
+#include "rclcpp/version.h"
+#if RCLCPP_VERSION_GTE(29, 5, 1) // Kilted and Rolling
+  rclcpp::experimental::executors::EventsExecutor executor;
+#else // Humble, Iron and Jazzy
   rclcpp::executors::MultiThreadedExecutor executor;
+#endif
+#else // Foxy and Galactic
+  rclcpp::executors::MultiThreadedExecutor executor;
+#endif
   /// Thread for spinning the node.
   std::unique_ptr<std::thread> spin_thread;
 };

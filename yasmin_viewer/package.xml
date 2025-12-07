@@ -2,7 +2,7 @@
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
   <name>yasmin_viewer</name>
-  <version>4.0.2</version>
+  <version>4.1.0</version>
   <description>YASMIN viewer for FSM</description>
   <maintainer email="mgons@unileon.es">miguel</maintainer>
   <license>GPL-3.0</license>
@@ -17,10 +17,6 @@
   <depend>yasmin</depend>
   <depend>yasmin_ros</depend>
   <depend>yasmin_msgs</depend>
-  <test_depend>ament_copyright</test_depend>
-  <test_depend>ament_flake8</test_depend>
-  <test_depend>ament_pep257</test_depend>
-  <test_depend>python3-pytest</test_depend>
   <export>
     <build_type>ament_cmake</build_type>
   </export>

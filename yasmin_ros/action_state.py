@@ -166,6 +166,9 @@ class ActionState(State):
         yasmin.YASMIN_LOG_INFO(f"Waiting for action '{self._action_name}'")
 
         while not self._action_client.wait_for_server(self._wait_timeout):
+            if self.is_canceled():
+                return CANCEL
+
             yasmin.YASMIN_LOG_WARN(
                 f"Timeout reached, action '{self._action_name}' is not available"
             )
@@ -178,6 +181,9 @@ class ActionState(State):
                     )
                 else:
                     return TIMEOUT
+
+        if self.is_canceled():
+            return CANCEL
 
         self._action_done_event.clear()
 
@@ -192,11 +198,11 @@ class ActionState(State):
         )
         send_goal_future.add_done_callback(self._goal_response_callback)
 
-        if self.is_canceled():
-            return CANCEL
-
         # Wait for action to be done
         while not self._action_done_event.wait(self._response_timeout):
+            if self.is_canceled():
+                return CANCEL
+
             yasmin.YASMIN_LOG_WARN(
                 f"Timeout reached while waiting for response from action '{self._action_name}'"
             )
@@ -208,6 +214,9 @@ class ActionState(State):
                 )
             else:
                 return TIMEOUT
+
+        if self.is_canceled():
+            return CANCEL
 
         status = self._action_status
 

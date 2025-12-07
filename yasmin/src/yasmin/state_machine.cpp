@@ -14,6 +14,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include <algorithm>
+#include <csignal>
 #include <exception>
 #include <map>
 #include <memory>
@@ -31,13 +32,27 @@
 
 using namespace yasmin;
 
-StateMachine::StateMachine(const std::set<std::string> &outcomes)
-    : StateMachine("", outcomes) {}
+namespace {
+StateMachine *sigint_handler_instance = nullptr;
+
+void sigint_handler(int signum) {
+  if (sigint_handler_instance) {
+    sigint_handler_instance->cancel_state();
+  }
+}
+} // namespace
+
+StateMachine::StateMachine(const std::set<std::string> &outcomes,
+                           bool handle_sigint)
+    : StateMachine("", outcomes, handle_sigint) {}
 
 StateMachine::StateMachine(const std::string &name,
-                           const std::set<std::string> &outcomes)
+                           const std::set<std::string> &outcomes,
+                           bool handle_sigint)
     : State(outcomes), current_state_mutex(std::make_unique<std::mutex>()),
-      name(name) {}
+      name(name) {
+  this->set_sigint_handler(handle_sigint);
+}
 
 StateMachine::~StateMachine() {
   this->states.clear();
@@ -347,6 +362,10 @@ StateMachine::execute(std::shared_ptr<yasmin::Blackboard> blackboard) {
       outcome = transitions.at(outcome);
     }
 
+    YASMIN_LOG_INFO("State machine transitioning '%s' : '%s' --> '%s'",
+                    this->current_state.c_str(), old_outcome.c_str(),
+                    outcome.c_str());
+
     // Outcome is an outcome of the sm
     if (std::find(this->outcomes.begin(), this->outcomes.end(), outcome) !=
         this->outcomes.end()) {
@@ -359,10 +378,6 @@ StateMachine::execute(std::shared_ptr<yasmin::Blackboard> blackboard) {
 
       // Outcome is a state
     } else if (this->states.find(outcome) != this->states.end()) {
-
-      YASMIN_LOG_INFO("State machine transitioning '%s' : '%s' --> '%s'",
-                      this->current_state.c_str(), old_outcome.c_str(),
-                      outcome.c_str());
       this->call_transition_cbs(blackboard, this->current_state, outcome,
                                 old_outcome);
 
@@ -410,6 +425,26 @@ void StateMachine::cancel_state() {
       this->states.at(current_state)->cancel_state();
       State::cancel_state();
     }
+  }
+}
+
+void StateMachine::set_sigint_handler(bool handle) {
+  if (handle) {
+    sigint_handler_instance = this;
+    // Set up signal handler for SIGINT
+    struct sigaction sigint_action;
+    sigint_action.sa_handler = sigint_handler;
+    sigemptyset(&sigint_action.sa_mask);
+    sigint_action.sa_flags = 0;
+    sigaction(SIGINT, &sigint_action, nullptr);
+  } else {
+    sigint_handler_instance = nullptr;
+    // Reset to default handler
+    struct sigaction sigint_action;
+    sigint_action.sa_handler = SIG_DFL;
+    sigemptyset(&sigint_action.sa_mask);
+    sigint_action.sa_flags = 0;
+    sigaction(SIGINT, &sigint_action, nullptr);
   }
 }
 

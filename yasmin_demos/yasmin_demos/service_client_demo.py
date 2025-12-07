@@ -127,7 +127,7 @@ def main() -> None:
     set_ros_loggers()
 
     # Create a FSM
-    sm = StateMachine(outcomes=["outcome4"])
+    sm = StateMachine(outcomes=["outcome4"], handle_sigint=True)
 
     # Add states
     sm.add_state(
@@ -155,20 +155,19 @@ def main() -> None:
     # Publish FSM info
     viewer = YasminViewerPub(sm, "YASMIN_SERVICE_CLIENT_DEMO")
 
-    # Execute FSM
+    # Execute the FSM
     try:
         outcome = sm()
         yasmin.YASMIN_LOG_INFO(outcome)
-    except KeyboardInterrupt:
-        if sm.is_running():
-            sm.cancel_state()
+    except Exception as e:
+        yasmin.YASMIN_LOG_WARN(e)
     finally:
         viewer.cleanup()
         del sm
 
-        # Shutdown ROS 2 if it's running
-        if rclpy.ok():
-            rclpy.shutdown()
+    # Shutdown ROS 2 if it's running
+    if rclpy.ok():
+        rclpy.shutdown()
 
 
 if __name__ == "__main__":

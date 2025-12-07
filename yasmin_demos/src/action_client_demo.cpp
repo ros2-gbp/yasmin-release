@@ -152,14 +152,7 @@ int main(int argc, char *argv[]) {
 
   // Create the state machine
   auto sm = std::make_shared<yasmin::StateMachine>(
-      std::initializer_list<std::string>{"outcome4"});
-
-  // Cancel state machine on ROS 2 shutdown
-  rclcpp::on_shutdown([sm]() {
-    if (sm->is_running()) {
-      sm->cancel_state();
-    }
-  });
+      std::initializer_list<std::string>{"outcome4"}, true);
 
   // Add states to the state machine
   sm->add_state("CALLING_FIBONACCI", std::make_shared<FibonacciState>(),

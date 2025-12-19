@@ -37,7 +37,7 @@ class FooState(State):
 
         Outcomes:
             outcome1: Indicates the state should continue.
-            outcome2: Indicates the state should cotninue.
+            outcome2: Indicates the state should continue.
             outcome3: Indicates the state should finish execution and return.
         """
         super().__init__(["outcome1", "outcome2", "outcome3"])
@@ -58,8 +58,6 @@ class FooState(State):
         """
         yasmin.YASMIN_LOG_INFO("Executing state FOO")
         time.sleep(2)  # Simulate work by sleeping
-
-        outcome = ""
 
         blackboard["foo_str"] = f"Counter: {self.counter}"
 
@@ -117,13 +115,12 @@ class BarState(State):
 
 
 def main() -> None:
-    yasmin.YASMIN_LOG_INFO("yasmin_concurrence_demo")
-
     # Initialize ROS 2
     rclpy.init()
 
     # Set ROS 2 loggers
     set_ros_loggers()
+    yasmin.YASMIN_LOG_INFO("yasmin_concurrence_demo")
 
     # Create a finite state machine (FSM)
     sm = StateMachine(outcomes=["outcome4"], handle_sigint=True)
@@ -163,7 +160,7 @@ def main() -> None:
     )
 
     # Publish FSM information for visualization
-    viewer = YasminViewerPub(sm, "YASMIN_CONCURRENCE_DEMO")
+    YasminViewerPub(sm, "YASMIN_CONCURRENCE_DEMO")
 
     # Execute the FSM
     try:
@@ -171,9 +168,6 @@ def main() -> None:
         yasmin.YASMIN_LOG_INFO(outcome)
     except Exception as e:
         yasmin.YASMIN_LOG_WARN(e)
-    finally:
-        viewer.cleanup()
-        del sm
 
     # Shutdown ROS 2 if it's running
     if rclpy.ok():

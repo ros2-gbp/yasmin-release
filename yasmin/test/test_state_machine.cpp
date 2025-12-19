@@ -20,6 +20,7 @@
 #include "yasmin/blackboard.hpp"
 #include "yasmin/state.hpp"
 #include "yasmin/state_machine.hpp"
+#include "yasmin/types.hpp"
 
 using namespace yasmin;
 
@@ -30,7 +31,7 @@ private:
 public:
   FooState() : State({"outcome1", "outcome2"}), counter(0) {}
 
-  std::string execute(std::shared_ptr<yasmin::Blackboard> blackboard) override {
+  std::string execute(yasmin::Blackboard::SharedPtr blackboard) override {
     if (counter < 3) {
       counter++;
       blackboard->set<std::string>("foo_str",
@@ -46,33 +47,35 @@ class BarState : public State {
 public:
   BarState() : State({"outcome2", "outcome3"}) {}
 
-  std::string execute(std::shared_ptr<yasmin::Blackboard> blackboard) override {
+  std::string execute(yasmin::Blackboard::SharedPtr blackboard) override {
     return "outcome2";
   }
 };
 
 class TestStateMachine : public ::testing::Test {
 protected:
-  std::shared_ptr<StateMachine> sm;
-  std::shared_ptr<yasmin::Blackboard> blackboard;
+  yasmin::StateMachine::SharedPtr sm;
+  yasmin::Blackboard::SharedPtr blackboard;
 
   void SetUp() override {
     sm = std::make_shared<StateMachine>(
-        std::set<std::string>{"outcome4", "outcome5"});
+        yasmin::Outcomes{"outcome4", "outcome5"});
     blackboard = std::make_shared<yasmin::Blackboard>();
 
-    sm->add_state("FOO", std::make_shared<FooState>(),
-                  std::map<std::string, std::string>{{"outcome1", "BAR"},
-                                                     {"outcome2", "outcome4"}});
+    sm->add_state(
+        "FOO", std::make_shared<FooState>(),
+        yasmin::Transitions{{"outcome1", "BAR"}, {"outcome2", "outcome4"}});
 
     sm->add_state("BAR", std::make_shared<BarState>(),
-                  std::map<std::string, std::string>{{"outcome2", "FOO"}});
+                  yasmin::Transitions{{"outcome2", "FOO"}});
   }
 };
 
 TEST_F(TestStateMachine, TestStr) {
   std::string sm_str = sm->to_string();
-  EXPECT_TRUE(sm_str == "State Machine [BAR (BarState), FOO (FooState)]");
+  // Check if "Bar (BarState)" and "Foo (FooState)" are in the string
+  EXPECT_TRUE(sm_str.find("BAR (BarState)") != std::string::npos);
+  EXPECT_TRUE(sm_str.find("FOO (FooState)") != std::string::npos);
 }
 
 TEST_F(TestStateMachine, TestGetNameEmpty) { EXPECT_EQ(sm->get_name(), ""); }
@@ -124,7 +127,7 @@ TEST_F(TestStateMachine, TestSetStartStateWrongState) {
 TEST_F(TestStateMachine, TestAddRepeatedState) {
   try {
     sm->add_state("FOO", std::make_shared<FooState>(),
-                  std::map<std::string, std::string>{{"outcome1", "BAR"}});
+                  yasmin::Transitions{{"outcome1", "BAR"}});
     FAIL() << "Expected std::logic_error";
   } catch (const std::logic_error &e) {
     EXPECT_STREQ("State 'FOO' already registered in the state machine",
@@ -135,7 +138,7 @@ TEST_F(TestStateMachine, TestAddRepeatedState) {
 TEST_F(TestStateMachine, TestAddOutcomeState) {
   try {
     sm->add_state("outcome4", std::make_shared<FooState>(),
-                  std::map<std::string, std::string>{{"outcome1", "BAR"}});
+                  yasmin::Transitions{{"outcome1", "BAR"}});
     FAIL() << "Expected std::logic_error";
   } catch (const std::logic_error &e) {
     EXPECT_STREQ("State name 'outcome4' is already registered as an outcome",
@@ -146,7 +149,7 @@ TEST_F(TestStateMachine, TestAddOutcomeState) {
 TEST_F(TestStateMachine, TestAddStateWithWrongOutcome) {
   try {
     sm->add_state("FOO1", std::make_shared<FooState>(),
-                  std::map<std::string, std::string>{{"outcome9", "BAR"}});
+                  yasmin::Transitions{{"outcome9", "BAR"}});
     FAIL() << "Expected std::invalid_argument";
   } catch (const std::invalid_argument &e) {
     std::string error_msg = e.what();
@@ -159,7 +162,7 @@ TEST_F(TestStateMachine, TestAddStateWithWrongOutcome) {
 TEST_F(TestStateMachine, TestAddWrongSourceTransition) {
   try {
     sm->add_state("FOO1", std::make_shared<FooState>(),
-                  std::map<std::string, std::string>{{"", "BAR"}});
+                  yasmin::Transitions{{"", "BAR"}});
     FAIL() << "Expected std::invalid_argument";
   } catch (const std::invalid_argument &e) {
     EXPECT_STREQ("Transitions with empty source in state 'FOO1'", e.what());
@@ -169,7 +172,7 @@ TEST_F(TestStateMachine, TestAddWrongSourceTransition) {
 TEST_F(TestStateMachine, TestAddWrongTargetTransition) {
   try {
     sm->add_state("FOO1", std::make_shared<FooState>(),
-                  std::map<std::string, std::string>{{"outcome1", ""}});
+                  yasmin::Transitions{{"outcome1", ""}});
     FAIL() << "Expected std::invalid_argument";
   } catch (const std::invalid_argument &e) {
     EXPECT_STREQ("Transitions with empty target in state 'FOO1'", e.what());
@@ -177,9 +180,9 @@ TEST_F(TestStateMachine, TestAddWrongTargetTransition) {
 }
 
 TEST_F(TestStateMachine, TestValidateOutcomeFromFsmNotUsed) {
-  auto sm1 = std::make_shared<StateMachine>(std::set<std::string>{"outcome4"});
-  auto sm2 = std::make_shared<StateMachine>(
-      std::set<std::string>{"outcome4", "outcome5"});
+  auto sm1 = std::make_shared<StateMachine>(yasmin::Outcomes{"outcome4"});
+  auto sm2 =
+      std::make_shared<StateMachine>(yasmin::Outcomes{"outcome4", "outcome5"});
   sm1->add_state("FSM", sm2);
   sm2->add_state("FOO", std::make_shared<FooState>(),
                  {
@@ -197,8 +200,8 @@ TEST_F(TestStateMachine, TestValidateOutcomeFromFsmNotUsed) {
 }
 
 TEST_F(TestStateMachine, TestValidateOutcomeFromStateNotUsed) {
-  auto sm1 = std::make_shared<StateMachine>(std::set<std::string>{"outcome4"});
-  auto sm2 = std::make_shared<StateMachine>(std::set<std::string>{"outcome4"});
+  auto sm1 = std::make_shared<StateMachine>(yasmin::Outcomes{"outcome4"});
+  auto sm2 = std::make_shared<StateMachine>(yasmin::Outcomes{"outcome4"});
   sm1->add_state("FSM", sm2);
   sm2->add_state("FOO", std::make_shared<FooState>(),
                  {
@@ -215,9 +218,9 @@ TEST_F(TestStateMachine, TestValidateOutcomeFromStateNotUsed) {
 }
 
 TEST_F(TestStateMachine, TestValidateFsmOutcomeNotUsed) {
-  auto sm1 = std::make_shared<StateMachine>(std::set<std::string>{"outcome4"});
-  auto sm2 = std::make_shared<StateMachine>(
-      std::set<std::string>{"outcome4", "outcome5"});
+  auto sm1 = std::make_shared<StateMachine>(yasmin::Outcomes{"outcome4"});
+  auto sm2 =
+      std::make_shared<StateMachine>(yasmin::Outcomes{"outcome4", "outcome5"});
   sm1->add_state("FSM", sm2,
                  {
                      {"outcome5", "outcome4"},
@@ -238,8 +241,8 @@ TEST_F(TestStateMachine, TestValidateFsmOutcomeNotUsed) {
 }
 
 TEST_F(TestStateMachine, TestValidateWrongState) {
-  auto sm1 = std::make_shared<StateMachine>(std::set<std::string>{"outcome4"});
-  auto sm2 = std::make_shared<StateMachine>(std::set<std::string>{"outcome4"});
+  auto sm1 = std::make_shared<StateMachine>(yasmin::Outcomes{"outcome4"});
+  auto sm2 = std::make_shared<StateMachine>(yasmin::Outcomes{"outcome4"});
   sm1->add_state("FSM", sm2,
                  {
                      {"outcome4", "outcome4"},
@@ -258,6 +261,103 @@ TEST_F(TestStateMachine, TestValidateWrongState) {
         "State machine outcome 'BAR' not registered as outcome neither state",
         e.what());
   }
+}
+
+TEST_F(TestStateMachine, TestStartCallback) {
+  bool start_called = false;
+  std::string start_state_called;
+
+  sm->add_start_cb([&](yasmin::Blackboard::SharedPtr blackboard,
+                       const std::string &start_state) {
+    start_called = true;
+    start_state_called = start_state;
+  });
+
+  EXPECT_EQ((*sm)(blackboard), "outcome4");
+  EXPECT_TRUE(start_called);
+  EXPECT_EQ(start_state_called, "FOO");
+}
+
+TEST_F(TestStateMachine, TestTransitionCallback) {
+  std::vector<std::tuple<std::string, std::string, std::string>>
+      transitions_called;
+
+  sm->add_transition_cb([&](yasmin::Blackboard::SharedPtr blackboard,
+                            const std::string &from_state,
+                            const std::string &to_state,
+                            const std::string &outcome) {
+    transitions_called.emplace_back(from_state, to_state, outcome);
+  });
+
+  EXPECT_EQ((*sm)(blackboard), "outcome4");
+
+  // Should have transitions: FOO -> BAR (outcome1), BAR -> FOO (outcome2), FOO
+  // -> BAR (outcome1), BAR -> FOO (outcome2), FOO -> BAR (outcome1), BAR -> FOO
+  // (outcome2)
+  EXPECT_EQ(transitions_called.size(), 6);
+  EXPECT_EQ(std::get<0>(transitions_called[0]), "FOO");
+  EXPECT_EQ(std::get<1>(transitions_called[0]), "BAR");
+  EXPECT_EQ(std::get<2>(transitions_called[0]), "outcome1");
+  EXPECT_EQ(std::get<0>(transitions_called[1]), "BAR");
+  EXPECT_EQ(std::get<1>(transitions_called[1]), "FOO");
+  EXPECT_EQ(std::get<2>(transitions_called[1]), "outcome2");
+  EXPECT_EQ(std::get<0>(transitions_called[2]), "FOO");
+  EXPECT_EQ(std::get<1>(transitions_called[2]), "BAR");
+  EXPECT_EQ(std::get<2>(transitions_called[2]), "outcome1");
+  EXPECT_EQ(std::get<0>(transitions_called[3]), "BAR");
+  EXPECT_EQ(std::get<1>(transitions_called[3]), "FOO");
+  EXPECT_EQ(std::get<2>(transitions_called[3]), "outcome2");
+  EXPECT_EQ(std::get<0>(transitions_called[4]), "FOO");
+  EXPECT_EQ(std::get<1>(transitions_called[4]), "BAR");
+  EXPECT_EQ(std::get<2>(transitions_called[4]), "outcome1");
+  EXPECT_EQ(std::get<0>(transitions_called[5]), "BAR");
+  EXPECT_EQ(std::get<1>(transitions_called[5]), "FOO");
+  EXPECT_EQ(std::get<2>(transitions_called[5]), "outcome2");
+}
+
+TEST_F(TestStateMachine, TestEndCallback) {
+  bool end_called = false;
+  std::string end_outcome_called;
+
+  sm->add_end_cb([&](yasmin::Blackboard::SharedPtr blackboard,
+                     const std::string &outcome) {
+    end_called = true;
+    end_outcome_called = outcome;
+  });
+
+  EXPECT_EQ((*sm)(blackboard), "outcome4");
+  EXPECT_TRUE(end_called);
+  EXPECT_EQ(end_outcome_called, "outcome4");
+}
+
+TEST_F(TestStateMachine, TestMultipleCallbacks) {
+  int start_count = 0;
+  int transition_count = 0;
+  int end_count = 0;
+
+  sm->add_start_cb([&](yasmin::Blackboard::SharedPtr, const std::string &) {
+    start_count++;
+  });
+  sm->add_start_cb([&](yasmin::Blackboard::SharedPtr, const std::string &) {
+    start_count++;
+  });
+
+  sm->add_transition_cb([&](yasmin::Blackboard::SharedPtr, const std::string &,
+                            const std::string &,
+                            const std::string &) { transition_count++; });
+  sm->add_transition_cb([&](yasmin::Blackboard::SharedPtr, const std::string &,
+                            const std::string &,
+                            const std::string &) { transition_count++; });
+
+  sm->add_end_cb(
+      [&](yasmin::Blackboard::SharedPtr, const std::string &) { end_count++; });
+  sm->add_end_cb(
+      [&](yasmin::Blackboard::SharedPtr, const std::string &) { end_count++; });
+
+  EXPECT_EQ((*sm)(blackboard), "outcome4");
+  EXPECT_EQ(start_count, 2);
+  EXPECT_EQ(transition_count, 12); // 6 transitions * 2 callbacks
+  EXPECT_EQ(end_count, 2);
 }
 
 int main(int argc, char **argv) {

@@ -13,21 +13,18 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-#ifndef YASMIN__BLACKBOARD_PYWRAPPER_HPP
-#define YASMIN__BLACKBOARD_PYWRAPPER_HPP
+#ifndef YASMIN__BLACKBOARD_PYWRAPPER_HPP_
+#define YASMIN__BLACKBOARD_PYWRAPPER_HPP_
 
-#include <list>
-#include <map>
 #include <pybind11/cast.h>
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 #include <string>
-#include <tuple>
 #include <type_traits>
 #include <typeinfo>
-#include <vector>
 
 #include "yasmin/blackboard.hpp"
+#include "yasmin/types.hpp"
 
 namespace py = pybind11;
 
@@ -48,7 +45,7 @@ class BlackboardPyWrapper;
 class BlackboardPyWrapper {
 private:
   /// @brief Underlying C++ Blackboard instance
-  std::shared_ptr<Blackboard> blackboard;
+  Blackboard ::SharedPtr blackboard;
 
 public:
   BlackboardPyWrapper() : blackboard(std::make_shared<Blackboard>()) {}
@@ -62,7 +59,7 @@ public:
   /**
    * @brief Construct by wrapping a shared_ptr to a C++ Blackboard
    */
-  explicit BlackboardPyWrapper(std::shared_ptr<Blackboard> bb_ptr)
+  explicit BlackboardPyWrapper(Blackboard::SharedPtr bb_ptr)
       : blackboard(bb_ptr) {}
 
   /**
@@ -83,14 +80,6 @@ public:
       this->blackboard->set<double>(key, value.cast<double>());
     } else if (py::isinstance<py::str>(value)) {
       this->blackboard->set<std::string>(key, value.cast<std::string>());
-    } else if (py::isinstance<py::list>(value)) {
-      this->blackboard->set<py::object>(key, value);
-    } else if (py::isinstance<py::dict>(value)) {
-      this->blackboard->set<py::object>(key, value);
-    } else if (py::isinstance<py::tuple>(value)) {
-      this->blackboard->set<py::object>(key, value);
-    } else if (py::isinstance<py::set>(value)) {
-      this->blackboard->set<py::object>(key, value);
     } else {
       this->blackboard->set<py::object>(key, value);
     }
@@ -102,52 +91,15 @@ public:
    * @return The Python object.
    * @throws std::runtime_error if the key does not exist.
    */
-  py::object get(const std::string &key) {
+  py::object get(const std::string &key) const {
     // Get the type of the stored value
     std::string type = this->blackboard->get_type(key);
 
-    // Check if it's a pybind11::object (Python object - includes all Python
-    // types)
-    if (type.find("pybind11::object") != std::string::npos ||
-        type.find("pybind11::int_") != std::string::npos ||
-        type.find("pybind11::float_") != std::string::npos ||
-        type.find("pybind11::str") != std::string::npos ||
-        type.find("pybind11::bool_") != std::string::npos ||
-        type.find("pybind11::list") != std::string::npos ||
-        type.find("pybind11::dict") != std::string::npos ||
-        type.find("pybind11::set") != std::string::npos ||
-        type.find("pybind11::tuple") != std::string::npos ||
-        type.find("pybind11::bytes") != std::string::npos ||
-        type.find("pybind11::none") != std::string::npos) {
-      return this->blackboard->get<py::object>(key);
-    }
     // Check if it's a std::string (C++ string) - convert to Python str
-    else if (type.find("std::string") != std::string::npos ||
-             type.find("std::__cxx11::basic_string") != std::string::npos) {
+    if (type.find("std::string") != std::string::npos ||
+        type.find("std::__cxx11::basic_string") != std::string::npos) {
       std::string cpp_value = this->blackboard->get<std::string>(key);
       return py::cast(cpp_value);
-    }
-    // Check if it's a std::vector (C++ vector) - convert to Python list
-    else if (type.find("std::vector") != std::string::npos) {
-      return this->blackboard->get<py::object>(key);
-    }
-    // Check if it's a std::map (C++ map) - convert to Python dict
-    else if (type.find("std::map") != std::string::npos ||
-             type.find("std::unordered_map") != std::string::npos) {
-      return this->blackboard->get<py::object>(key);
-    }
-    // Check if it's a std::set (C++ set) - convert to Python set
-    else if (type.find("std::set") != std::string::npos ||
-             type.find("std::unordered_set") != std::string::npos) {
-      return this->blackboard->get<py::object>(key);
-    }
-    // Check if it's a std::list (C++ list) - convert to Python list
-    else if (type.find("std::list") != std::string::npos) {
-      return this->blackboard->get<py::object>(key);
-    }
-    // Check if it's a std::tuple (C++ tuple) - convert to Python tuple
-    else if (type.find("std::tuple") != std::string::npos) {
-      return this->blackboard->get<py::object>(key);
     }
     // Check if it's an int (C++ int) - convert to Python int
     else if (type.find("int") != std::string::npos) {
@@ -188,7 +140,7 @@ public:
    * @param key The key to check.
    * @return True if the key exists, false otherwise.
    */
-  bool contains(const std::string &key) {
+  bool contains(const std::string &key) const {
     return this->blackboard->contains(key);
   }
 
@@ -196,19 +148,19 @@ public:
    * @brief Get the number of key-value pairs in the blackboard.
    * @return The size of the blackboard.
    */
-  int size() { return this->blackboard->size(); }
+  int size() const { return this->blackboard->size(); }
 
   /**
    * @brief Convert the contents of the blackboard to a string.
    * @return A string representation of the blackboard.
    */
-  std::string to_string() { return this->blackboard->to_string(); }
+  std::string to_string() const { return this->blackboard->to_string(); }
 
   /**
    * @brief Set the remappings of the blackboard.
    * @param remappings The remappings to set.
    */
-  void set_remappings(const std::map<std::string, std::string> &remappings) {
+  void set_remappings(const Remappings &remappings) {
     this->blackboard->set_remappings(remappings);
   }
 
@@ -216,7 +168,7 @@ public:
    * @brief Get the remappings of the blackboard.
    * @return The remappings of the blackboard.
    */
-  std::map<std::string, std::string> get_remappings() {
+  const Remappings &get_remappings() const {
     return this->blackboard->get_remappings();
   }
 
@@ -224,9 +176,9 @@ public:
    * @brief Get a shared pointer to the underlying C++ Blackboard
    * @return Shared pointer to the C++ Blackboard
    */
-  std::shared_ptr<Blackboard> get_cpp_blackboard() { return this->blackboard; }
+  Blackboard::SharedPtr get_cpp_blackboard() const { return this->blackboard; }
 };
 
 } // namespace yasmin
 
-#endif // YASMIN__BLACKBOARD_PYWRAPPER_HPP
+#endif // YASMIN__BLACKBOARD_PYWRAPPER_HPP_

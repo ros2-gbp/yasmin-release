@@ -25,13 +25,12 @@ from ament_index_python import get_package_share_directory
 
 
 def main() -> None:
-    yasmin.YASMIN_LOG_INFO("YASMIN_FACTORY_DEMO")
-
     # Initialize ROS 2
     rclpy.init()
 
     # Set ROS 2 loggers
     set_ros_loggers()
+    yasmin.YASMIN_LOG_INFO("YASMIN_FACTORY_DEMO")
 
     # Create a finite state machine (FSM)
     factory = YasminFactory()
@@ -43,7 +42,7 @@ def main() -> None:
     sm.set_sigint_handler(True)
 
     # Publish FSM information for visualization
-    viewer = YasminViewerPub(sm, "plugin_demo")
+    YasminViewerPub(sm, "plugin_demo")
 
     # Execute the FSM
     try:
@@ -51,9 +50,6 @@ def main() -> None:
         yasmin.YASMIN_LOG_INFO(outcome)
     except Exception as e:
         yasmin.YASMIN_LOG_WARN(e)
-    finally:
-        viewer.cleanup()
-        del sm
 
     # Shutdown ROS 2 if it's running
     if rclpy.ok():

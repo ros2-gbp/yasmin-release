@@ -12,16 +12,17 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-#ifndef YASMIN_ROS__GET_PARAMETER_STATE_HPP
-#define YASMIN_ROS__GET_PARAMETER_STATE_HPP
+#ifndef YASMIN_ROS__GET_PARAMETER_STATE_HPP_
+#define YASMIN_ROS__GET_PARAMETER_STATE_HPP_
 
 #include <any>
-#include <map>
 #include <string>
+#include <unordered_map>
 
 #include "rclcpp/rclcpp.hpp"
 #include "yasmin/blackboard.hpp"
 #include "yasmin/state.hpp"
+#include "yasmin/types.hpp"
 #include "yasmin_ros/basic_outcomes.hpp"
 #include "yasmin_ros/yasmin_node.hpp"
 
@@ -36,12 +37,17 @@ namespace yasmin_ros {
 class GetParametersState : public yasmin::State {
 public:
   /**
+   * @brief Type alias for a map of parameters.
+   */
+  using Parameters = std::unordered_map<std::string, std::any>;
+
+  /**
    * @brief Constructs a GetParametersState with a map of parameters.
    *
    * @param parameters A map of parameter names to their default values.
    * @param node A shared pointer to the ROS 2 node.
    */
-  GetParametersState(const std::map<std::string, std::any> &parameters,
+  GetParametersState(const Parameters &parameters,
                      rclcpp::Node::SharedPtr node = nullptr);
 
   /**
@@ -50,16 +56,16 @@ public:
    * @param blackboard A reference to the Yasmin blackboard.
    * @return A string representing the outcome of the execution.
    */
-  std::string execute(std::shared_ptr<yasmin::Blackboard> blackboard) override;
+  std::string execute(yasmin::Blackboard::SharedPtr blackboard) override;
 
 private:
   /// Map of parameters to retrieve, where the key is the parameter name
   /// and the value is the default value.
-  std::map<std::string, std::any> parameters_;
+  std::unordered_map<std::string, std::any> parameters_;
   /// Shared pointer to the ROS 2 node.
   rclcpp::Node::SharedPtr node_;
 };
 
 } // namespace yasmin_ros
 
-#endif // YASMIN_ROS__GET_PARAMETER_STATE_HPP
+#endif // YASMIN_ROS__GET_PARAMETER_STATE_HPP_

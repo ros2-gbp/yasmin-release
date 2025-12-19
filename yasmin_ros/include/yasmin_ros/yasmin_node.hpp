@@ -13,8 +13,8 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-#ifndef YASMIN_ROS__YASMIN_NODE_HPP
-#define YASMIN_ROS__YASMIN_NODE_HPP
+#ifndef YASMIN_ROS__YASMIN_NODE_HPP_
+#define YASMIN_ROS__YASMIN_NODE_HPP_
 
 #include <memory>
 #include <string>
@@ -37,12 +37,13 @@ namespace yasmin_ros {
  */
 class YasminNode : public rclcpp::Node {
 
-public:
+protected:
   /**
    * @brief Default constructor. Initializes the node with a unique name.
    */
   explicit YasminNode();
 
+public:
   /**
    * @brief Deleted copy constructor to prevent copying of the singleton
    * instance.
@@ -52,16 +53,16 @@ public:
   YasminNode(YasminNode &other) = delete;
 
   /**
+   * @brief Destructor. Cleans up resources.
+   */
+  ~YasminNode() {}
+
+  /**
    * @brief Deleted assignment operator to enforce singleton pattern.
    *
    * @param other Another instance of YasminNode (unused).
    */
   void operator=(const YasminNode &) = delete;
-
-  /**
-   * @brief Destructor. Cleans up resources.
-   */
-  ~YasminNode() {}
 
   /**
    * @brief Provides access to the singleton instance of YasminNode.
@@ -70,12 +71,15 @@ public:
    *
    * @return A shared pointer to the singleton instance of YasminNode.
    */
-  static std::shared_ptr<YasminNode> get_instance() {
+  static YasminNode::SharedPtr get_instance() {
+    // Ensure ROS 2 is initialized
     if (!rclcpp::ok()) {
       rclcpp::init(0, nullptr);
     }
-    static std::shared_ptr<YasminNode> instance =
-        std::make_shared<YasminNode>();
+
+    // Create the singleton instance if it doesn't exist
+    static YasminNode::SharedPtr instance =
+        YasminNode::SharedPtr(new YasminNode());
     return instance;
   }
 
@@ -83,7 +87,7 @@ private:
   /// Executor for managing multiple threads.
 #if __has_include("rclcpp/version.h")
 #include "rclcpp/version.h"
-#if RCLCPP_VERSION_GTE(29, 5, 1) // Kilted and Rolling
+#if RCLCPP_VERSION_GTE(29, 1, 1) // Jazzy, Kilted and Rolling
   rclcpp::experimental::executors::EventsExecutor executor;
 #else // Humble, Iron and Jazzy
   rclcpp::executors::MultiThreadedExecutor executor;
@@ -97,4 +101,4 @@ private:
 
 } // namespace yasmin_ros
 
-#endif // YASMIN_ROS__YASMIN_NODE_HPP
+#endif // YASMIN_ROS__YASMIN_NODE_HPP_

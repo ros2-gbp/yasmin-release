@@ -22,12 +22,14 @@
 
 #include "yasmin/concurrence.hpp"
 #include "yasmin/logs.hpp"
+#include "yasmin/state.hpp"
+#include "yasmin/types.hpp"
 
 using namespace yasmin;
 
-Concurrence::Concurrence(
-    const std::map<std::string, std::shared_ptr<State>> &states,
-    const std::string &default_outcome, const OutcomeMap &outcome_map)
+Concurrence::Concurrence(const StateMap &states,
+                         const std::string &default_outcome,
+                         const OutcomeMap &outcome_map)
     : State(generate_possible_outcomes(outcome_map, default_outcome)),
       states(states), default_outcome(default_outcome),
       outcome_map(outcome_map) {
@@ -65,7 +67,7 @@ Concurrence::Concurrence(
       }
 
       // Check if intermediate outcome is valid for the state
-      std::shared_ptr<State> state = state_it->second;
+      State::SharedPtr state = state_it->second;
       if (state->get_outcomes().find(intermediate_outcome) ==
           state->get_outcomes().end()) {
         throw std::invalid_argument(
@@ -75,13 +77,12 @@ Concurrence::Concurrence(
             state->to_string() + "'");
       }
 
-      intermediate_outcome_map.insert({state_name, nullptr});
+      intermediate_outcome_map.insert({state_name, ""});
     }
   }
 }
 
-std::string
-Concurrence::execute(std::shared_ptr<yasmin::Blackboard> blackboard) {
+std::string Concurrence::execute(Blackboard::SharedPtr blackboard) {
   std::vector<std::thread> state_threads;
 
   // Initialize the parallel execution of all the states
@@ -90,8 +91,7 @@ Concurrence::execute(std::shared_ptr<yasmin::Blackboard> blackboard) {
                                          blackboard]() {
       std::string outcome = (*state.get())(blackboard);
       const std::lock_guard<std::mutex> lock(this->intermediate_outcome_mutex);
-      this->intermediate_outcome_map[state_name] =
-          std::make_shared<std::string>(outcome);
+      this->intermediate_outcome_map[state_name] = outcome;
     }));
   }
 
@@ -108,19 +108,18 @@ Concurrence::execute(std::shared_ptr<yasmin::Blackboard> blackboard) {
   }
 
   // Build final outcome
-  std::set<std::string> satisfied_outcomes;
+  Outcomes satisfied_outcomes;
   for (const auto &[outcome, requirements] : outcome_map) {
     bool satisfied = true;
     for (const auto &[state_name, expected_intermediate_outcome] :
          requirements) {
-      std::shared_ptr<std::string> actual_intermediate_outcome =
+      std::string actual_intermediate_outcome =
           intermediate_outcome_map.find(state_name)->second;
-      if (actual_intermediate_outcome == nullptr) {
+      if (actual_intermediate_outcome.empty()) {
         throw std::runtime_error("An intermediate outcome for state '" +
                                  state_name + "' was not received.");
       }
-      satisfied &=
-          *actual_intermediate_outcome == expected_intermediate_outcome;
+      satisfied &= actual_intermediate_outcome == expected_intermediate_outcome;
     }
     if (satisfied) {
       satisfied_outcomes.insert(outcome);
@@ -158,23 +157,22 @@ void Concurrence::cancel_state() {
   yasmin::State::cancel_state();
 }
 
-const std::map<std::string, std::shared_ptr<State>> &
-Concurrence::get_states() const {
+const StateMap &Concurrence::get_states() const noexcept {
   return this->states;
 }
 
-const Concurrence::OutcomeMap &Concurrence::get_outcome_map() const {
+const OutcomeMap &Concurrence::get_outcome_map() const noexcept {
   return this->outcome_map;
 }
 
-const std::string &Concurrence::get_default_outcome() const {
+const std::string &Concurrence::get_default_outcome() const noexcept {
   return this->default_outcome;
 }
 
-std::set<std::string>
+Outcomes
 Concurrence::generate_possible_outcomes(const OutcomeMap &outcome_map,
                                         const std::string &default_outcome) {
-  std::set<std::string> possible_outcomes;
+  Outcomes possible_outcomes;
   possible_outcomes.insert(
       default_outcome); // Always include the default outcome
 
@@ -183,4 +181,21 @@ Concurrence::generate_possible_outcomes(const OutcomeMap &outcome_map,
   }
 
   return possible_outcomes;
+}
+
+std::string Concurrence::to_string() const {
+  std::string name = "Concurrence [";
+
+  for (auto it = states.begin(); it != states.end(); ++it) {
+    name += it->first + " (" + it->second->to_string() + ")";
+
+    // Add a comma if this is not the last element
+    if (std::next(it) != states.end()) {
+      name += ", ";
+    }
+  }
+
+  name += "]";
+
+  return name;
 }

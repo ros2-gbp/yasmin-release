@@ -73,18 +73,7 @@ class YasminViewerPub(object):
         ## A timer to periodically publish the FSM state.
         self._timer = self._node.create_timer(1 / rate, self._publish_data)
 
-    def cleanup(self) -> None:
-        """
-        Cleans up resources used by the YasminViewerPub instance.
-        """
-        if self._timer is not None:
-            self._timer.cancel()
-            self._node.destroy_timer(self._timer)
-        del self._timer
-        if self._pub is not None:
-            self._node.destroy_publisher(self._pub)
-        del self._pub
-        self._fsm = None
+        ## Register shutdown callback to clean up the viewer.
 
     def parse_transitions(self, transitions: Dict[str, str]) -> List[TransitionMsg]:
         """

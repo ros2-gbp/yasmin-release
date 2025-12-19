@@ -13,14 +13,15 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-#include "yasmin_factory/yasmin_factory.hpp"
-
-#include "yasmin/blackboard_pywrapper.hpp"
 #include <algorithm>
 #include <cctype>
 #include <filesystem>
 #include <sstream>
 #include <stdexcept>
+
+#include "yasmin/blackboard_pywrapper.hpp"
+#include "yasmin/types.hpp"
+#include "yasmin_factory/yasmin_factory.hpp"
 
 namespace yasmin_factory {
 
@@ -30,19 +31,19 @@ std::unique_ptr<py::scoped_interpreter> YasminFactory::py_interpreter_ =
 bool YasminFactory::py_initialized_ = false;
 
 // PythonStateHolder implementation
-PythonStateHolder::PythonStateHolder(std::shared_ptr<yasmin::State> cpp_state,
+PythonStateHolder::PythonStateHolder(yasmin::State::SharedPtr cpp_state,
                                      py::object py_state)
     : yasmin::State(cpp_state->get_outcomes()), cpp_state_(cpp_state),
       py_state_(py_state) {}
 
 std::string
-PythonStateHolder::execute(std::shared_ptr<yasmin::Blackboard> blackboard) {
+PythonStateHolder::execute(yasmin::Blackboard::SharedPtr blackboard) {
   return this->cpp_state_->execute(blackboard);
 }
 
 void PythonStateHolder::cancel_state() { this->cpp_state_->cancel_state(); }
 
-std::string PythonStateHolder::to_string() {
+std::string PythonStateHolder::to_string() const {
   return this->cpp_state_->to_string();
 }
 
@@ -85,9 +86,9 @@ void YasminFactory::initialize_python() {
   }
 }
 
-std::shared_ptr<yasmin::State>
+yasmin::State::SharedPtr
 YasminFactory::create_python_state(const std::string &module_name,
-                                   const std::string &class_name) {
+                                   const std::string &class_name) const {
   try {
     py::gil_scoped_acquire acquire;
     // Import the yasmin.state module to ensure the State class is registered
@@ -107,7 +108,7 @@ YasminFactory::create_python_state(const std::string &module_name,
     py::object py_state = state_class();
 
     // Extract the C++ pointer from the Python object
-    auto cpp_state_ptr = py_state.cast<std::shared_ptr<yasmin::State>>();
+    auto cpp_state_ptr = py_state.cast<yasmin::State::SharedPtr>();
 
     // Wrap it in a holder that keeps the Python object alive
     return std::make_shared<PythonStateHolder>(cpp_state_ptr, py_state);
@@ -137,7 +138,7 @@ std::vector<std::string> YasminFactory::split_string(const std::string &str,
   while (std::getline(ss, token, delimiter)) {
     token = this->trim(token);
     if (!token.empty()) {
-      tokens.push_back(token);
+      tokens.emplace_back(std::move(token));
     }
   }
 
@@ -163,8 +164,8 @@ YasminFactory::get_optional_attribute(tinyxml2::XMLElement *element,
   return attr ? std::string(attr) : default_value;
 }
 
-std::shared_ptr<yasmin::State>
-YasminFactory::create_state(tinyxml2::XMLElement *state_elem) {
+yasmin::State::SharedPtr
+YasminFactory::create_state(tinyxml2::XMLElement *state_elem) const {
   std::string state_type =
       this->get_optional_attribute(state_elem, "type", "cpp");
   std::string class_name = this->get_required_attribute(state_elem, "class");
@@ -185,13 +186,13 @@ YasminFactory::create_state(tinyxml2::XMLElement *state_elem) {
   }
 }
 
-std::shared_ptr<yasmin::Concurrence>
+yasmin::Concurrence::SharedPtr
 YasminFactory::create_concurrence(tinyxml2::XMLElement *conc_elem) {
   std::string default_outcome =
       this->get_optional_attribute(conc_elem, "default_outcome", "");
 
-  std::map<std::string, std::shared_ptr<yasmin::State>> states;
-  yasmin::Concurrence::OutcomeMap outcome_map;
+  yasmin::StateMap states;
+  yasmin::OutcomeMap outcome_map;
 
   // Parse the concurrence structure
   for (tinyxml2::XMLElement *child = conc_elem->FirstChildElement(); child;
@@ -239,7 +240,7 @@ YasminFactory::create_concurrence(tinyxml2::XMLElement *conc_elem) {
                                                outcome_map);
 }
 
-std::shared_ptr<yasmin::StateMachine>
+yasmin::StateMachine::SharedPtr
 YasminFactory::create_sm(tinyxml2::XMLElement *root) {
 
   std::string file_path = this->get_optional_attribute(root, "file_path", "");
@@ -282,7 +283,7 @@ YasminFactory::create_sm(tinyxml2::XMLElement *root) {
   std::string set_start_state =
       this->get_optional_attribute(root, "start_state", "");
   std::vector<std::string> outcomes_vec = this->split_string(outcomes_str, ' ');
-  std::set<std::string> outcomes(outcomes_vec.begin(), outcomes_vec.end());
+  yasmin::Outcomes outcomes(outcomes_vec.begin(), outcomes_vec.end());
 
   auto sm = std::make_shared<yasmin::StateMachine>(outcomes);
 
@@ -299,7 +300,7 @@ YasminFactory::create_sm(tinyxml2::XMLElement *root) {
     std::string name = this->get_required_attribute(child, "name");
 
     // Parse transitions
-    std::map<std::string, std::string> transitions;
+    yasmin::Transitions transitions;
     for (tinyxml2::XMLElement *transition =
              child->FirstChildElement("Transition");
          transition;
@@ -310,7 +311,7 @@ YasminFactory::create_sm(tinyxml2::XMLElement *root) {
     }
 
     // Parse remappings
-    std::map<std::string, std::string> remappings;
+    yasmin::Remappings remappings;
     for (tinyxml2::XMLElement *transition = child->FirstChildElement("Remap");
          transition; transition = transition->NextSiblingElement("Remap")) {
       std::string from = this->get_required_attribute(transition, "old");
@@ -319,7 +320,7 @@ YasminFactory::create_sm(tinyxml2::XMLElement *root) {
     }
 
     // Create the state
-    std::shared_ptr<yasmin::State> state;
+    yasmin::State::SharedPtr state;
     if (child_name == "State") {
       state = this->create_state(child);
     } else if (child_name == "Concurrence") {
@@ -342,7 +343,7 @@ YasminFactory::create_sm(tinyxml2::XMLElement *root) {
   return sm;
 }
 
-std::shared_ptr<yasmin::StateMachine>
+yasmin::StateMachine::SharedPtr
 YasminFactory::create_sm_from_file(const std::string &xml_file) {
   this->xml_path_ = xml_file;
   tinyxml2::XMLDocument doc;

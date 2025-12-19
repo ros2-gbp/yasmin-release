@@ -18,6 +18,7 @@
 #include <pybind11/stl.h>
 
 #include "yasmin/state.hpp"
+#include "yasmin/types.hpp"
 
 namespace py = pybind11;
 
@@ -41,7 +42,7 @@ public:
             "yasmin", "yasmin::State")) {}
 
   /**
-   * @brief Destructor that destroys the ClassLoader.
+   * @brief Destructor.
    */
   ~CppStateFactory() = default;
 
@@ -61,13 +62,20 @@ public:
    * @throws pluginlib::CreateClassException if the class cannot be
    * instantiated.
    */
-  std::shared_ptr<yasmin::State> create(const std::string &class_name) {
-    return this->loader_->createSharedInstance(class_name);
+  yasmin::State::SharedPtr create(const std::string &class_name) {
+    // Create an unmanaged instance of the specified class
+    // Python will manage the lifetime via shared_ptr
+    auto state = this->loader_->createUnmanagedInstance(class_name);
+
+    // Wrap the raw pointer in a shared_ptr (Python will manage the lifetime)
+    yasmin::State::SharedPtr state_ptr(state);
+
+    // Return the shared pointer to the created state
+    return state_ptr;
   }
 
 private:
-  /// The pluginlib ClassLoader for yasmin::State classes (as shared_ptr for
-  /// controlled lifetime).
+  /// The pluginlib ClassLoader for yasmin::State classes
   std::shared_ptr<pluginlib::ClassLoader<yasmin::State>> loader_;
 };
 

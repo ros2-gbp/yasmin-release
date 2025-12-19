@@ -85,7 +85,7 @@ class PluginManager:
                             for library in root_elem.findall("library"):
                                 for class_elem in library.findall("class"):
                                     class_name: str = class_elem.get("name")
-                                    if class_name and "yasmin" in class_name.lower():
+                                    if class_name:
                                         self.load_cpp_plugin(class_name)
 
     def load_python_plugins_from_package(self, package_name: str) -> None:
@@ -177,8 +177,10 @@ class PluginManager:
     def load_cpp_plugin(self, class_name: str) -> None:
         try:
             plugin_info: PluginInfo = PluginInfo(plugin_type="cpp", class_name=class_name)
-        except Exception:
-            yasmin.YASMIN_LOG_ERROR(f"Failed to load C++ plugin: {class_name}")
+        except Exception as e:
+            yasmin.YASMIN_LOG_ERROR(
+                f'Failed to load C++ plugin: {class_name}. Error: "{e}"'
+            )
             return
         self.cpp_plugins.append(plugin_info)
 
@@ -187,9 +189,9 @@ class PluginManager:
             plugin_info: PluginInfo = PluginInfo(
                 plugin_type="python", class_name=class_name, module=module
             )
-        except Exception:
+        except Exception as e:
             yasmin.YASMIN_LOG_ERROR(
-                f"Failed to load Python plugin: {class_name} from module {module}"
+                f'Failed to load Python plugin: {class_name} from module {module}. Error: "{e}"'
             )
             return
         self.python_plugins.append(plugin_info)

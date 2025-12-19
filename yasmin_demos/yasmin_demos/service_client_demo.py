@@ -118,13 +118,12 @@ def print_sum(blackboard: Blackboard) -> str:
 
 
 def main() -> None:
-    yasmin.YASMIN_LOG_INFO("yasmin_service_client_demo")
-
     # Init ROS 2
     rclpy.init()
 
     # Set ROS 2 logs
     set_ros_loggers()
+    yasmin.YASMIN_LOG_INFO("yasmin_service_client_demo")
 
     # Create a FSM
     sm = StateMachine(outcomes=["outcome4"], handle_sigint=True)
@@ -153,7 +152,7 @@ def main() -> None:
     )
 
     # Publish FSM info
-    viewer = YasminViewerPub(sm, "YASMIN_SERVICE_CLIENT_DEMO")
+    YasminViewerPub(sm, "YASMIN_SERVICE_CLIENT_DEMO")
 
     # Execute the FSM
     try:
@@ -161,9 +160,6 @@ def main() -> None:
         yasmin.YASMIN_LOG_INFO(outcome)
     except Exception as e:
         yasmin.YASMIN_LOG_WARN(e)
-    finally:
-        viewer.cleanup()
-        del sm
 
     # Shutdown ROS 2 if it's running
     if rclpy.ok():

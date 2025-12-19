@@ -19,48 +19,58 @@
 #include <string>
 #include <vector>
 
+#ifdef __GNUG__     // If using GCC/G++
+#include <cxxabi.h> // For abi::__cxa_demangle
+#endif
+
 #include "yasmin/logs.hpp"
 #include "yasmin/state.hpp"
+#include "yasmin/types.hpp"
 
 using namespace yasmin;
 
-State::State(const std::set<std::string> &outcomes) : outcomes(outcomes) {
+State::State(const Outcomes &outcomes) : outcomes(outcomes) {
   if (outcomes.empty()) {
     throw std::logic_error("A state must have at least one possible outcome.");
   }
 }
 
+void State::set_status(StateStatus new_status) {
+  this->status.store(new_status);
+}
+
 StateStatus State::get_status() const { return this->status.load(); }
 
-bool State::is_idle() const { return this->status.load() == StateStatus::IDLE; }
-
-bool State::is_running() const {
-  return this->status.load() == StateStatus::RUNNING;
+bool State::is_idle() const noexcept {
+  return this->get_status() == StateStatus::IDLE;
 }
 
-bool State::is_canceled() const {
-  return this->status.load() == StateStatus::CANCELED;
+bool State::is_running() const noexcept {
+  return this->get_status() == StateStatus::RUNNING;
 }
 
-bool State::is_completed() const {
-  return this->status.load() == StateStatus::COMPLETED;
+bool State::is_canceled() const noexcept {
+  return this->get_status() == StateStatus::CANCELED;
 }
 
-std::string State::operator()(std::shared_ptr<yasmin::Blackboard> blackboard) {
+bool State::is_completed() const noexcept {
+  return this->get_status() == StateStatus::COMPLETED;
+}
+
+std::string State::operator()(Blackboard::SharedPtr blackboard) {
+
   YASMIN_LOG_DEBUG("Executing state '%s'", this->to_string().c_str());
-
-  this->status.store(StateStatus::RUNNING);
+  this->set_status(StateStatus::RUNNING);
 
   // Execute the specific logic of the state
   std::string outcome = this->execute(blackboard);
 
   // Check if the outcome is valid
-  if (std::find(this->outcomes.begin(), this->outcomes.end(), outcome) ==
-      this->outcomes.end()) {
+  if (this->outcomes.find(outcome) == this->outcomes.end()) {
 
     // Construct a string representation of the possible outcomes
     std::string outcomes_string = "[";
-    auto outcomes = this->get_outcomes();
+    const auto &outcomes = this->get_outcomes();
 
     for (auto it = outcomes.begin(); it != outcomes.end(); ++it) {
       const auto &s = *it;
@@ -75,7 +85,7 @@ std::string State::operator()(std::shared_ptr<yasmin::Blackboard> blackboard) {
     outcomes_string += "]";
 
     // Mark as idle before throwing exception
-    this->status.store(StateStatus::IDLE);
+    this->set_status(StateStatus::IDLE);
 
     // Throw an exception if the outcome is not valid
     throw std::logic_error("Outcome '" + outcome +
@@ -86,11 +96,28 @@ std::string State::operator()(std::shared_ptr<yasmin::Blackboard> blackboard) {
   }
 
   // Mark as completed if not canceled
-  if (this->status.load() != StateStatus::CANCELED) {
-    this->status.store(StateStatus::COMPLETED);
+  if (!this->is_canceled()) {
+    this->set_status(StateStatus::COMPLETED);
   }
 
   return outcome; // Return the valid outcome
 }
 
-std::set<std::string> const &State::get_outcomes() { return this->outcomes; }
+Outcomes const &State::get_outcomes() const noexcept { return this->outcomes; }
+
+std::string State::to_string() const {
+  std::string name = typeid(*this).name();
+
+#ifdef __GNUG__ // If using GCC/G++
+  int status;
+  // Demangle the name using GCC's demangling function
+  char *demangled =
+      abi::__cxa_demangle(name.c_str(), nullptr, nullptr, &status);
+  if (status == 0) {
+    name = demangled;
+  }
+  free(demangled);
+#endif
+
+  return name; // Return the demangled class name
+}

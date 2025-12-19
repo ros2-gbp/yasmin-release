@@ -52,7 +52,7 @@ public:
    * @param blackboard Shared pointer to the blackboard for state communication.
    * @return std::string The outcome of the execution: "outcome1" or "outcome2".
    */
-  std::string execute(std::shared_ptr<yasmin::Blackboard> blackboard) override {
+  std::string execute(yasmin::Blackboard::SharedPtr blackboard) override {
     YASMIN_LOG_INFO("Executing state FOO");
     std::this_thread::sleep_for(std::chrono::seconds(3));
 
@@ -90,7 +90,7 @@ public:
    * @param blackboard Shared pointer to the blackboard for state communication.
    * @return std::string The outcome of the execution: "outcome3".
    */
-  std::string execute(std::shared_ptr<yasmin::Blackboard> blackboard) override {
+  std::string execute(yasmin::Blackboard::SharedPtr blackboard) override {
     YASMIN_LOG_INFO("Executing state BAR");
     std::this_thread::sleep_for(std::chrono::seconds(3));
 
@@ -101,11 +101,12 @@ public:
 };
 
 int main(int argc, char *argv[]) {
-  YASMIN_LOG_INFO("yasmin_demo");
+  // Initialize ROS 2
   rclcpp::init(argc, argv);
 
   // Set ROS 2 logs
   yasmin_ros::set_ros_loggers();
+  YASMIN_LOG_INFO("yasmin_demo");
 
   // Create a state machine
   auto sm = std::make_shared<yasmin::StateMachine>(

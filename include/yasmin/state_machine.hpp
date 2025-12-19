@@ -13,16 +13,13 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-#ifndef YASMIN__STATE_MACHINE_HPP
-#define YASMIN__STATE_MACHINE_HPP
+#ifndef YASMIN__STATE_MACHINE_HPP_
+#define YASMIN__STATE_MACHINE_HPP_
 
 #include <atomic>
 #include <condition_variable>
 #include <functional>
-#include <map>
-#include <memory>
 #include <mutex>
-#include <set>
 #include <string>
 #include <vector>
 
@@ -42,21 +39,23 @@ namespace yasmin {
  */
 class StateMachine : public State {
 
-  /// Alias for a callback function executed before running the state machine.
-  using StartCallbackType = std::function<void(
-      std::shared_ptr<yasmin::Blackboard>, const std::string &,
-      const std::vector<std::string> &)>;
-  /// Alias for a callback function executed before changing the state.
-  using TransitionCallbackType = std::function<void(
-      std::shared_ptr<yasmin::Blackboard>, const std::string &,
-      const std::string &, const std::string &,
-      const std::vector<std::string> &)>;
-  /// Alias for a callback function executed after running the state machine.
-  using EndCallbackType = std::function<void(
-      std::shared_ptr<yasmin::Blackboard>, const std::string &,
-      const std::vector<std::string> &)>;
-
 public:
+  /// Alias for a callback function executed before running the state machine.
+  using StartCallbackType =
+      std::function<void(Blackboard::SharedPtr, const std::string &)>;
+  /// Alias for a callback function executed before changing the state.
+  using TransitionCallbackType =
+      std::function<void(Blackboard::SharedPtr, const std::string &,
+                         const std::string &, const std::string &)>;
+  /// Alias for a callback function executed after running the state machine.
+  using EndCallbackType =
+      std::function<void(Blackboard::SharedPtr, const std::string &)>;
+
+  /**
+   * @brief Shared pointer type for StateMachine.
+   */
+  YASMIN_PTR_ALIASES(StateMachine)
+
   /**
    * @brief Construct a new StateMachine object.
    *
@@ -64,8 +63,7 @@ public:
    * @param handle_sigint Whether to handle SIGINT for canceling the state
    * machine.
    */
-  StateMachine(const std::set<std::string> &outcomes,
-               bool handle_sigint = false);
+  StateMachine(const Outcomes &outcomes, bool handle_sigint = false);
 
   /**
    * @brief Construct a new StateMachine object.
@@ -75,7 +73,7 @@ public:
    * @param handle_sigint Whether to handle SIGINT for canceling the state
    * machine.
    */
-  StateMachine(const std::string &name, const std::set<std::string> &outcomes,
+  StateMachine(const std::string &name, const Outcomes &outcomes,
                bool handle_sigint = false);
 
   /**
@@ -97,9 +95,9 @@ public:
    * @throws std::invalid_argument If any transition has empty source or target,
    *                               or references unregistered outcomes.
    */
-  void add_state(const std::string &name, std::shared_ptr<State> state,
-                 const std::map<std::string, std::string> &transitions = {},
-                 const std::map<std::string, std::string> &remappings = {});
+  void add_state(const std::string &name, State::SharedPtr state,
+                 const Transitions &transitions = {},
+                 const Remappings &remappings = {});
 
   /**
    * @brief Sets the name of the state machine.
@@ -113,7 +111,7 @@ public:
    *
    * @return The name of the state machine.
    */
-  const std::string &get_name() const { return this->name; }
+  const std::string &get_name() const noexcept { return this->name; }
 
   /**
    * @brief Sets the start state for the state machine.
@@ -128,87 +126,49 @@ public:
    *
    * @return The name of the start state.
    */
-  std::string get_start_state();
+  std::string const &get_start_state() const noexcept;
 
   /**
    * @brief Gets a constant reference to the map of states.
    *
    * @return A constant reference to the map of states.
    */
-  std::map<std::string, std::shared_ptr<State>> const &get_states();
+  StateMap const &get_states() const noexcept;
 
   /**
    * @brief Gets a constant reference to the map of transitions.
    *
    * @return A constant reference to the map of transitions.
    */
-  std::map<std::string, std::map<std::string, std::string>> const &
-  get_transitions();
+  TransitionsMap const &get_transitions() const noexcept;
 
   /**
    * @brief Retrieves the current state name.
    *
    * @return The name of the current state.
    */
-  std::string get_current_state();
+  std::string const &get_current_state() const;
 
   /**
    * @brief Adds a callback function to be called when the state machine starts.
    *
    * @param cb The callback function to execute.
-   * @param args Optional arguments to pass to the callback.
    */
-  void add_start_cb(StartCallbackType cb,
-                    const std::vector<std::string> &args = {});
+  void add_start_cb(StartCallbackType cb);
 
   /**
    * @brief Adds a callback function for state transitions.
    *
    * @param cb The callback function to execute.
-   * @param args Optional arguments to pass to the callback.
    */
-  void add_transition_cb(TransitionCallbackType cb,
-                         const std::vector<std::string> &args = {});
+  void add_transition_cb(TransitionCallbackType cb);
 
   /**
    * @brief Adds a callback function to be called when the state machine ends.
    *
    * @param cb The callback function to execute.
-   * @param args Optional arguments to pass to the callback.
    */
-  void add_end_cb(EndCallbackType cb,
-                  const std::vector<std::string> &args = {});
-
-  /**
-   * @brief Calls start callbacks with the given blackboard and start state.
-   *
-   * @param blackboard A shared pointer to the blackboard.
-   * @param start_state The name of the start state.
-   */
-  void call_start_cbs(std::shared_ptr<yasmin::Blackboard> blackboard,
-                      const std::string &start_state);
-
-  /**
-   * @brief Calls transition callbacks when transitioning between states.
-   *
-   * @param blackboard A shared pointer to the blackboard.
-   * @param from_state The state being transitioned from.
-   * @param to_state The state being transitioned to.
-   * @param outcome The outcome that triggered the transition.
-   */
-  void call_transition_cbs(std::shared_ptr<yasmin::Blackboard> blackboard,
-                           const std::string &from_state,
-                           const std::string &to_state,
-                           const std::string &outcome);
-
-  /**
-   * @brief Calls end callbacks with the given blackboard and outcome.
-   *
-   * @param blackboard A shared pointer to the blackboard.
-   * @param outcome The outcome when the state machine ends.
-   */
-  void call_end_cbs(std::shared_ptr<yasmin::Blackboard> blackboard,
-                    const std::string &outcome);
+  void add_end_cb(EndCallbackType cb);
 
   /**
    * @brief Validates the state machine configuration.
@@ -227,7 +187,7 @@ public:
    * @throws std::runtime_error If the execution cannot be completed due to
    *                            invalid states or transitions.
    */
-  std::string execute(std::shared_ptr<yasmin::Blackboard> blackboard) override;
+  std::string execute(Blackboard::SharedPtr blackboard) override;
 
   /**
    * @brief Executes the state machine using a default blackboard.
@@ -243,6 +203,7 @@ public:
    */
   std::string operator()();
 
+  // Use the base class operator()
   using State::operator();
 
   /**
@@ -261,17 +222,19 @@ public:
    *
    * @return A string describing the state machine and its states.
    */
-  std::string to_string();
+  std::string to_string() const override;
 
 private:
   // Name of the state machine (used if this is the root state machine)
   std::string name;
+
   /// Map of states
-  std::map<std::string, std::shared_ptr<State>> states;
+  StateMap states;
   /// Map of transitions
-  std::map<std::string, std::map<std::string, std::string>> transitions;
+  TransitionsMap transitions;
   /// A dictionary of remappings to set in the blackboard in each transition
-  std::map<std::string, std::map<std::string, std::string>> remappings;
+  RemappingsMap remappings;
+
   /// Name of the start state
   std::string start_state;
   /// Name of the current state
@@ -285,12 +248,11 @@ private:
   std::atomic_bool validated{false};
 
   /// Start callbacks executed before the state machine
-  std::vector<std::pair<StartCallbackType, std::vector<std::string>>> start_cbs;
+  std::vector<StartCallbackType> start_cbs;
   /// Transition callbacks executed before changing the state
-  std::vector<std::pair<TransitionCallbackType, std::vector<std::string>>>
-      transition_cbs;
+  std::vector<TransitionCallbackType> transition_cbs;
   /// End callbacks executed before the state machine
-  std::vector<std::pair<EndCallbackType, std::vector<std::string>>> end_cbs;
+  std::vector<EndCallbackType> end_cbs;
 
   /**
    * @brief Sets the current state name.
@@ -298,8 +260,39 @@ private:
    * @param state_name The name of the state to set as the current state.
    */
   void set_current_state(const std::string &state_name);
+
+  /**
+   * @brief Calls start callbacks with the given blackboard and start state.
+   *
+   * @param blackboard A shared pointer to the blackboard.
+   * @param start_state The name of the start state.
+   */
+  void call_start_cbs(Blackboard::SharedPtr blackboard,
+                      const std::string &start_state);
+
+  /**
+   * @brief Calls transition callbacks when transitioning between states.
+   *
+   * @param blackboard A shared pointer to the blackboard.
+   * @param from_state The state being transitioned from.
+   * @param to_state The state being transitioned to.
+   * @param outcome The outcome that triggered the transition.
+   */
+  void call_transition_cbs(Blackboard::SharedPtr blackboard,
+                           const std::string &from_state,
+                           const std::string &to_state,
+                           const std::string &outcome);
+
+  /**
+   * @brief Calls end callbacks with the given blackboard and outcome.
+   *
+   * @param blackboard A shared pointer to the blackboard.
+   * @param outcome The outcome when the state machine ends.
+   */
+  void call_end_cbs(Blackboard::SharedPtr blackboard,
+                    const std::string &outcome);
 };
 
 } // namespace yasmin
 
-#endif // YASMIN__STATE_MACHINE_HPP
+#endif // YASMIN__STATE_MACHINE_HPP_

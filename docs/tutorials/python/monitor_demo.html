@@ -186,7 +186,7 @@ class PrintOdometryState(MonitorState):
     logging them and transitioning based on the number of messages received.
     """
 
-    def __init__(self, times: int) -&gt; None:
+    def __init__(self, times: int = 5) -&gt; None:
         """
         Initializes the PrintOdometryState.
 
@@ -247,31 +247,39 @@ class PrintOdometryState(MonitorState):
           completion, timeout scenarios, and user interruption.
         </p>
 
-        <pre><code class="language-python">rclpy.init()
-set_ros_loggers()
+        <pre><code class="language-python">def main() -&gt; None:
+    # Initialize ROS 2
+    rclpy.init()
 
-sm = StateMachine(outcomes=["outcome4"], handle_sigint=True)
+    # Set ROS 2 logs
+    set_ros_loggers()
+    yasmin.YASMIN_LOG_INFO("yasmin_monitor_demo")
 
-sm.add_state(
-    "PRINTING_ODOM",
-    PrintOdometryState(5),  # Monitor 5 messages
-    transitions={
-        "outcome1": "PRINTING_ODOM",  # Loop to continue monitoring
-        "outcome2": "outcome4",  # Exit when done
-        TIMEOUT: "outcome4",  # Exit on timeout
-        CANCEL: "outcome4",  # Exit on cancel
-    },
-)
+    # Create a finite state machine (FSM)
+    sm = StateMachine(outcomes=["outcome4"], handle_sigint=True)
 
-YasminViewerPub(sm, "YASMIN_MONITOR_DEMO")</code></pre>
+    # Add states to the FSM
+    sm.add_state(
+        "PRINTING_ODOM",
+        PrintOdometryState(5),
+        transitions={
+            "outcome1": "PRINTING_ODOM",
+            "outcome2": "outcome4",
+            TIMEOUT: "outcome4",
+            CANCEL: "outcome4",
+        },
+    )
+
+    # Publish FSM information for visualization
+    YasminViewerPub(sm, "YASMIN_MONITOR_DEMO")</code></pre>
 
         <h2>3. Execute</h2>
         <p>
           Execute the state machine with proper exception handling to manage
           keyboard interrupts and ensure clean shutdown.
         </p>
-        <pre><code class="language-python">    # Publish FSM information
-    viewer = YasminViewerPub(sm, "YASMIN_MONITOR_DEMO")
+        <pre><code class="language-python">    # Publish FSM information for visualization
+    YasminViewerPub(sm, "YASMIN_MONITOR_DEMO")
 
     # Execute the FSM
     try:
@@ -279,9 +287,6 @@ YasminViewerPub(sm, "YASMIN_MONITOR_DEMO")</code></pre>
         yasmin.YASMIN_LOG_INFO(outcome)
     except Exception as e:
         yasmin.YASMIN_LOG_WARN(e)
-    finally:
-        viewer.cleanup()
-        del sm
 
     # Shutdown ROS 2 if it's running
     if rclpy.ok():

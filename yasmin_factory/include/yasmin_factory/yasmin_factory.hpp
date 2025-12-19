@@ -13,12 +13,9 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-#ifndef YASMIN_FACTORY__YASMIN_FACTORY_HPP
-#define YASMIN_FACTORY__YASMIN_FACTORY_HPP
+#ifndef YASMIN_FACTORY__YASMIN_FACTORY_HPP_
+#define YASMIN_FACTORY__YASMIN_FACTORY_HPP_
 
-#include <map>
-#include <memory>
-#include <set>
 #include <string>
 #include <vector>
 
@@ -32,6 +29,7 @@
 #include "yasmin/concurrence.hpp"
 #include "yasmin/state.hpp"
 #include "yasmin/state_machine.hpp"
+#include "yasmin/types.hpp"
 
 namespace py = pybind11;
 
@@ -53,13 +51,12 @@ public:
    * @param cpp_state The C++ state pointer extracted from Python.
    * @param py_state The Python state object (kept alive).
    */
-  PythonStateHolder(std::shared_ptr<yasmin::State> cpp_state,
-                    py::object py_state);
+  PythonStateHolder(yasmin::State::SharedPtr cpp_state, py::object py_state);
 
   /**
    * @brief Delegates execution to the underlying Python state.
    */
-  std::string execute(std::shared_ptr<yasmin::Blackboard> blackboard) override;
+  std::string execute(yasmin::Blackboard::SharedPtr blackboard) override;
 
   /**
    * @brief Delegates cancellation to the underlying Python state.
@@ -69,11 +66,11 @@ public:
   /**
    * @brief Delegates string conversion to the underlying Python state.
    */
-  std::string to_string() override;
+  std::string to_string() const override;
 
 private:
-  std::shared_ptr<yasmin::State> cpp_state_; ///< The C++ state pointer
-  py::object py_state_;                      ///< Python object (kept alive)
+  yasmin::State::SharedPtr cpp_state_; ///< The C++ state pointer
+  py::object py_state_;                ///< Python object (kept alive)
 };
 
 /**
@@ -105,7 +102,7 @@ public:
    * @throws std::runtime_error If the state type is unknown or required
    *         attributes are missing.
    */
-  std::shared_ptr<yasmin::State> create_state(tinyxml2::XMLElement *state_elem);
+  yasmin::State::SharedPtr create_state(tinyxml2::XMLElement *state_elem) const;
 
   /**
    * @brief Creates a concurrence from an XML element.
@@ -115,7 +112,7 @@ public:
    * @throws std::runtime_error If required attributes are missing or the
    *         XML structure is invalid.
    */
-  std::shared_ptr<yasmin::Concurrence>
+  yasmin::Concurrence::SharedPtr
   create_concurrence(tinyxml2::XMLElement *conc_elem);
 
   /**
@@ -125,7 +122,7 @@ public:
    * @return A shared pointer to the created StateMachine.
    * @throws std::runtime_error If the XML structure is invalid.
    */
-  std::shared_ptr<yasmin::StateMachine> create_sm(tinyxml2::XMLElement *root);
+  yasmin::StateMachine::SharedPtr create_sm(tinyxml2::XMLElement *root);
 
   /**
    * @brief Creates a state machine from an XML file.
@@ -135,7 +132,7 @@ public:
    * @throws std::runtime_error If the file cannot be loaded or the XML
    *         structure is invalid.
    */
-  std::shared_ptr<yasmin::StateMachine>
+  yasmin::StateMachine::SharedPtr
   create_sm_from_file(const std::string &xml_file);
 
   /**
@@ -172,9 +169,9 @@ private:
    * @return A shared pointer to the created Python state adapter.
    * @throws std::runtime_error If the Python state cannot be created.
    */
-  std::shared_ptr<yasmin::State>
+  yasmin::State::SharedPtr
   create_python_state(const std::string &module_name,
-                      const std::string &class_name);
+                      const std::string &class_name) const;
 
   /**
    * @brief Helper function to split a string by a delimiter.
@@ -221,4 +218,4 @@ private:
 
 } // namespace yasmin_factory
 
-#endif // YASMIN_FACTORY__YASMIN_FACTORY_HPP
+#endif // YASMIN_FACTORY__YASMIN_FACTORY_HPP_

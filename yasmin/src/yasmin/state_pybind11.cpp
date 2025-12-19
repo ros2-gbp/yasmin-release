@@ -19,6 +19,7 @@
 #include "yasmin/blackboard_pywrapper.hpp"
 #include "yasmin/pybind11_utils.hpp"
 #include "yasmin/state.hpp"
+#include "yasmin/types.hpp"
 
 namespace py = pybind11;
 
@@ -45,7 +46,7 @@ public:
    * We wrap the C++ Blackboard in BlackboardPyWrapper before passing to Python.
    * The GIL must be acquired before calling into Python.
    */
-  std::string execute(std::shared_ptr<yasmin::Blackboard> blackboard) override {
+  std::string execute(yasmin::Blackboard::SharedPtr blackboard) override {
     // Acquire GIL before calling Python code
     py::gil_scoped_acquire acquire;
 
@@ -94,7 +95,7 @@ public:
    * @brief Override to_string().
    * The GIL must be acquired before calling into Python.
    */
-  std::string to_string() override {
+  std::string to_string() const override {
     // Acquire GIL before calling Python code
     py::gil_scoped_acquire acquire;
 
@@ -117,27 +118,17 @@ PYBIND11_MODULE(state, m) {
   py::module blackboard_module = py::module::import("yasmin.blackboard");
 #endif
 
-  // Export StateStatus enum
-  py::enum_<yasmin::StateStatus>(m, "StateStatus")
-      .value("IDLE", yasmin::StateStatus::IDLE)
-      .value("RUNNING", yasmin::StateStatus::RUNNING)
-      .value("CANCELED", yasmin::StateStatus::CANCELED)
-      .value("COMPLETED", yasmin::StateStatus::COMPLETED)
-      .export_values();
-
   // Export State class with trampoline
-  py::class_<yasmin::State, yasmin::PyState, std::shared_ptr<yasmin::State>>
+  py::class_<yasmin::State, yasmin::PyState, yasmin::State::SharedPtr>
       state_class(m, "State");
 
-  state_class.def(py::init<std::set<std::string>>(), py::arg("outcomes"))
+  state_class.def(py::init<yasmin::Outcomes>(), py::arg("outcomes"))
       .def(py::init([](const std::vector<std::string> &outcomes) {
              return new yasmin::PyState(
-                 std::set<std::string>(outcomes.begin(), outcomes.end()));
+                 yasmin::Outcomes(outcomes.begin(), outcomes.end()));
            }),
            py::arg("outcomes"))
       // Status methods
-      .def("get_status", &yasmin::State::get_status,
-           "Gets the current status of the state")
       .def("is_idle", &yasmin::State::is_idle, "Checks if the state is idle")
       .def("is_running", &yasmin::State::is_running,
            "Checks if the state is currently running")

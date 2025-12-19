@@ -228,8 +228,8 @@
           outcomes.
         </p>
         <pre><code class="language-cpp">// my_package/include/my_package/my_custom_state.hpp
-#ifndef MY_PACKAGE__MY_CUSTOM_STATE_HPP
-#define MY_PACKAGE__MY_CUSTOM_STATE_HPP
+#ifndef MY_PACKAGE__MY_CUSTOM_STATE_HPP_
+#define MY_PACKAGE__MY_CUSTOM_STATE_HPP_
 
 #include "yasmin/state.hpp"
 #include "yasmin/blackboard.hpp"
@@ -239,7 +239,7 @@ namespace my_package {
 class MyCustomState : public yasmin::State {
 public:
   MyCustomState();
-  std::string execute(std::shared_ptr&lt;yasmin::Blackboard&gt; blackboard) override;
+  std::string execute(yasmin::Blackboard::SharedPtr blackboard) override;
 };
 
 }  // namespace my_package
@@ -260,7 +260,7 @@ namespace my_package {
 MyCustomState::MyCustomState() : yasmin::State({"success", "failure"}) {}
 
 std::string MyCustomState::execute(
-    std::shared_ptr&lt;yasmin::Blackboard&gt; blackboard) {
+    yasmin::Blackboard::SharedPtr blackboard) {
   // Your state logic here
   return "success";
 }

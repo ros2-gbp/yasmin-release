@@ -20,6 +20,7 @@
 #include "yasmin/blackboard_pywrapper.hpp"
 #include "yasmin/pybind11_utils.hpp"
 #include "yasmin/state_machine.hpp"
+#include "yasmin/types.hpp"
 
 namespace py = pybind11;
 
@@ -32,18 +33,18 @@ PYBIND11_MODULE(state_machine, m) {
   // Export StateMachine class - inherits from State
   py::class_<yasmin::StateMachine,
              yasmin::State, // Inherit from State
-             std::shared_ptr<yasmin::StateMachine>>
+             yasmin::StateMachine::SharedPtr /* Shared pointer */>
       sm_class(m, "StateMachine");
 
-  sm_class.def(py::init<std::set<std::string>>(), py::arg("outcomes"))
+  sm_class.def(py::init<yasmin::Outcomes>(), py::arg("outcomes"))
       .def(py::init([](const std::vector<std::string> &outcomes,
                        bool handle_sigint) {
              return new yasmin::StateMachine(
-                 std::set<std::string>(outcomes.begin(), outcomes.end()),
+                 yasmin::Outcomes(outcomes.begin(), outcomes.end()),
                  handle_sigint);
            }),
            py::arg("outcomes"), py::arg("handle_sigint") = false)
-      .def(py::init<const std::string &, const std::set<std::string> &, bool>(),
+      .def(py::init<const std::string &, const yasmin::Outcomes &, bool>(),
            py::arg("name"), py::arg("outcomes"),
            py::arg("handle_sigint") = false)
       .def(py::init([](const std::string &name,
@@ -55,22 +56,20 @@ PYBIND11_MODULE(state_machine, m) {
            }),
            py::arg("name"), py::arg("outcomes"),
            py::arg("handle_sigint") = false)
-      // Add destructor from StateMachine
-      .def("__del__", [](yasmin::StateMachine *self) { delete self; })
       // Add state method with keep_alive to manage object lifetime
       .def(
           "add_state",
           [](yasmin::StateMachine &self, const std::string &name,
-             std::shared_ptr<yasmin::State> state,
-             const std::map<std::string, std::string> &transitions,
-             const std::map<std::string, std::string> &remappings) {
+             yasmin::State::SharedPtr state,
+             const yasmin::Transitions &transitions,
+             const yasmin::Remappings &remappings) {
             // Ensure the Python object is kept alive
             py::object py_state = py::cast(state);
             self.add_state(name, state, transitions, remappings);
           },
           "Add a state to the state machine", py::arg("name"), py::arg("state"),
-          py::arg("transitions") = std::map<std::string, std::string>(),
-          py::arg("remappings") = std::map<std::string, std::string>(),
+          py::arg("transitions") = yasmin::Transitions(),
+          py::arg("remappings") = yasmin::Remappings(),
           py::keep_alive<1, 3>()) // Keep state (arg 3) alive as long as self
                                   // (arg 1) is alive
       // Setters and getters for name and start state
@@ -121,44 +120,33 @@ PYBIND11_MODULE(state_machine, m) {
       // Callback registration methods
       .def(
           "add_start_cb",
-          [](yasmin::StateMachine &self, py::function cb,
-             std::vector<std::string> args) {
+          [](yasmin::StateMachine &self, py::function cb) {
             // Wrap Python callback using utility function
-            auto wrapped_cb =
-                yasmin::pybind11_utils::wrap_blackboard_callback<void (*)(
-                    std::shared_ptr<yasmin::Blackboard>, const std::string &,
-                    const std::vector<std::string> &)>(cb);
-            self.add_start_cb(wrapped_cb, args);
+            auto wrapped_cb = yasmin::pybind11_utils::wrap_blackboard_callback<
+                yasmin::StateMachine::StartCallbackType>(cb);
+            self.add_start_cb(wrapped_cb);
           },
           "Add a callback to be called when the state machine starts",
-          py::arg("cb"), py::arg("args") = std::vector<std::string>())
+          py::arg("cb"))
       .def(
           "add_transition_cb",
-          [](yasmin::StateMachine &self, py::function cb,
-             std::vector<std::string> args) {
+          [](yasmin::StateMachine &self, py::function cb) {
             // Wrap Python callback using utility function
-            auto wrapped_cb =
-                yasmin::pybind11_utils::wrap_blackboard_callback<void (*)(
-                    std::shared_ptr<yasmin::Blackboard>, const std::string &,
-                    const std::string &, const std::string &,
-                    const std::vector<std::string> &)>(cb);
-            self.add_transition_cb(wrapped_cb, args);
+            auto wrapped_cb = yasmin::pybind11_utils::wrap_blackboard_callback<
+                yasmin::StateMachine::TransitionCallbackType>(cb);
+            self.add_transition_cb(wrapped_cb);
           },
-          "Add a callback to be called during state transitions", py::arg("cb"),
-          py::arg("args") = std::vector<std::string>())
+          "Add a callback to be called during state transitions", py::arg("cb"))
       .def(
           "add_end_cb",
-          [](yasmin::StateMachine &self, py::function cb,
-             std::vector<std::string> args) {
+          [](yasmin::StateMachine &self, py::function cb) {
             // Wrap Python callback using utility function
-            auto wrapped_cb =
-                yasmin::pybind11_utils::wrap_blackboard_callback<void (*)(
-                    std::shared_ptr<yasmin::Blackboard>, const std::string &,
-                    const std::vector<std::string> &)>(cb);
-            self.add_end_cb(wrapped_cb, args);
+            auto wrapped_cb = yasmin::pybind11_utils::wrap_blackboard_callback<
+                yasmin::StateMachine::EndCallbackType>(cb);
+            self.add_end_cb(wrapped_cb);
           },
           "Add a callback to be called when the state machine ends",
-          py::arg("cb"), py::arg("args") = std::vector<std::string>())
+          py::arg("cb"))
       // Validation and cancellation methods
       .def("validate", &yasmin::StateMachine::validate,
            "Validate the state machine configuration",

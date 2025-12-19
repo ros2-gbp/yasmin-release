@@ -13,17 +13,43 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-#include <string>
-
 #ifndef BAR_STATE_H
 #define BAR_STATE_H
 
+#include <string>
+
+#include <yasmin/blackboard.hpp>
+#include <yasmin/state.hpp>
+#include <yasmin/types.hpp>
+
+/**
+ * @brief Represents the "Bar" state in the state machine.
+ *
+ * This state logs the value from the blackboard and provides
+ * a single outcome to transition.
+ */
 class BarState : public yasmin::State {
 public:
+  /**
+   * @brief Constructs a BarState object.
+   */
   BarState();
+
+  /**
+   * @brief Destructs the BarState object.
+   */
   ~BarState();
 
-  std::string execute(std::shared_ptr<yasmin::Blackboard> blackboard);
+  /**
+   * @brief Executes the Bar state logic.
+   *
+   * This method logs the execution, waits for 3 seconds,
+   * retrieves a string from the blackboard, and logs it.
+   *
+   * @param blackboard Shared pointer to the blackboard for state communication.
+   * @return std::string The outcome of the execution: "outcome3".
+   */
+  std::string execute(yasmin::Blackboard::SharedPtr blackboard);
 };
 
 #endif // BAR_STATE_H

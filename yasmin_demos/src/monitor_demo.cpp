@@ -50,7 +50,7 @@ public:
    * @brief Constructor for the PrintOdometryState class.
    * @param times Number of times to print odometry data before transitioning.
    */
-  PrintOdometryState(int times)
+  PrintOdometryState(int times = 5)
       : yasmin_ros::MonitorState<nav_msgs::msg::Odometry>(
             "odom",                   // topic name
             {"outcome1", "outcome2"}, // possible outcomes
@@ -77,8 +77,8 @@ public:
    * @return A string representing the outcome: "outcome1" to stay in the state,
    *         or "outcome2" to transition out of the state.
    */
-  std::string monitor_handler(std::shared_ptr<yasmin::Blackboard> blackboard,
-                              std::shared_ptr<nav_msgs::msg::Odometry> msg) {
+  std::string monitor_handler(yasmin::Blackboard::SharedPtr blackboard,
+                              nav_msgs::msg::Odometry::SharedPtr msg) {
 
     (void)blackboard; // blackboard is not used in this implementation
 
@@ -98,12 +98,12 @@ public:
 };
 
 int main(int argc, char *argv[]) {
-
-  YASMIN_LOG_INFO("yasmin_monitor_demo");
+  // Initialize ROS 2
   rclcpp::init(argc, argv);
 
   // Set up ROS 2 loggers
   yasmin_ros::set_ros_loggers();
+  YASMIN_LOG_INFO("yasmin_monitor_demo");
 
   // Create a state machine with a final outcome
   auto sm = std::make_shared<yasmin::StateMachine>(

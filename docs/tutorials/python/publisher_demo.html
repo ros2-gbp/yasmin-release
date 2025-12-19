@@ -251,16 +251,16 @@ def check_count(blackboard: Blackboard) -&gt; str:
         <h2>3. Build and Execute State Machine</h2>
         <p>
           Define the complete main function that initializes ROS 2, creates the
-          state machine with publishing and checking states, sets up the viewer
-          with an on_shutdown handler for proper cleanup, and executes with
+          state machine with publishing and checking states, and executes with
           error handling.
         </p>
         <pre><code class="language-python">def main() -&gt; None:
-    yasmin.YASMIN_LOG_INFO("yasmin_monitor_demo")
+    # Initialize ROS 2
     rclpy.init()
 
-    # Configure YASMIN to use ROS-based logging
+    # Set ROS 2 loggers
     set_ros_loggers()
+    yasmin.YASMIN_LOG_INFO("yasmin_publisher_demo")
 
     # Create the state machine with 'SUCCEED' as the terminal outcome
     sm = StateMachine([SUCCEED], handle_sigint=True)
@@ -284,8 +284,8 @@ def check_count(blackboard: Blackboard) -&gt; str:
         },
     )
 
-    # Launch YASMIN Viewer publisher for state visualization
-    viewer = YasminViewerPub(sm, "YASMIN_PUBLISHER_DEMO")
+    # Publish FSM information for visualization
+    YasminViewerPub(sm, "YASMIN_PUBLISHER_DEMO")
 
     # Initialize blackboard with counter values
     blackboard = Blackboard()
@@ -298,9 +298,6 @@ def check_count(blackboard: Blackboard) -&gt; str:
         yasmin.YASMIN_LOG_INFO(outcome)
     except Exception as e:
         yasmin.YASMIN_LOG_WARN(e)
-    finally:
-        viewer.cleanup()
-        del sm
 
     # Shutdown ROS 2 if it's running
     if rclpy.ok():

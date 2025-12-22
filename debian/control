@@ -1,0 +1,12 @@
+Source: ros-kilted-yasmin-demos
+Section: misc
+Priority: optional
+Maintainer: Miguel Ángel González Santamarta <mgons@unileon.es>
+Build-Depends: debhelper (>= 9.0.0), ros-kilted-ament-cmake, ros-kilted-ament-cmake-python, ros-kilted-example-interfaces, ros-kilted-nav-msgs, ros-kilted-pluginlib, ros-kilted-rclcpp, ros-kilted-rclcpp-action, ros-kilted-rclpy, ros-kilted-ros-environment, ros-kilted-yasmin, ros-kilted-yasmin-factory, ros-kilted-yasmin-ros, ros-kilted-yasmin-viewer, ros-kilted-ros-workspace
+Homepage: 
+Standards-Version: 3.9.2
+
+Package: ros-kilted-yasmin-demos
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, ros-kilted-example-interfaces, ros-kilted-nav-msgs, ros-kilted-pluginlib, ros-kilted-rclcpp, ros-kilted-rclcpp-action, ros-kilted-rclpy, ros-kilted-yasmin, ros-kilted-yasmin-factory, ros-kilted-yasmin-ros, ros-kilted-yasmin-viewer, ros-kilted-ros-workspace
+Description: Demos of YASMIN (Yet Another State MachINe)

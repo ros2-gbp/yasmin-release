@@ -1,0 +1,12 @@
+Source: ros-rolling-yasmin-demos
+Section: misc
+Priority: optional
+Maintainer: Miguel Ángel González Santamarta <mgons@unileon.es>
+Build-Depends: debhelper (>= 9.0.0), ros-rolling-ament-cmake, ros-rolling-ament-cmake-python, ros-rolling-example-interfaces, ros-rolling-nav-msgs, ros-rolling-pluginlib, ros-rolling-rclcpp, ros-rolling-rclcpp-action, ros-rolling-rclpy, ros-rolling-ros-environment, ros-rolling-yasmin, ros-rolling-yasmin-factory, ros-rolling-yasmin-ros, ros-rolling-yasmin-viewer, ros-rolling-ros-workspace
+Homepage: 
+Standards-Version: 3.9.2
+
+Package: ros-rolling-yasmin-demos
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, ros-rolling-example-interfaces, ros-rolling-nav-msgs, ros-rolling-pluginlib, ros-rolling-rclcpp, ros-rolling-rclcpp-action, ros-rolling-rclpy, ros-rolling-yasmin, ros-rolling-yasmin-factory, ros-rolling-yasmin-ros, ros-rolling-yasmin-viewer, ros-rolling-ros-workspace
+Description: Demos of YASMIN (Yet Another State MachINe)

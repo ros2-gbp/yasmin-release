@@ -8,7 +8,7 @@
 
 <div align="center">
 
-[![License: MIT](https://img.shields.io/badge/GitHub-GPL--3.0-informational)](https://opensource.org/license/gpl-3-0)
+[![License: GPL-v3.0](https://img.shields.io/badge/GitHub-GPL--3.0-informational)](https://opensource.org/license/gpl-3-0)
 [![GitHub release](https://img.shields.io/github/release/uleroboticsgroup/yasmin.svg)](https://github.com/uleroboticsgroup/yasmin/releases)
 [![Code Size](https://img.shields.io/github/languages/code-size/uleroboticsgroup/yasmin.svg?branch=main)](https://github.com/uleroboticsgroup/yasmin?branch=main)
 [![Dependencies](https://img.shields.io/librariesio/github/uleroboticsgroup/yasmin?branch=main)](https://libraries.io/github/uleroboticsgroup/yasmin?branch=main)
@@ -757,13 +757,9 @@ class PrintOdometryState(MonitorState):
     logging them and transitioning based on the number of messages received.
     """
 
-    def __init__(self, times: int = 5) -> None:
+    def __init__(self) -> None:
         """
         Initializes the PrintOdometryState.
-
-        Args:
-            times (int): The number of Odometry messages to monitor before
-                         transitioning to the next outcome.
         """
         super().__init__(
             Odometry,  # msg type
@@ -774,7 +770,7 @@ class PrintOdometryState(MonitorState):
             msg_queue=10,  # queue for the monitor handler callback
             timeout=10,  # timeout to wait for messages in seconds
         )
-        self.times = times
+        self.times = 5
 
     def monitor_handler(self, blackboard: Blackboard, msg: Odometry) -> str:
         """
@@ -819,7 +815,7 @@ def main() -> None:
     # Add states to the FSM
     sm.add_state(
         "PRINTING_ODOM",
-        PrintOdometryState(5),
+        PrintOdometryState(),
         transitions={
             "outcome1": "PRINTING_ODOM",
             "outcome2": "outcome4",
@@ -1757,7 +1753,7 @@ int main(int argc, char *argv[]) {
   YASMIN_LOG_INFO("yasmin_demo");
 
   // Create a state machine
-  auto sm = std::make_shared<yasmin::StateMachine>(
+  auto sm = yasmin::StateMachine::make_shared(
       std::initializer_list<std::string>{"outcome4"}, true);
 
   // Add states to the state machine
@@ -1875,12 +1871,12 @@ int main(int argc, char *argv[]) {
   YASMIN_LOG_INFO("yasmin_remapping_demo");
 
   // Create blackboard
-  auto blackboard = std::make_shared<yasmin::Blackboard>();
+  auto blackboard = yasmin::Blackboard::make_shared();
   blackboard->set<std::string>("msg1", "test1");
   blackboard->set<std::string>("msg2", "test2");
 
   // Create a state machine
-  auto sm = std::make_shared<yasmin::StateMachine>(
+  auto sm = yasmin::StateMachine::make_shared(
       std::initializer_list<std::string>{yasmin_ros::basic_outcomes::SUCCEED},
       true);
 
@@ -2050,7 +2046,7 @@ int main(int argc, char *argv[]) {
   YASMIN_LOG_INFO("yasmin_concurrence_demo");
 
   // Create a state machine
-  auto sm = std::make_shared<yasmin::StateMachine>(
+  auto sm = yasmin::StateMachine::make_shared(
       std::initializer_list<std::string>{"outcome4"}, true);
 
   // Create states to run concurrently
@@ -2058,7 +2054,7 @@ int main(int argc, char *argv[]) {
   auto bar_state = std::make_shared<BarState>();
 
   // Create concurrent state
-  auto concurrent_state = std::make_shared<yasmin::Concurrence>(
+  auto concurrent_state = yasmin::Concurrence::make_shared(
       yasmin::StateMap{
           {"FOO", foo_state},
           {"BAR", bar_state},
@@ -2200,7 +2196,7 @@ int main(int argc, char *argv[]) {
   YASMIN_LOG_INFO("yasmin_publisher_demo");
 
   // Create a state machine with a final outcome
-  auto sm = std::make_shared<yasmin::StateMachine>(
+  auto sm = yasmin::StateMachine::make_shared(
       std::initializer_list<std::string>{yasmin_ros::basic_outcomes::SUCCEED},
       true);
 
@@ -2211,7 +2207,7 @@ int main(int argc, char *argv[]) {
                      "CHECKINNG_COUNTS"}, // Transition back to itself
                 });
   sm->add_state("CHECKINNG_COUNTS",
-                std::make_shared<yasmin::CbState>(
+                yasmin::CbState::make_shared(
                     std::initializer_list<std::string>{"outcome1", "outcome2"},
                     check_count),
                 {{"outcome1", yasmin_ros::basic_outcomes::SUCCEED},
@@ -2222,7 +2218,7 @@ int main(int argc, char *argv[]) {
 
   // Execute the state machine
   yasmin::Blackboard::SharedPtr blackboard =
-      std::make_shared<yasmin::Blackboard>();
+      yasmin::Blackboard::make_shared();
   blackboard->set<int>("counter", 0);
   blackboard->set<int>("max_count", 10);
   try {
@@ -2285,9 +2281,8 @@ public:
 
   /**
    * @brief Constructor for the PrintOdometryState class.
-   * @param times Number of times to print odometry data before transitioning.
    */
-  PrintOdometryState(int times = 5)
+  PrintOdometryState()
       : yasmin_ros::MonitorState<nav_msgs::msg::Odometry>(
             "odom",                   // topic name
             {"outcome1", "outcome2"}, // possible outcomes
@@ -2297,7 +2292,7 @@ public:
             10,            // queue size for the callback
             10             // timeout for receiving messages
         ) {
-    this->times = times;
+    this->times = 5;
   };
 
   /**
@@ -2344,12 +2339,12 @@ int main(int argc, char *argv[]) {
   YASMIN_LOG_INFO("yasmin_monitor_demo");
 
   // Create a state machine with a final outcome
-  auto sm = std::make_shared<yasmin::StateMachine>(
+  auto sm = yasmin::StateMachine::make_shared(
       std::initializer_list<std::string>{"outcome4"}, true);
 
   // Add states to the state machine
   sm->add_state(
-      "PRINTING_ODOM", std::make_shared<PrintOdometryState>(5),
+      "PRINTING_ODOM", std::make_shared<PrintOdometryState>(),
       {
           {"outcome1",
            "PRINTING_ODOM"},        // Transition back to itself on outcome1
@@ -2514,12 +2509,12 @@ int main(int argc, char *argv[]) {
   YASMIN_LOG_INFO("yasmin_service_client_demo");
 
   // Create a state machine with a specified outcome.
-  auto sm = std::make_shared<yasmin::StateMachine>(
+  auto sm = yasmin::StateMachine::make_shared(
       std::initializer_list<std::string>{"outcome4"}, true);
 
   // Add states to the state machine.
   sm->add_state("SETTING_INTS",
-                std::make_shared<yasmin::CbState>(
+                yasmin::CbState::make_shared(
                     std::initializer_list<std::string>{
                         yasmin_ros::basic_outcomes::SUCCEED},
                     set_ints),
@@ -2533,7 +2528,7 @@ int main(int argc, char *argv[]) {
                     {yasmin_ros::basic_outcomes::ABORT, "outcome4"},
                 });
   sm->add_state("PRINTING_SUM",
-                std::make_shared<yasmin::CbState>(
+                yasmin::CbState::make_shared(
                     std::initializer_list<std::string>{
                         yasmin_ros::basic_outcomes::SUCCEED},
                     print_sum),
@@ -2715,7 +2710,7 @@ int main(int argc, char *argv[]) {
   YASMIN_LOG_INFO("yasmin_action_client_demo");
 
   // Create the state machine
-  auto sm = std::make_shared<yasmin::StateMachine>(
+  auto sm = yasmin::StateMachine::make_shared(
       std::initializer_list<std::string>{"outcome4"}, true);
 
   // Add states to the state machine
@@ -2726,7 +2721,7 @@ int main(int argc, char *argv[]) {
                     {yasmin_ros::basic_outcomes::ABORT, "outcome4"},
                 });
   sm->add_state("PRINTING_RESULT",
-                std::make_shared<yasmin::CbState>(
+                yasmin::CbState::make_shared(
                     std::initializer_list<std::string>{
                         yasmin_ros::basic_outcomes::SUCCEED},
                     print_result),
@@ -2739,7 +2734,7 @@ int main(int argc, char *argv[]) {
 
   // Create an initial blackboard and set the Fibonacci order
   yasmin::Blackboard::SharedPtr blackboard =
-      std::make_shared<yasmin::Blackboard>();
+      yasmin::Blackboard::make_shared();
   blackboard->set<int>("n", 10);
 
   // Execute the state machine
@@ -2869,12 +2864,12 @@ int main(int argc, char *argv[]) {
   YASMIN_LOG_INFO("yasmin_parameters_demo");
 
   // Create a state machine
-  auto sm = std::make_shared<yasmin::StateMachine>(
+  auto sm = yasmin::StateMachine::make_shared(
       std::initializer_list<std::string>{"outcome4"}, true);
 
   // Add states to the state machine
   sm->add_state("GETTING_PARAMETERS",
-                std::make_shared<yasmin_ros::GetParametersState>(
+                yasmin_ros::GetParametersState::make_shared(
                     yasmin_ros::GetParametersState::Parameters{
                         {"max_counter", 3},
                         {"counter_str", std::string("Counter")},
@@ -3151,12 +3146,12 @@ int main(int argc, char *argv[]) {
   YASMIN_LOG_INFO("yasmin_nav2_demo");
 
   // Create state machines
-  auto sm = std::make_shared<yasmin::StateMachine>(
+  auto sm = yasmin::StateMachine::make_shared(
       std::initializer_list<std::string>{yasmin_ros::basic_outcomes::SUCCEED,
                                          yasmin_ros::basic_outcomes::ABORT,
                                          yasmin_ros::basic_outcomes::CANCEL},
       true);
-  auto nav_sm = std::make_shared<yasmin::StateMachine>(
+  auto nav_sm = yasmin::StateMachine::make_shared(
       std::initializer_list<std::string>{yasmin_ros::basic_outcomes::SUCCEED,
                                          yasmin_ros::basic_outcomes::ABORT,
                                          yasmin_ros::basic_outcomes::CANCEL});
@@ -3164,14 +3159,14 @@ int main(int argc, char *argv[]) {
   // Add states to the state machine
   sm->add_state(
       "CREATING_WAYPOINTS",
-      std::make_shared<yasmin::CbState>(
+      yasmin::CbState::make_shared(
           std::initializer_list<std::string>{
               yasmin_ros::basic_outcomes::SUCCEED},
           create_waypoints),
       std::map<std::string, std::string>{
           {yasmin_ros::basic_outcomes::SUCCEED, "TAKING_RANDOM_WAYPOINTS"}});
   sm->add_state("TAKING_RANDOM_WAYPOINTS",
-                std::make_shared<yasmin::CbState>(
+                yasmin::CbState::make_shared(
                     std::initializer_list<std::string>{
                         yasmin_ros::basic_outcomes::SUCCEED},
                     take_random_waypoint),
@@ -3180,7 +3175,7 @@ int main(int argc, char *argv[]) {
 
   nav_sm->add_state(
       "GETTING_NEXT_WAYPOINT",
-      std::make_shared<yasmin::CbState>(
+      yasmin::CbState::make_shared(
           std::initializer_list<std::string>{END, HAS_NEXT}, get_next_waypoint),
       std::map<std::string, std::string>{
           {END, yasmin_ros::basic_outcomes::SUCCEED},
@@ -3207,7 +3202,7 @@ int main(int argc, char *argv[]) {
   yasmin_viewer::YasminViewerPub yasmin_pub(sm, "YASMIN_NAV2_DEMO");
 
   // Execute the state machine
-  auto blackboard = std::make_shared<yasmin::Blackboard>();
+  auto blackboard = yasmin::Blackboard::make_shared();
   blackboard->set<int>("waypoints_num",
                        2); // Set the number of waypoints to navigate
 

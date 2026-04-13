@@ -13,14 +13,14 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-#include <chrono>
 #include <gtest/gtest.h>
+
+#include <chrono>
 #include <memory>
 #include <thread>
 
-#include "std_msgs/msg/string.hpp"
-
-#include "rclcpp/rclcpp.hpp"
+#include <rclcpp/rclcpp.hpp>
+#include <std_msgs/msg/string.hpp>
 
 #include "yasmin/types.hpp"
 #include "yasmin_ros/action_state.hpp"
@@ -79,6 +79,8 @@ protected:
     ROSClientsCache::clear_all();
     aux_node.reset();
     executor.reset();
+    yasmin_ros::ROSClientsCache::clear_all();
+    yasmin_ros::YasminNode::destroy_instance();
     rclcpp::shutdown();
   }
 };

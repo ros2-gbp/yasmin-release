@@ -24,7 +24,7 @@
 | ROS 2 Distro |                                                                                                            Build and Test                                                                                                            |                                                               Docker Image                                                                |
 | :----------: | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------: | :---------------------------------------------------------------------------------------------------------------------------------------: |
 |   **Foxy**   |        [![Foxy Build](https://github.com/uleroboticsgroup/yasmin/actions/workflows/foxy-build-test.yml/badge.svg?branch=main)](https://github.com/uleroboticsgroup/yasmin/actions/workflows/foxy-build-test.yml?branch=main)         |     [![Docker Image](https://img.shields.io/badge/Docker%20Image%20-foxy-blue)](https://hub.docker.com/r/mgons/yasmin/tags?name=foxy)     |
-| **Galatic**  |  [![Galactic Build](https://github.com/uleroboticsgroup/yasmin/actions/workflows/galactic-build-test.yml/badge.svg?branch=main)](https://github.com/uleroboticsgroup/yasmin/actions/workflows/galactic-build-test.yml?branch=main)   | [![Docker Image](https://img.shields.io/badge/Docker%20Image%20-galactic-blue)](https://hub.docker.com/r/mgons/yasmin/tags?name=galactic) |
+| **Galactic** |  [![Galactic Build](https://github.com/uleroboticsgroup/yasmin/actions/workflows/galactic-build-test.yml/badge.svg?branch=main)](https://github.com/uleroboticsgroup/yasmin/actions/workflows/galactic-build-test.yml?branch=main)   | [![Docker Image](https://img.shields.io/badge/Docker%20Image%20-galactic-blue)](https://hub.docker.com/r/mgons/yasmin/tags?name=galactic) |
 |  **Humble**  | [![Humble Build and Test](https://github.com/uleroboticsgroup/yasmin/actions/workflows/humble-build-test.yml/badge.svg?branch=main)](https://github.com/uleroboticsgroup/yasmin/actions/workflows/humble-build-test.yml?branch=main) |   [![Docker Image](https://img.shields.io/badge/Docker%20Image%20-humble-blue)](https://hub.docker.com/r/mgons/yasmin/tags?name=humble)   |
 |   **Iron**   |        [![Iron Build](https://github.com/uleroboticsgroup/yasmin/actions/workflows/iron-build-test.yml/badge.svg?branch=main)](https://github.com/uleroboticsgroup/yasmin/actions/workflows/iron-build-test.yml?branch=main)         |     [![Docker Image](https://img.shields.io/badge/Docker%20Image%20-iron-blue)](https://hub.docker.com/r/mgons/yasmin/tags?name=iron)     |
 |  **Jazzy**   |       [![Jazzy Build](https://github.com/uleroboticsgroup/yasmin/actions/workflows/jazzy-build-test.yml/badge.svg?branch=main)](https://github.com/uleroboticsgroup/yasmin/actions/workflows/jazzy-build-test.yml?branch=main)       |    [![Docker Image](https://img.shields.io/badge/Docker%20Image%20-jazzy-blue)](https://hub.docker.com/r/mgons/yasmin/tags?name=jazzy)    |
@@ -35,7 +35,7 @@
 
 ## Table of Contents
 
-1. [Features](#features)
+1. [Key Features](#key-features)
 2. [Installation](#installation)
    - [Debian Packages](#debian-packages)
    - [Building from Source](#building-from-source)
@@ -43,12 +43,18 @@
 3. [Demos](#demos)
    - [Python](#python)
    - [Cpp](#cpp)
-4. [YASMIN Editor](#yasmin-editor)
-   - [Getting Started](#getting-started)
-5. [YASMIN Viewer](#yasmin-viewer)
-   - [Getting Started](#getting-started-1)
+4. [Cross-Language ROS Interface Communication](#crosslanguage-ros-interface-communication)
+5. [TF States](#tf-states)
+6. [YASMIN Editor](#yasmin-editor)
+7. [YASMIN Viewer](#yasmin-viewer)
    - [Custom Host and Port](#custom-host-and-port)
-6. [Citations](#citations)
+8. [YASMIN CLI](#yasmin-cli)
+   - [Available Commands](#available-commands)
+   - [Usage Examples](#usage-examples)
+9. [YASMIN Factory](#yasmin-factory)
+10. [YASMIN PCL](#yasmin-pcl)
+11. [YASMIN Plugins Manager](#yasmin-plugins-manager)
+12. [Citations](#citations)
 
 ## Key Features
 
@@ -58,7 +64,16 @@
 - **Predefined States**: Includes states for interacting with ROS 2 action clients, service clients, and topics.
 - **Data Sharing with Blackboards**: Utilizes blackboards for data sharing between states and state machines.
 - **State Management**: Supports cancellation and stopping of state machines, including halting the current executing state.
+- **Concurrence**: Run multiple states in parallel with configurable join policies.
+- **XML State Machines**: Define state machines in XML files using the Factory and load them at runtime with plugins.
+- **Graphical Editor**: Visual editor for building state machines with drag-and-drop functionality.
 - **Web Viewer**: Features an integrated web viewer for real-time monitoring of state machine execution.
+- **CLI Tool**: Command-line interface for listing, inspecting, running, validating, editing, and testing state machines.
+- **PCL Integration**: Predefined states for Point Cloud Library (PCL) operations, including filtering, segmentation, and point cloud I/O.
+- **Plugin Architecture**: Extensible plugin system for registering custom states usable across C++ and Python.
+- **State Metadata**: States and state machines support descriptions and typed input/output blackboard key annotations.
+- **Cross-Language Serialization**: Share ROS interfaces between Python and C++ states via binary serialization.
+- **TF Integration**: `TfBufferState` creates and shares a tf2 buffer and transform listener through the blackboard so all states in the machine can perform coordinate frame lookups.
 
 ## Installation
 
@@ -85,7 +100,7 @@ colcon build
 Then, you can run the tests as follow:
 
 ```shell
-colcon test --packages-select yasmin yasmin_ros yasmin_factory
+colcon test --packages-select yasmin yasmin_ros yasmin_factory yasmin_pcl
 colcon test-result --verbose
 ```
 
@@ -139,10 +154,11 @@ ros2 run yasmin_demos yasmin_demo.py
 
 ```python
 import time
+
 import rclpy
 
 import yasmin
-from yasmin import State, Blackboard, StateMachine
+from yasmin import Blackboard, State, StateMachine
 from yasmin_ros import set_ros_loggers
 from yasmin_viewer import YasminViewerPub
 
@@ -163,6 +179,13 @@ class FooState(State):
         """
         super().__init__(["outcome1", "outcome2"])
         self.counter = 0
+        self.set_description(
+            "Increments an internal counter, writes the formatted counter string to the blackboard, and controls the loop outcome."
+        )
+        self.add_output_key(
+            "foo_str",
+            "Formatted counter string written by FooState.",
+        )
 
     def execute(self, blackboard: Blackboard) -> str:
         """
@@ -202,6 +225,13 @@ class BarState(State):
             outcome3: Indicates the state should transition back to the Foo state.
         """
         super().__init__(outcomes=["outcome3"])
+        self.set_description(
+            "Reads the counter string from the blackboard, logs it, and transitions back to FooState."
+        )
+        self.add_input_key(
+            "foo_str",
+            "Formatted counter string produced by FooState.",
+        )
 
     def execute(self, blackboard: Blackboard) -> str:
         """
@@ -233,6 +263,13 @@ def main() -> None:
 
     # Create a finite state machine (FSM)
     sm = StateMachine(outcomes=["outcome4"], handle_sigint=True)
+    sm.set_description(
+        "Runs a simple loop between FooState and BarState until FooState reaches its terminal outcome."
+    )
+    sm.add_output_key(
+        "foo_str",
+        "Formatted counter string produced by FooState and read by BarState.",
+    )
 
     # Add states to the FSM
     sm.add_state(
@@ -283,11 +320,11 @@ ros2 run yasmin_demos remap_demo.py
 
 ```python
 import rclpy
+from yasmin_ros.basic_outcomes import SUCCEED
 
 import yasmin
-from yasmin import State, Blackboard, StateMachine
+from yasmin import Blackboard, State, StateMachine
 from yasmin_ros import set_ros_loggers
-from yasmin_ros.basic_outcomes import SUCCEED
 from yasmin_viewer import YasminViewerPub
 
 
@@ -304,6 +341,17 @@ class Foo(State):
             SUCCEED: Indicates the state should continue to the next state.
         """
         super().__init__(outcomes=[SUCCEED])
+        self.set_description(
+            "Reads input data from the blackboard, logs it, and writes it back as output."
+        )
+        self.add_input_key(
+            "foo_data",
+            "Input data read by the Foo state.",
+        )
+        self.add_output_key(
+            "foo_out_data",
+            "Output data written by the Foo state.",
+        )
 
     def execute(self, blackboard: Blackboard):
         """
@@ -338,6 +386,11 @@ class BarState(State):
             SUCCEDED: Indicates the state should continue to the next state.
         """
         super().__init__(outcomes=[SUCCEED])
+        self.set_description("Reads remapped input data from the blackboard and logs it.")
+        self.add_input_key(
+            "bar_data",
+            "Input data read by the Bar state.",
+        )
 
     def execute(self, blackboard: Blackboard):
         """
@@ -372,6 +425,21 @@ def main() -> None:
 
     # Create a finite state machine (FSM)
     sm = StateMachine(outcomes=[SUCCEED], handle_sigint=True)
+    sm.set_description(
+        "Demonstrates blackboard remapping by forwarding values through multiple states."
+    )
+    sm.add_input_key(
+        "msg1",
+        "Initial input value remapped to the first Foo state.",
+    )
+    sm.add_input_key(
+        "msg2",
+        "Initial input value remapped to the second Foo state.",
+    )
+    sm.add_output_key(
+        "foo_out_data",
+        "Output data written by Foo and forwarded to Bar through remapping.",
+    )
 
     # Add states to the FSM
     sm.add_state(
@@ -425,10 +493,11 @@ ros2 run yasmin_demos concurrence_demo.py
 
 ```python
 import time
+
 import rclpy
 
 import yasmin
-from yasmin import State, Concurrence, Blackboard, StateMachine
+from yasmin import Blackboard, Concurrence, State, StateMachine
 from yasmin_ros import set_ros_loggers
 from yasmin_viewer import YasminViewerPub
 
@@ -450,6 +519,13 @@ class FooState(State):
         """
         super().__init__(["outcome1", "outcome2", "outcome3"])
         self.counter = 0
+        self.set_description(
+            "Produces a counter string and stores it in the blackboard while cycling through outcomes based on the internal counter."
+        )
+        self.add_output_key(
+            "foo_str",
+            "String containing the current counter value produced by FooState.",
+        )
 
     def execute(self, blackboard: Blackboard) -> str:
         """
@@ -466,8 +542,6 @@ class FooState(State):
         """
         yasmin.YASMIN_LOG_INFO("Executing state FOO")
         time.sleep(2)  # Simulate work by sleeping
-
-        outcome = ""
 
         blackboard["foo_str"] = f"Counter: {self.counter}"
 
@@ -497,6 +571,13 @@ class BarState(State):
             outcome3: This state will always return this outcome
         """
         super().__init__(outcomes=["outcome3"])
+        self.set_description(
+            "Reads and prints the value stored in 'foo_str' from the blackboard."
+        )
+        self.add_input_key(
+            "foo_str",
+            "String produced by FooState containing the counter value.",
+        )
 
     def execute(self, blackboard: Blackboard) -> str:
         """
@@ -530,10 +611,17 @@ def main() -> None:
 
     # Set ROS 2 loggers
     set_ros_loggers()
-    yasmin.YASMIN_LOG_INFO("CONCURRENCE_DEMO")
+    yasmin.YASMIN_LOG_INFO("yasmin_concurrence_demo")
 
     # Create a finite state machine (FSM)
     sm = StateMachine(outcomes=["outcome4"], handle_sigint=True)
+    sm.set_description(
+        "Runs FooState and BarState concurrently until the concurrence state no longer matches the configured outcome map."
+    )
+    sm.add_output_key(
+        "foo_str",
+        "String containing the current counter value produced during the concurrent execution.",
+    )
 
     # Create states to run concurrently
     foo_state: State = FooState()
@@ -556,6 +644,17 @@ def main() -> None:
                 "BAR": "outcome3",
             },
         },
+    )
+    concurrence_state.set_description(
+        "Executes FooState and BarState in parallel and maps their combined outcomes to the next transition."
+    )
+    concurrence_state.add_input_key(
+        "foo_str",
+        "String read by BarState during the concurrent execution.",
+    )
+    concurrence_state.add_output_key(
+        "foo_str",
+        "String written by FooState during the concurrent execution.",
     )
 
     # Add concurrent state to the FSM
@@ -601,13 +700,14 @@ ros2 run yasmin_demos publisher_demo.py
 
 ```python
 import time
+
 import rclpy
 from std_msgs.msg import Int32
+from yasmin_ros.basic_outcomes import SUCCEED
 
 import yasmin
-from yasmin import CbState, StateMachine, Blackboard
+from yasmin import Blackboard, CbState, StateMachine
 from yasmin_ros import PublisherState, set_ros_loggers
-from yasmin_ros.basic_outcomes import SUCCEED
 from yasmin_viewer import YasminViewerPub
 
 
@@ -624,6 +724,18 @@ class PublishIntState(PublisherState):
         Initializes the PublishIntState with the topic 'count' and a message creation callback.
         """
         super().__init__(Int32, "count", self.create_int_msg)
+        self.set_description(
+            "Publishes an incrementing integer to the 'count' topic using values stored in the blackboard."
+        )
+        self.add_input_key(
+            "counter",
+            "Current counter value stored in the blackboard.",
+            0,
+        )
+        self.add_output_key(
+            "counter",
+            "Updated counter value after incrementing.",
+        )
 
     def create_int_msg(self, blackboard: Blackboard) -> Int32:
         """
@@ -685,6 +797,38 @@ def main() -> None:
 
     # Create a finite state machine (FSM)
     sm = StateMachine([SUCCEED], handle_sigint=True)
+    sm.set_description(
+        "Publishes incrementing integers until the configured maximum count is reached."
+    )
+    sm.add_input_key(
+        "counter",
+        "Current counter value stored in the blackboard.",
+        0,
+    )
+    sm.add_input_key(
+        "max_count",
+        "Maximum counter threshold used to stop publishing.",
+        10,
+    )
+    sm.add_output_key(
+        "counter",
+        "Updated counter value after each publish step.",
+    )
+
+    checking_counts_state = CbState(["outcome1", "outcome2"], check_count)
+    checking_counts_state.set_description(
+        "Checks whether the counter stored in the blackboard reached the configured maximum."
+    )
+    checking_counts_state.add_input_key(
+        "counter",
+        "Current counter value.",
+        0,
+    )
+    checking_counts_state.add_input_key(
+        "max_count",
+        "Maximum counter threshold used to stop publishing.",
+        10,
+    )
 
     # Add states to the FSM
     sm.add_state(
@@ -696,7 +840,7 @@ def main() -> None:
     )
     sm.add_state(
         "CHECKING_COUNTS",
-        CbState(["outcome1", "outcome2"], check_count),
+        checking_counts_state,
         {
             "outcome1": SUCCEED,
             "outcome2": "PUBLISHING_INT",
@@ -713,7 +857,7 @@ def main() -> None:
 
     # Execute the FSM
     try:
-        outcome = sm()
+        outcome = sm(blackboard)
         yasmin.YASMIN_LOG_INFO(outcome)
     except Exception as e:
         yasmin.YASMIN_LOG_WARN(e)
@@ -738,14 +882,13 @@ ros2 run yasmin_demos monitor_demo.py
 
 ```python
 import rclpy
-from rclpy.qos import qos_profile_sensor_data
 from nav_msgs.msg import Odometry
+from rclpy.qos import qos_profile_sensor_data
+from yasmin_ros.basic_outcomes import CANCEL, TIMEOUT
 
 import yasmin
 from yasmin import Blackboard, StateMachine
-from yasmin_ros import MonitorState
-from yasmin_ros import set_ros_loggers
-from yasmin_ros.basic_outcomes import TIMEOUT
+from yasmin_ros import MonitorState, set_ros_loggers
 from yasmin_viewer import YasminViewerPub
 
 
@@ -771,6 +914,13 @@ class PrintOdometryState(MonitorState):
             timeout=10,  # timeout to wait for messages in seconds
         )
         self.times = 5
+        self.set_description(
+            "Monitors Odometry messages from the 'odom' topic and logs them until a predefined number of messages has been received."
+        )
+        self.add_input_key(
+            "odom",
+            "Odometry message received from the monitored ROS topic.",
+        )
 
     def monitor_handler(self, blackboard: Blackboard, msg: Odometry) -> str:
         """
@@ -811,6 +961,13 @@ def main() -> None:
 
     # Create a finite state machine (FSM)
     sm = StateMachine(outcomes=["outcome4"], handle_sigint=True)
+    sm.set_description(
+        "Continuously monitors the 'odom' topic and logs received Odometry messages until a fixed number of messages has been processed."
+    )
+    sm.add_input_key(
+        "odom",
+        "Odometry messages received from the monitored ROS topic.",
+    )
 
     # Add states to the FSM
     sm.add_state(
@@ -861,12 +1018,11 @@ ros2 run yasmin_demos service_client_demo.py
 ```python
 import rclpy
 from example_interfaces.srv import AddTwoInts
+from yasmin_ros.basic_outcomes import ABORT, SUCCEED
 
 import yasmin
-from yasmin import CbState, Blackboard, StateMachine
-from yasmin_ros import ServiceState
-from yasmin_ros import set_ros_loggers
-from yasmin_ros.basic_outcomes import SUCCEED, ABORT
+from yasmin import Blackboard, CbState, StateMachine
+from yasmin_ros import ServiceState, set_ros_loggers
 from yasmin_viewer import YasminViewerPub
 
 
@@ -893,6 +1049,12 @@ class AddTwoIntsState(ServiceState):
             ["outcome1"],  # outcomes. Includes (SUCCEED, ABORT)
             self.response_handler,  # cb to process the response
         )
+        self.set_description(
+            "Calls the AddTwoInts service using the values stored in the blackboard and writes the resulting sum back to the blackboard."
+        )
+        self.add_input_key("a", "First integer used for the service request.")
+        self.add_input_key("b", "Second integer used for the service request.")
+        self.add_output_key("sum", "Sum returned by the AddTwoInts service.")
 
     def create_request_handler(self, blackboard: Blackboard) -> AddTwoInts.Request:
         """
@@ -971,11 +1133,39 @@ def main() -> None:
 
     # Create a FSM
     sm = StateMachine(outcomes=["outcome4"], handle_sigint=True)
+    sm.set_description(
+        "Sets two integers in the blackboard, calls the AddTwoInts service, and prints the resulting sum."
+    )
+    sm.add_output_key("a", "First integer used for the service request.")
+    sm.add_output_key("b", "Second integer used for the service request.")
+    sm.add_output_key("sum", "Sum returned by the AddTwoInts service.")
+
+    setting_ints_state = CbState([SUCCEED], set_ints)
+    setting_ints_state.set_description(
+        "Writes the two input integers for the AddTwoInts service into the blackboard."
+    )
+    setting_ints_state.add_output_key(
+        "a",
+        "First integer used for the service request.",
+    )
+    setting_ints_state.add_output_key(
+        "b",
+        "Second integer used for the service request.",
+    )
+
+    printing_sum_state = CbState([SUCCEED], print_sum)
+    printing_sum_state.set_description(
+        "Reads the computed sum from the blackboard and logs it."
+    )
+    printing_sum_state.add_input_key(
+        "sum",
+        "Sum previously written to the blackboard by the service state.",
+    )
 
     # Add states
     sm.add_state(
         "SETTING_INTS",
-        CbState([SUCCEED], set_ints),
+        setting_ints_state,
         transitions={SUCCEED: "ADD_TWO_INTS"},
     )
     sm.add_state(
@@ -989,7 +1179,7 @@ def main() -> None:
     )
     sm.add_state(
         "PRINTING_SUM",
-        CbState([SUCCEED], print_sum),
+        printing_sum_state,
         transitions={
             SUCCEED: "outcome4",
         },
@@ -1032,12 +1222,11 @@ ros2 run yasmin_demos action_client_demo.py
 ```python
 import rclpy
 from example_interfaces.action import Fibonacci
+from yasmin_ros.basic_outcomes import ABORT, CANCEL, SUCCEED
 
 import yasmin
-from yasmin import CbState, Blackboard, StateMachine
-from yasmin_ros import ActionState
-from yasmin_ros import set_ros_loggers
-from yasmin_ros.basic_outcomes import SUCCEED, ABORT, CANCEL
+from yasmin import Blackboard, CbState, StateMachine
+from yasmin_ros import ActionState, set_ros_loggers
 from yasmin_viewer import YasminViewerPub
 
 
@@ -1061,9 +1250,17 @@ class FibonacciState(ActionState):
             Fibonacci,  # action type
             "/fibonacci",  # action name
             self.create_goal_handler,  # callback to create the goal
-            None,  # outcomes. Includes (SUCCEED, ABORT, CANCEL)
+            set(),  # outcomes. Includes (SUCCEED, ABORT, CANCEL)
             self.response_handler,  # callback to process the response
             self.print_feedback,  # callback to process the feedback
+        )
+        self.set_description(
+            "Calls the ROS2 Fibonacci action server and computes the Fibonacci sequence up to the requested order."
+        )
+        self.add_input_key("n", "Order of the Fibonacci sequence to compute.", 10)
+        self.add_output_key(
+            "fibo_res",
+            "Computed Fibonacci sequence returned by the action server.",
         )
 
     def create_goal_handler(self, blackboard: Blackboard) -> Fibonacci.Goal:
@@ -1159,6 +1356,23 @@ def main() -> None:
 
     # Create a finite state machine (FSM)
     sm = StateMachine(outcomes=["outcome4"], handle_sigint=True)
+    sm.set_description(
+        "Calls a Fibonacci action server, stores the resulting sequence in the blackboard, and prints the result."
+    )
+    sm.add_input_key("n", "Order of the Fibonacci sequence to compute.", 10)
+    sm.add_output_key(
+        "fibo_res",
+        "Computed Fibonacci sequence returned by the action server.",
+    )
+
+    printing_result_state = CbState([SUCCEED], print_result)
+    printing_result_state.set_description(
+        "Reads the computed Fibonacci sequence from the blackboard and logs it."
+    )
+    printing_result_state.add_input_key(
+        "fibo_res",
+        "Computed Fibonacci sequence returned by the action server.",
+    )
 
     # Add states to the FSM
     sm.add_state(
@@ -1172,7 +1386,7 @@ def main() -> None:
     )
     sm.add_state(
         "PRINTING_RESULT",
-        CbState([SUCCEED], print_result),
+        printing_result_state,
         transitions={
             SUCCEED: "outcome4",
         },
@@ -1216,13 +1430,13 @@ ros2 run yasmin_demos parameters_demo.py --ros-args -p max_counter:=5
 
 ```python
 import time
+
 import rclpy
+from yasmin_ros.basic_outcomes import ABORT, SUCCEED
 
 import yasmin
-from yasmin import State, Blackboard, StateMachine
-from yasmin_ros import set_ros_loggers
-from yasmin_ros import GetParametersState
-from yasmin_ros.basic_outcomes import SUCCEED, ABORT
+from yasmin import Blackboard, State, StateMachine
+from yasmin_ros import GetParametersState, set_ros_loggers
 from yasmin_viewer import YasminViewerPub
 
 
@@ -1242,6 +1456,22 @@ class FooState(State):
         """
         super().__init__(["outcome1", "outcome2"])
         self.counter = 0
+        self.set_description(
+            "Increments a counter until the value from 'max_counter' is reached and writes the formatted counter string to the blackboard."
+        )
+        self.add_input_key(
+            "max_counter",
+            "Maximum number of iterations before the state finishes.",
+        )
+        self.add_input_key(
+            "counter_str",
+            "Prefix used when formatting the counter string.",
+            "Counter",
+        )
+        self.add_output_key(
+            "foo_str",
+            "Formatted counter string written to the blackboard.",
+        )
 
     def execute(self, blackboard: Blackboard) -> str:
         """
@@ -1281,6 +1511,13 @@ class BarState(State):
             outcome3: Indicates the state should transition back to the Foo state.
         """
         super().__init__(outcomes=["outcome3"])
+        self.set_description(
+            "Reads and prints the formatted counter string stored in 'foo_str' from the blackboard."
+        )
+        self.add_input_key(
+            "foo_str",
+            "Formatted counter string produced by FooState.",
+        )
 
     def execute(self, blackboard: Blackboard) -> str:
         """
@@ -1312,16 +1549,46 @@ def main() -> None:
 
     # Create a finite state machine (FSM)
     sm = StateMachine(outcomes=["outcome4"], handle_sigint=True)
+    sm.set_description(
+        "Loads configuration values into the blackboard and then runs a loop that formats and prints a counter string until the configured maximum is reached."
+    )
+    sm.add_input_key(
+        "max_counter",
+        "Maximum number of iterations before the state machine finishes.",
+        3,
+    )
+    sm.add_input_key(
+        "counter_str",
+        "Prefix used when formatting the counter string.",
+        "Counter",
+    )
+    sm.add_output_key(
+        "foo_str",
+        "Formatted counter string produced during execution.",
+    )
+
+    getting_parameters_state = GetParametersState(
+        parameters={
+            "max_counter": 3,
+            "counter_str": "Counter",
+        },
+    )
+    getting_parameters_state.set_description(
+        "Loads the configured parameters and stores them in the blackboard."
+    )
+    getting_parameters_state.add_output_key(
+        "max_counter",
+        "Maximum number of iterations before the state machine finishes.",
+    )
+    getting_parameters_state.add_output_key(
+        "counter_str",
+        "Prefix used when formatting the counter string.",
+    )
 
     # Add states to the FSM
     sm.add_state(
         "GETTING_PARAMETERS",
-        GetParametersState(
-            parameters={
-                "max_counter": 3,
-                "counter_str": "Counter",
-            },
-        ),
+        getting_parameters_state,
         transitions={
             SUCCEED: "FOO",
             ABORT: "outcome4",
@@ -1404,7 +1671,7 @@ def main() -> None:
 
     # Set ROS 2 loggers
     set_ros_loggers()
-    yasmin.YASMIN_LOG_INFO("yasmin_demo")
+    yasmin.YASMIN_LOG_INFO("YASMIN_FACTORY_DEMO")
 
     # Create a finite state machine (FSM)
     factory = YasminFactory()
@@ -1417,6 +1684,81 @@ def main() -> None:
 
     # Publish FSM information for visualization
     YasminViewerPub(sm, "plugin_demo")
+
+    # Execute the FSM
+    try:
+        outcome = sm()
+        yasmin.YASMIN_LOG_INFO(outcome)
+    except Exception as e:
+        yasmin.YASMIN_LOG_WARN(e)
+
+    # Shutdown ROS 2 if it's running
+    if rclpy.ok():
+        rclpy.shutdown()
+
+
+if __name__ == "__main__":
+    main()
+```
+
+</details>
+
+#### Multiple States Demo (States in Separate Files)
+
+<details>
+<summary>Click to expand</summary>
+
+```shell
+ros2 run yasmin_demos multiple_states_demo.py
+```
+
+```python
+import rclpy
+
+import yasmin
+from yasmin import StateMachine
+from yasmin_demos import BarState, FooState
+from yasmin_ros import set_ros_loggers
+from yasmin_viewer import YasminViewerPub
+
+
+def main() -> None:
+    # Initialize ROS 2
+    rclpy.init()
+
+    # Set ROS 2 loggers
+    set_ros_loggers()
+    yasmin.YASMIN_LOG_INFO("yasmin_multiple_states_demo")
+
+    # Create a finite state machine (FSM)
+    sm = StateMachine(outcomes=["outcome4"], handle_sigint=True)
+    sm.set_description(
+        "Runs a simple loop between FooState and BarState demonstrating how states can be organized across multiple files."
+    )
+    sm.add_output_key(
+        "foo_str",
+        "Formatted counter string produced by FooState and read by BarState.",
+    )
+
+    # Add states to the FSM
+    sm.add_state(
+        "FOO",
+        FooState(),
+        transitions={
+            "outcome1": "BAR",
+            "outcome2": "outcome4",
+        },
+    )
+    sm.add_state(
+        "BAR",
+        BarState(),
+        transitions={
+            "outcome3": "FOO",
+        },
+    )
+
+    # Publish FSM information for visualization
+    YasminViewerPub(sm, "YASMIN_MULTIPLE_STATES_DEMO")
 
     # Execute the FSM
     try:
@@ -1655,18 +1997,6 @@ ros2 run yasmin_demos yasmin_demo
 ```
 
 ```cpp
-#include <chrono>
-#include <iostream>
-#include <memory>
-#include <string>
-
-#include "rclcpp/rclcpp.hpp"
-#include "yasmin/logs.hpp"
-#include "yasmin/state.hpp"
-#include "yasmin/state_machine.hpp"
-#include "yasmin_ros/ros_logs.hpp"
-#include "yasmin_viewer/yasmin_viewer_pub.hpp"
-
 /**
  * @brief Represents the "Foo" state in the state machine.
  *
@@ -1681,7 +2011,13 @@ public:
   /**
    * @brief Constructs a FooState object, initializing the counter.
    */
-  FooState() : yasmin::State({"outcome1", "outcome2"}), counter(0){};
+  FooState() : yasmin::State({"outcome1", "outcome2"}), counter(0) {
+    this->set_description(
+        "Increments an internal counter, writes the formatted counter string "
+        "to the blackboard, and controls the loop outcome.");
+    this->add_output_key("foo_str",
+                         "Formatted counter string written by FooState.");
+  };
 
   /**
    * @brief Executes the Foo state logic.
@@ -1694,8 +2030,7 @@ public:
    * @param blackboard Shared pointer to the blackboard for state communication.
    * @return std::string The outcome of the execution: "outcome1" or "outcome2".
    */
-  std::string
-  execute(yasmin::Blackboard::SharedPtr blackboard) override {
+  std::string execute(yasmin::Blackboard::SharedPtr blackboard) override {
     YASMIN_LOG_INFO("Executing state FOO");
     std::this_thread::sleep_for(std::chrono::seconds(3));
 
@@ -1722,7 +2057,12 @@ public:
   /**
    * @brief Constructs a BarState object.
    */
-  BarState() : yasmin::State({"outcome3"}) {}
+  BarState() : yasmin::State({"outcome3"}) {
+    this->set_description("Reads the counter string from the blackboard, logs "
+                          "it, and transitions back to FooState.");
+    this->add_input_key("foo_str",
+                        "Formatted counter string produced by FooState.");
+  }
 
   /**
    * @brief Executes the Bar state logic.
@@ -1733,8 +2073,7 @@ public:
    * @param blackboard Shared pointer to the blackboard for state communication.
    * @return std::string The outcome of the execution: "outcome3".
    */
-  std::string
-  execute(yasmin::Blackboard::SharedPtr blackboard) override {
+  std::string execute(yasmin::Blackboard::SharedPtr blackboard) override {
     YASMIN_LOG_INFO("Executing state BAR");
     std::this_thread::sleep_for(std::chrono::seconds(3));
 
@@ -1755,6 +2094,11 @@ int main(int argc, char *argv[]) {
   // Create a state machine
   auto sm = yasmin::StateMachine::make_shared(
       std::initializer_list<std::string>{"outcome4"}, true);
+  sm->set_description("Runs a simple loop between FooState and BarState until "
+                      "FooState reaches its terminal outcome.");
+  sm->add_output_key(
+      "foo_str",
+      "Formatted counter string produced by FooState and read by BarState.");
 
   // Add states to the state machine
   sm->add_state("FOO", std::make_shared<FooState>(),
@@ -1796,19 +2140,6 @@ ros2 run yasmin_demos remap_demo
 ```
 
 ```cpp
-#include <chrono>
-#include <iostream>
-#include <memory>
-#include <string>
-
-#include "rclcpp/rclcpp.hpp"
-#include "yasmin/logs.hpp"
-#include "yasmin/state.hpp"
-#include "yasmin/state_machine.hpp"
-#include "yasmin_ros/basic_outcomes.hpp"
-#include "yasmin_ros/ros_logs.hpp"
-#include "yasmin_viewer/yasmin_viewer_pub.hpp"
-
 /**
  * @brief Represents the "Foo" state in the state machine.
  */
@@ -1817,7 +2148,13 @@ public:
   /**
    * @brief Constructs a FooState object, initializing the counter.
    */
-  FooState() : yasmin::State({yasmin_ros::basic_outcomes::SUCCEED}){};
+  FooState() : yasmin::State({yasmin_ros::basic_outcomes::SUCCEED}) {
+    this->set_description("Reads input data from the blackboard, logs it, and "
+                          "writes it back as output.");
+    this->add_input_key("foo_data", "Input data read by the Foo state.");
+    this->add_output_key("foo_out_data",
+                         "Output data written by the Foo state.");
+  };
 
   /**
    * @brief Executes the Foo state logic.
@@ -1827,8 +2164,7 @@ public:
    * @param blackboard Shared pointer to the blackboard for state communication.
    * @return std::string The outcome of the execution, which can be SUCCEED.
    */
-  std::string
-  execute(yasmin::Blackboard::SharedPtr blackboard) override {
+  std::string execute(yasmin::Blackboard::SharedPtr blackboard) override {
     std::string data = blackboard->get<std::string>("foo_data");
     YASMIN_LOG_INFO("%s", data.c_str());
     blackboard->set<std::string>("foo_out_data", data);
@@ -1844,7 +2180,11 @@ public:
   /**
    * @brief Constructs a BarState object.
    */
-  BarState() : yasmin::State({yasmin_ros::basic_outcomes::SUCCEED}) {}
+  BarState() : yasmin::State({yasmin_ros::basic_outcomes::SUCCEED}) {
+    this->set_description(
+        "Reads remapped input data from the blackboard and logs it.");
+    this->add_input_key("bar_data", "Input data read by the Bar state.");
+  }
 
   /**
    * @brief Executes the Bar state logic.
@@ -1854,8 +2194,7 @@ public:
    * @param blackboard Shared pointer to the blackboard for state communication.
    * @return std::string The outcome of the execution: "outcome3".
    */
-  std::string
-  execute(yasmin::Blackboard::SharedPtr blackboard) override {
+  std::string execute(yasmin::Blackboard::SharedPtr blackboard) override {
     std::string datga = blackboard->get<std::string>("bar_data");
     YASMIN_LOG_INFO("%s", datga.c_str());
     return yasmin_ros::basic_outcomes::SUCCEED;
@@ -1871,7 +2210,7 @@ int main(int argc, char *argv[]) {
   YASMIN_LOG_INFO("yasmin_remapping_demo");
 
   // Create blackboard
-  auto blackboard = yasmin::Blackboard::make_shared();
+  auto blackboard = std::make_shared<yasmin::Blackboard>();
   blackboard->set<std::string>("msg1", "test1");
   blackboard->set<std::string>("msg2", "test2");
 
@@ -1879,6 +2218,15 @@ int main(int argc, char *argv[]) {
   auto sm = yasmin::StateMachine::make_shared(
       std::initializer_list<std::string>{yasmin_ros::basic_outcomes::SUCCEED},
       true);
+  sm->set_description("Demonstrates blackboard remapping by forwarding values "
+                      "through multiple states.");
+  sm->add_input_key("msg1",
+                    "Initial input value remapped to the first Foo state.");
+  sm->add_input_key("msg2",
+                    "Initial input value remapped to the second Foo state.");
+  sm->add_output_key(
+      "foo_out_data",
+      "Output data written by Foo and forwarded to Bar through remapping.");
 
   // Add states to the state machine
   sm->add_state("STATE1", std::make_shared<FooState>(),
@@ -1933,19 +2281,6 @@ ros2 run yasmin_demos concurrence_demo
 ```
 
 ```cpp
-#include <chrono>
-#include <iostream>
-#include <memory>
-#include <string>
-
-#include "rclcpp/rclcpp.hpp"
-#include "yasmin/concurrence.hpp"
-#include "yasmin/logs.hpp"
-#include "yasmin/state.hpp"
-#include "yasmin/state_machine.hpp"
-#include "yasmin_ros/ros_logs.hpp"
-#include "yasmin_viewer/yasmin_viewer_pub.hpp"
-
 /**
  * @brief Represents the "Foo" state in the state machine.
  *
@@ -1960,8 +2295,14 @@ public:
   /**
    * @brief Constructs a FooState object, initializing the counter.
    */
-  FooState()
-      : yasmin::State({"outcome1", "outcome2", "outcome3"}), counter(0){};
+  FooState() : yasmin::State({"outcome1", "outcome2", "outcome3"}), counter(0) {
+    this->set_description(
+        "Produces a counter string and stores it in the blackboard while "
+        "cycling through outcomes based on the internal counter.");
+    this->add_output_key(
+        "foo_str",
+        "String containing the current counter value produced by FooState.");
+  };
 
   /**
    * @brief Executes the Foo state logic.
@@ -1974,8 +2315,7 @@ public:
    * @param blackboard Shared pointer to the blackboard for state communication.
    * @return std::string The outcome of the execution: "outcome1" or "outcome2".
    */
-  std::string
-  execute(yasmin::Blackboard::SharedPtr blackboard) override {
+  std::string execute(yasmin::Blackboard::SharedPtr blackboard) override {
     YASMIN_LOG_INFO("Executing state FOO");
     std::this_thread::sleep_for(std::chrono::seconds(2));
 
@@ -2009,7 +2349,12 @@ public:
   /**
    * @brief Constructs a BarState object.
    */
-  BarState() : yasmin::State({"outcome3"}) {}
+  BarState() : yasmin::State({"outcome3"}) {
+    this->set_description(
+        "Reads and prints the value stored in 'foo_str' from the blackboard.");
+    this->add_input_key(
+        "foo_str", "String produced by FooState containing the counter value.");
+  }
 
   /**
    * @brief Executes the Bar state logic.
@@ -2020,8 +2365,7 @@ public:
    * @param blackboard Shared pointer to the blackboard for state communication.
    * @return std::string The outcome of the execution: "outcome3".
    */
-  std::string
-  execute(yasmin::Blackboard::SharedPtr blackboard) override {
+  std::string execute(yasmin::Blackboard::SharedPtr blackboard) override {
     YASMIN_LOG_INFO("Executing state BAR");
     std::this_thread::sleep_for(std::chrono::seconds(4));
 
@@ -2048,6 +2392,12 @@ int main(int argc, char *argv[]) {
   // Create a state machine
   auto sm = yasmin::StateMachine::make_shared(
       std::initializer_list<std::string>{"outcome4"}, true);
+  sm->set_description(
+      "Runs FooState and BarState concurrently until the concurrence state no "
+      "longer matches the configured outcome map.");
+  sm->add_output_key(
+      "foo_str", "String containing the current counter value produced during "
+                 "the concurrent execution.");
 
   // Create states to run concurrently
   auto foo_state = std::make_shared<FooState>();
@@ -2064,6 +2414,13 @@ int main(int argc, char *argv[]) {
           {"outcome1", {{"FOO", "outcome1"}, {"BAR", "outcome3"}}},
           {"outcome2", {{"FOO", "outcome2"}, {"BAR", "outcome3"}}},
       });
+  concurrent_state->set_description(
+      "Executes FooState and BarState in parallel and maps their combined "
+      "outcomes to the next transition.");
+  concurrent_state->add_input_key(
+      "foo_str", "String read by BarState during the concurrent execution.");
+  concurrent_state->add_output_key(
+      "foo_str", "String written by FooState during the concurrent execution.");
 
   // Add concurrent state to the state machine
   sm->add_state("CONCURRENCE", concurrent_state,
@@ -2102,21 +2459,6 @@ ros2 run yasmin_demos publisher_demo
 ```
 
 ```cpp
-#include <iostream>
-#include <memory>
-#include <string>
-
-#include "rclcpp/rclcpp.hpp"
-#include "std_msgs/msg/int32.hpp"
-
-#include "yasmin/cb_state.hpp"
-#include "yasmin/logs.hpp"
-#include "yasmin/state_machine.hpp"
-#include "yasmin_ros/basic_outcomes.hpp"
-#include "yasmin_ros/publisher_state.hpp"
-#include "yasmin_ros/ros_logs.hpp"
-#include "yasmin_viewer/yasmin_viewer_pub.hpp"
-
 using std::placeholders::_1;
 using std::placeholders::_2;
 
@@ -2139,7 +2481,14 @@ public:
             "count", // topic name
             std::bind(&PublishIntState::create_int_msg, this,
                       _1) // create msg handler callback
-        ){};
+        ) {
+    this->set_description("Publishes an incrementing integer to the 'count' "
+                          "topic using values stored in the blackboard.");
+    this->add_input_key<int>(
+        "counter", "Current counter value stored in the blackboard.", 0);
+    this->add_output_key("counter",
+                         "Updated counter value after incrementing.");
+  };
 
   /**
    * @brief Create a new Int message.
@@ -2173,8 +2522,7 @@ public:
  * @param blackboard Shared pointer to the blackboard.
  * @return A string representing the outcome.
  */
-std::string
-check_count(yasmin::Blackboard::SharedPtr blackboard) {
+std::string check_count(yasmin::Blackboard::SharedPtr blackboard) {
 
   // Sleep for 1 second to simulate some processing time
   rclcpp::sleep_for(std::chrono::seconds(1));
@@ -2199,6 +2547,24 @@ int main(int argc, char *argv[]) {
   auto sm = yasmin::StateMachine::make_shared(
       std::initializer_list<std::string>{yasmin_ros::basic_outcomes::SUCCEED},
       true);
+  sm->set_description("Publishes incrementing integers until the configured "
+                      "maximum count is reached.");
+  sm->add_input_key<int>("counter",
+                         "Current counter value stored in the blackboard.", 0);
+  sm->add_input_key<int>(
+      "max_count", "Maximum counter threshold used to stop publishing.", 10);
+  sm->add_output_key("counter",
+                     "Updated counter value after each publish step.");
+
+  auto checking_counts_state = yasmin::CbState::make_shared(
+      std::initializer_list<std::string>{"outcome1", "outcome2"}, check_count);
+  checking_counts_state->set_description(
+      "Checks whether the counter stored in the blackboard reached the "
+      "configured maximum.");
+  checking_counts_state->add_input_key<int>("counter", "Current counter value.",
+                                            0);
+  checking_counts_state->add_input_key<int>(
+      "max_count", "Maximum counter threshold used to stop publishing.", 10);
 
   // Add states to the state machine
   sm->add_state("PUBLISHING_INT", std::make_shared<PublishIntState>(),
@@ -2206,10 +2572,7 @@ int main(int argc, char *argv[]) {
                     {yasmin_ros::basic_outcomes::SUCCEED,
                      "CHECKINNG_COUNTS"}, // Transition back to itself
                 });
-  sm->add_state("CHECKINNG_COUNTS",
-                yasmin::CbState::make_shared(
-                    std::initializer_list<std::string>{"outcome1", "outcome2"},
-                    check_count),
+  sm->add_state("CHECKINNG_COUNTS", checking_counts_state,
                 {{"outcome1", yasmin_ros::basic_outcomes::SUCCEED},
                  {"outcome2", "PUBLISHING_INT"}});
 
@@ -2217,8 +2580,7 @@ int main(int argc, char *argv[]) {
   yasmin_viewer::YasminViewerPub yasmin_pub(sm, "YASMIN_PUBLISHER_DEMO");
 
   // Execute the state machine
-  yasmin::Blackboard::SharedPtr blackboard =
-      yasmin::Blackboard::make_shared();
+  yasmin::Blackboard::SharedPtr blackboard = yasmin::Blackboard::make_shared();
   blackboard->set<int>("counter", 0);
   blackboard->set<int>("max_count", 10);
   try {
@@ -2246,20 +2608,6 @@ ros2 run yasmin_demos monitor_demo
 ```
 
 ```cpp
-#include <iostream>
-#include <memory>
-#include <string>
-
-#include "nav_msgs/msg/odometry.hpp"
-#include "rclcpp/rclcpp.hpp"
-
-#include "yasmin/logs.hpp"
-#include "yasmin/state_machine.hpp"
-#include "yasmin_ros/basic_outcomes.hpp"
-#include "yasmin_ros/monitor_state.hpp"
-#include "yasmin_ros/ros_logs.hpp"
-#include "yasmin_viewer/yasmin_viewer_pub.hpp"
-
 using std::placeholders::_1;
 using std::placeholders::_2;
 
@@ -2293,6 +2641,10 @@ public:
             10             // timeout for receiving messages
         ) {
     this->times = 5;
+    this->set_description("Monitors odometry messages from the 'odom' topic "
+                          "and logs the received positions.");
+    this->add_input_key(
+        "odom", "Odometry message received from the monitored ROS topic.");
   };
 
   /**
@@ -2309,9 +2661,8 @@ public:
    * @return A string representing the outcome: "outcome1" to stay in the state,
    *         or "outcome2" to transition out of the state.
    */
-  std::string
-  monitor_handler(yasmin::Blackboard::SharedPtr blackboard,
-                  std::shared_ptr<nav_msgs::msg::Odometry> msg) {
+  std::string monitor_handler(yasmin::Blackboard::SharedPtr blackboard,
+                              nav_msgs::msg::Odometry::SharedPtr msg) {
 
     (void)blackboard; // blackboard is not used in this implementation
 
@@ -2341,6 +2692,11 @@ int main(int argc, char *argv[]) {
   // Create a state machine with a final outcome
   auto sm = yasmin::StateMachine::make_shared(
       std::initializer_list<std::string>{"outcome4"}, true);
+  sm->set_description(
+      "Continuously monitors the 'odom' topic and logs received odometry "
+      "messages until a fixed number of messages has been processed.");
+  sm->add_input_key("odom",
+                    "Odometry messages received from the monitored ROS topic.");
 
   // Add states to the state machine
   sm->add_state(
@@ -2351,6 +2707,7 @@ int main(int argc, char *argv[]) {
           {"outcome2", "outcome4"}, // Transition to outcome4 on outcome2
           {yasmin_ros::basic_outcomes::TIMEOUT,
            "outcome4"}, // Timeout transition
+          {yasmin_ros::basic_outcomes::CANCEL, "outcome4"}, // Cancel transition
       });
 
   // Publisher for visualizing the state machine's status
@@ -2386,21 +2743,6 @@ ros2 run yasmin_demos service_client_demo
 ```
 
 ```cpp
-#include <iostream>
-#include <memory>
-#include <string>
-
-#include "example_interfaces/srv/add_two_ints.hpp"
-#include "rclcpp/rclcpp.hpp"
-
-#include "yasmin/cb_state.hpp"
-#include "yasmin/logs.hpp"
-#include "yasmin/state_machine.hpp"
-#include "yasmin_ros/basic_outcomes.hpp"
-#include "yasmin_ros/ros_logs.hpp"
-#include "yasmin_ros/service_state.hpp"
-#include "yasmin_viewer/yasmin_viewer_pub.hpp"
-
 using std::placeholders::_1;
 using std::placeholders::_2;
 
@@ -2413,8 +2755,7 @@ using std::placeholders::_2;
  * @param blackboard Shared pointer to the blackboard for setting values.
  * @return std::string Outcome indicating success or failure.
  */
-std::string
-set_ints(yasmin::Blackboard::SharedPtr blackboard) {
+std::string set_ints(yasmin::Blackboard::SharedPtr blackboard) {
   blackboard->set<int>("a", 10);
   blackboard->set<int>("b", 5);
   return yasmin_ros::basic_outcomes::SUCCEED;
@@ -2428,8 +2769,7 @@ set_ints(yasmin::Blackboard::SharedPtr blackboard) {
  * @param blackboard Shared pointer to the blackboard for getting values.
  * @return std::string Outcome indicating success.
  */
-std::string
-print_sum(yasmin::Blackboard::SharedPtr blackboard) {
+std::string print_sum(yasmin::Blackboard::SharedPtr blackboard) {
   std::stringstream ss;
   ss << "Sum: " << blackboard->get<int>("sum");
   YASMIN_LOG_INFO(ss.str().c_str());
@@ -2457,7 +2797,14 @@ public:
             "/add_two_ints",
             std::bind(&AddTwoIntsState::create_request_handler, this, _1),
             {"outcome1"},
-            std::bind(&AddTwoIntsState::response_handler, this, _1, _2)){};
+            std::bind(&AddTwoIntsState::response_handler, this, _1, _2)) {
+    this->set_description(
+        "Calls the AddTwoInts service using the values stored in the "
+        "blackboard and writes the resulting sum back to the blackboard.");
+    this->add_input_key("a", "First integer used for the service request.");
+    this->add_input_key("b", "Second integer used for the service request.");
+    this->add_output_key("sum", "Sum returned by the AddTwoInts service.");
+  };
 
   /**
    * @brief Creates a service request using values from the blackboard.
@@ -2470,8 +2817,7 @@ public:
    * request.
    */
   example_interfaces::srv::AddTwoInts::Request::SharedPtr
-  create_request_handler(
-      yasmin::Blackboard::SharedPtr blackboard) {
+  create_request_handler(yasmin::Blackboard::SharedPtr blackboard) {
 
     auto request =
         std::make_shared<example_interfaces::srv::AddTwoInts::Request>();
@@ -2511,13 +2857,33 @@ int main(int argc, char *argv[]) {
   // Create a state machine with a specified outcome.
   auto sm = yasmin::StateMachine::make_shared(
       std::initializer_list<std::string>{"outcome4"}, true);
+  sm->set_description("Sets two integers in the blackboard, calls the "
+                      "AddTwoInts service, and prints the resulting sum.");
+  sm->add_output_key("a", "First integer used for the service request.");
+  sm->add_output_key("b", "Second integer used for the service request.");
+  sm->add_output_key("sum", "Sum returned by the AddTwoInts service.");
+
+  auto setting_ints_state = yasmin::CbState::make_shared(
+      std::initializer_list<std::string>{yasmin_ros::basic_outcomes::SUCCEED},
+      set_ints);
+  setting_ints_state->set_description(
+      "Writes the two input integers for the AddTwoInts service into the "
+      "blackboard.");
+  setting_ints_state->add_output_key(
+      "a", "First integer used for the service request.");
+  setting_ints_state->add_output_key(
+      "b", "Second integer used for the service request.");
+
+  auto printing_sum_state = yasmin::CbState::make_shared(
+      std::initializer_list<std::string>{yasmin_ros::basic_outcomes::SUCCEED},
+      print_sum);
+  printing_sum_state->set_description(
+      "Reads the computed sum from the blackboard and prints it.");
+  printing_sum_state->add_input_key(
+      "sum", "Sum previously written to the blackboard by the service state.");
 
   // Add states to the state machine.
-  sm->add_state("SETTING_INTS",
-                yasmin::CbState::make_shared(
-                    std::initializer_list<std::string>{
-                        yasmin_ros::basic_outcomes::SUCCEED},
-                    set_ints),
+  sm->add_state("SETTING_INTS", setting_ints_state,
                 {
                     {yasmin_ros::basic_outcomes::SUCCEED, "ADD_TWO_INTS"},
                 });
@@ -2527,11 +2893,7 @@ int main(int argc, char *argv[]) {
                     {yasmin_ros::basic_outcomes::SUCCEED, "outcome4"},
                     {yasmin_ros::basic_outcomes::ABORT, "outcome4"},
                 });
-  sm->add_state("PRINTING_SUM",
-                yasmin::CbState::make_shared(
-                    std::initializer_list<std::string>{
-                        yasmin_ros::basic_outcomes::SUCCEED},
-                    print_sum),
+  sm->add_state("PRINTING_SUM", printing_sum_state,
                 {
                     {yasmin_ros::basic_outcomes::SUCCEED, "outcome4"},
                 });
@@ -2569,21 +2931,6 @@ ros2 run yasmin_demos action_client_demo
 ```
 
 ```cpp
-#include <iostream>
-#include <memory>
-#include <string>
-
-#include "example_interfaces/action/fibonacci.hpp"
-
-#include "yasmin/cb_state.hpp"
-#include "yasmin/logs.hpp"
-#include "yasmin/state_machine.hpp"
-#include "yasmin_ros/action_state.hpp"
-#include "yasmin_ros/basic_outcomes.hpp"
-#include "yasmin_ros/ros_logs.hpp"
-#include "yasmin_ros/yasmin_node.hpp"
-#include "yasmin_viewer/yasmin_viewer_pub.hpp"
-
 using std::placeholders::_1;
 using std::placeholders::_2;
 using Fibonacci = example_interfaces::action::Fibonacci;
@@ -2598,8 +2945,7 @@ using Fibonacci = example_interfaces::action::Fibonacci;
  * sequence.
  * @return The outcome status indicating success.
  */
-std::string
-print_result(yasmin::Blackboard::SharedPtr blackboard) {
+std::string print_result(yasmin::Blackboard::SharedPtr blackboard) {
 
   auto fibo_res = blackboard->get<std::vector<int>>("fibo_res");
 
@@ -2636,7 +2982,14 @@ public:
             "/fibonacci",
             std::bind(&FibonacciState::create_goal_handler, this, _1),
             std::bind(&FibonacciState::response_handler, this, _1, _2),
-            std::bind(&FibonacciState::print_feedback, this, _1, _2)){};
+            std::bind(&FibonacciState::print_feedback, this, _1, _2)) {
+    this->set_description("Calls the Fibonacci action server and stores the "
+                          "resulting sequence in the blackboard.");
+    this->add_input_key<int>("n", "Order of the Fibonacci sequence to compute.",
+                             10);
+    this->add_output_key("fibo_res",
+                         "Computed Fibonacci sequence returned by the action.");
+  };
 
   /**
    * @brief Callback for creating the Fibonacci action goal.
@@ -2646,8 +2999,8 @@ public:
    * @param blackboard Shared pointer to the blackboard.
    * @return The Fibonacci goal with the specified order.
    */
-  Fibonacci::Goal create_goal_handler(
-      yasmin::Blackboard::SharedPtr blackboard) {
+  Fibonacci::Goal
+  create_goal_handler(yasmin::Blackboard::SharedPtr blackboard) {
 
     auto goal = Fibonacci::Goal();
     goal.order = blackboard->get<int>("n");
@@ -2664,9 +3017,8 @@ public:
    * sequence.
    * @return The outcome status indicating success.
    */
-  std::string
-  response_handler(yasmin::Blackboard::SharedPtr blackboard,
-                   Fibonacci::Result::SharedPtr response) {
+  std::string response_handler(yasmin::Blackboard::SharedPtr blackboard,
+                               Fibonacci::Result::SharedPtr response) {
 
     blackboard->set<std::vector<int>>("fibo_res", response->sequence);
     return yasmin_ros::basic_outcomes::SUCCEED;
@@ -2682,9 +3034,8 @@ public:
    * @param feedback Shared pointer to the feedback message with partial
    * sequence.
    */
-  void
-  print_feedback(yasmin::Blackboard::SharedPtr blackboard,
-                 std::shared_ptr<const Fibonacci::Feedback> feedback) {
+  void print_feedback(yasmin::Blackboard::SharedPtr blackboard,
+                      std::shared_ptr<const Fibonacci::Feedback> feedback) {
     (void)blackboard;
 
     std::stringstream ss;
@@ -2702,6 +3053,7 @@ public:
 };
 
 int main(int argc, char *argv[]) {
+
   // Initialize ROS 2
   rclcpp::init(argc, argv);
 
@@ -2712,6 +3064,21 @@ int main(int argc, char *argv[]) {
   // Create the state machine
   auto sm = yasmin::StateMachine::make_shared(
       std::initializer_list<std::string>{"outcome4"}, true);
+  sm->set_description("Calls the Fibonacci action server, stores the resulting "
+                      "sequence, and prints it.");
+  sm->add_input_key<int>("n", "Order of the Fibonacci sequence to compute.",
+                         10);
+  sm->add_output_key("fibo_res",
+                     "Computed Fibonacci sequence returned by the action.");
+
+  auto printing_result_state = yasmin::CbState::make_shared(
+      std::initializer_list<std::string>{yasmin_ros::basic_outcomes::SUCCEED},
+      print_result);
+  printing_result_state->set_description(
+      "Reads the computed Fibonacci sequence from the blackboard and prints "
+      "it.");
+  printing_result_state->add_input_key(
+      "fibo_res", "Computed Fibonacci sequence returned by the action.");
 
   // Add states to the state machine
   sm->add_state("CALLING_FIBONACCI", std::make_shared<FibonacciState>(),
@@ -2720,11 +3087,7 @@ int main(int argc, char *argv[]) {
                     {yasmin_ros::basic_outcomes::CANCEL, "outcome4"},
                     {yasmin_ros::basic_outcomes::ABORT, "outcome4"},
                 });
-  sm->add_state("PRINTING_RESULT",
-                yasmin::CbState::make_shared(
-                    std::initializer_list<std::string>{
-                        yasmin_ros::basic_outcomes::SUCCEED},
-                    print_result),
+  sm->add_state("PRINTING_RESULT", printing_result_state,
                 {
                     {yasmin_ros::basic_outcomes::SUCCEED, "outcome4"},
                 });
@@ -2733,8 +3096,7 @@ int main(int argc, char *argv[]) {
   yasmin_viewer::YasminViewerPub yasmin_pub(sm, "YASMIN_ACTION_CLIENT_DEMO");
 
   // Create an initial blackboard and set the Fibonacci order
-  yasmin::Blackboard::SharedPtr blackboard =
-      yasmin::Blackboard::make_shared();
+  yasmin::Blackboard::SharedPtr blackboard = yasmin::Blackboard::make_shared();
   blackboard->set<int>("n", 10);
 
   // Execute the state machine
@@ -2763,20 +3125,6 @@ ros2 run yasmin_demos parameters_demo --ros-args -p max_counter:=5
 ```
 
 ```cpp
-#include <chrono>
-#include <iostream>
-#include <memory>
-#include <string>
-
-#include "rclcpp/rclcpp.hpp"
-#include "yasmin/logs.hpp"
-#include "yasmin/state.hpp"
-#include "yasmin/state_machine.hpp"
-#include "yasmin_ros/basic_outcomes.hpp"
-#include "yasmin_ros/get_parameters_state.hpp"
-#include "yasmin_ros/ros_logs.hpp"
-#include "yasmin_viewer/yasmin_viewer_pub.hpp"
-
 /**
  * @brief Represents the "Foo" state in the state machine.
  *
@@ -2791,7 +3139,19 @@ public:
   /**
    * @brief Constructs a FooState object, initializing the counter.
    */
-  FooState() : yasmin::State({"outcome1", "outcome2"}), counter(0){};
+  FooState() : yasmin::State({"outcome1", "outcome2"}), counter(0) {
+    this->set_description(
+        "Increments a counter until the value from 'max_counter' is reached "
+        "and writes the formatted counter string to the blackboard.");
+    this->add_input_key(
+        "max_counter",
+        "Maximum number of iterations before the state finishes.");
+    this->add_input_key<std::string>(
+        "counter_str", "Prefix used when formatting the counter string.",
+        std::string("Counter"));
+    this->add_output_key("foo_str",
+                         "Formatted counter string written to the blackboard.");
+  };
 
   /**
    * @brief Executes the Foo state logic.
@@ -2804,8 +3164,7 @@ public:
    * @param blackboard Shared pointer to the blackboard for state communication.
    * @return std::string The outcome of the execution: "outcome1" or "outcome2".
    */
-  std::string
-  execute(yasmin::Blackboard::SharedPtr blackboard) override {
+  std::string execute(yasmin::Blackboard::SharedPtr blackboard) override {
     YASMIN_LOG_INFO("Executing state FOO");
     std::this_thread::sleep_for(std::chrono::seconds(3));
 
@@ -2833,7 +3192,12 @@ public:
   /**
    * @brief Constructs a BarState object.
    */
-  BarState() : yasmin::State({"outcome3"}) {}
+  BarState() : yasmin::State({"outcome3"}) {
+    this->set_description("Reads and prints the formatted counter string "
+                          "stored in 'foo_str' from the blackboard.");
+    this->add_input_key("foo_str",
+                        "Formatted counter string produced by FooState.");
+  }
 
   /**
    * @brief Executes the Bar state logic.
@@ -2844,8 +3208,7 @@ public:
    * @param blackboard Shared pointer to the blackboard for state communication.
    * @return std::string The outcome of the execution: "outcome3".
    */
-  std::string
-  execute(yasmin::Blackboard::SharedPtr blackboard) override {
+  std::string execute(yasmin::Blackboard::SharedPtr blackboard) override {
     YASMIN_LOG_INFO("Executing state BAR");
     std::this_thread::sleep_for(std::chrono::seconds(3));
 
@@ -2866,14 +3229,33 @@ int main(int argc, char *argv[]) {
   // Create a state machine
   auto sm = yasmin::StateMachine::make_shared(
       std::initializer_list<std::string>{"outcome4"}, true);
+  sm->set_description("Loads configuration values into the blackboard and then "
+                      "runs a loop that formats and prints a counter string "
+                      "until the configured maximum is reached.");
+  sm->add_input_key<int>(
+      "max_counter",
+      "Maximum number of iterations before the state machine finishes.", 3);
+  sm->add_input_key<std::string>(
+      "counter_str", "Prefix used when formatting the counter string.",
+      std::string("Counter"));
+  sm->add_output_key("foo_str",
+                     "Formatted counter string produced during execution.");
+
+  auto getting_parameters_state = yasmin_ros::GetParametersState::make_shared(
+      yasmin_ros::GetParametersState::Parameters{
+          {"max_counter", 3},
+          {"counter_str", std::string("Counter")},
+      });
+  getting_parameters_state->set_description(
+      "Loads the configured parameters and stores them in the blackboard.");
+  getting_parameters_state->add_output_key(
+      "max_counter",
+      "Maximum number of iterations before the state machine finishes.");
+  getting_parameters_state->add_output_key(
+      "counter_str", "Prefix used when formatting the counter string.");
 
   // Add states to the state machine
-  sm->add_state("GETTING_PARAMETERS",
-                yasmin_ros::GetParametersState::make_shared(
-                    yasmin_ros::GetParametersState::Parameters{
-                        {"max_counter", 3},
-                        {"counter_str", std::string("Counter")},
-                    }),
+  sm->add_state("GETTING_PARAMETERS", getting_parameters_state,
                 {
                     {yasmin_ros::basic_outcomes::SUCCEED, "FOO"},
                     {yasmin_ros::basic_outcomes::ABORT, "outcome4"},
@@ -2931,16 +3313,6 @@ ros2 run yasmin_demos factory_demo
 ```
 
 ```cpp
-#include <iostream>
-#include <memory>
-#include <string>
-
-#include "ament_index_cpp/get_package_share_directory.hpp"
-#include "rclcpp/rclcpp.hpp"
-#include "yasmin/state_machine.hpp"
-#include "yasmin_factory/yasmin_factory.hpp"
-#include "yasmin_ros/ros_logs.hpp"
-
 int main(int argc, char *argv[]) {
   // Initialize ROS 2
   rclcpp::init(argc, argv);
@@ -2949,17 +3321,159 @@ int main(int argc, char *argv[]) {
   yasmin_ros::set_ros_loggers();
   YASMIN_LOG_INFO("yasmin_factory_demo");
 
-  // Create the factory in a scope
+  // Create the factory and state machine in a scope to ensure proper cleanup
   yasmin_factory::YasminFactory factory;
 
   // Load state machine from XML file
   std::string xml_file =
+#if __has_include("rclcpp/version.h")
+#include "rclcpp/version.h"
+#if RCLCPP_VERSION_GTE(29, 5, 1)
+      ([]() {
+        std::filesystem::path p;
+        ament_index_cpp::get_package_share_directory("yasmin_demos", p);
+        return (p / "state_machines/demo_2.xml").string();
+      })();
+#else
       ament_index_cpp::get_package_share_directory("yasmin_demos") +
       "/state_machines/demo_2.xml";
+#endif
+#else
+      ament_index_cpp::get_package_share_directory("yasmin_demos") +
+      "/state_machines/demo_2.xml";
+#endif
 
   // Create the state machine from the XML file
   auto sm = factory.create_sm_from_file(xml_file);
   sm->set_sigint_handler(true);
+
+  // Publisher for visualizing the state machine
+  yasmin_viewer::YasminViewerPub yasmin_pub(sm, "YASMIN_FACTORY_DEMO");
+
+  // Execute the state machine
+  try {
+    std::string outcome = (*sm.get())();
+    YASMIN_LOG_INFO(outcome.c_str());
+  } catch (const std::exception &e) {
+    YASMIN_LOG_WARN(e.what());
+  }
+
+  // Shutdown ROS 2
+  rclcpp::shutdown();
+  return 0;
+}
+```
+
+</details>
+
+#### Multiple States Demo (States in Separate Files)
+
+<details>
+<summary>Click to expand</summary>
+
+```shell
+ros2 run yasmin_demos multiple_states_demo
+```
+
+```cpp
+int main(int argc, char *argv[]) {
+  // Initialize ROS 2
+  rclcpp::init(argc, argv);
+
+  // Set ROS 2 logs
+  yasmin_ros::set_ros_loggers();
+  YASMIN_LOG_INFO("yasmin_multiple_states_demo");
+
+  // Create a state machine
+  auto sm = yasmin::StateMachine::make_shared(
+      std::initializer_list<std::string>{"outcome4"}, true);
+  sm->set_description(
+      "Runs a simple loop between FooState and BarState demonstrating how "
+      "states can be organized across multiple files.");
+  sm->add_output_key(
+      "foo_str",
+      "Formatted counter string produced by FooState and read by BarState.");
+
+  // Add states to the state machine
+  sm->add_state("FOO", std::make_shared<FooState>(),
+                {
+                    {"outcome1", "BAR"},
+                    {"outcome2", "outcome4"},
+                });
+  sm->add_state("BAR", std::make_shared<BarState>(),
+                {
+                    {"outcome3", "FOO"},
+                });
+
+  // Publisher for visualizing the state machine
+  yasmin_viewer::YasminViewerPub yasmin_pub(sm, "YASMIN_MULTIPLE_STATES_DEMO");
+
+  // Execute the state machine
+  try {
+    std::string outcome = (*sm.get())();
+    YASMIN_LOG_INFO(outcome.c_str());
+  } catch (const std::exception &e) {
+    YASMIN_LOG_WARN(e.what());
+  }
+
+  rclcpp::shutdown();
+
+  return 0;
+}
+```
+
+</details>
+
+#### ROS Serialization Demo (Factory + Cross-Language)
+
+<details>
+<summary>Click to expand</summary>
+
+```shell
+ros2 run yasmin_demos ros_serialization_demo
+```
+
+```cpp
+int main(int argc, char *argv[]) {
+  // Initialize ROS 2
+  rclcpp::init(argc, argv);
+
+  // Set up ROS 2 loggers
+  yasmin_ros::set_ros_loggers();
+  YASMIN_LOG_INFO("yasmin_ros_serialization_demo");
+
+  // Create the factory and state machine in a scope to ensure proper cleanup
+  yasmin_factory::YasminFactory factory;
+
+  // Load state machine from XML file
+  std::string xml_file =
+#if __has_include("rclcpp/version.h")
+#include "rclcpp/version.h"
+#if RCLCPP_VERSION_GTE(29, 5, 1)
+      ([]() {
+        std::filesystem::path p;
+        ament_index_cpp::get_package_share_directory("yasmin_demos", p);
+        return (p / "state_machines/demo_3.xml").string();
+      })();
+#else
+      ament_index_cpp::get_package_share_directory("yasmin_demos") +
+      "/state_machines/demo_3.xml";
+#endif
+#else
+      ament_index_cpp::get_package_share_directory("yasmin_demos") +
+      "/state_machines/demo_3.xml";
+#endif
+
+  // Create the state machine from the XML file
+  auto sm = factory.create_sm_from_file(xml_file);
+  sm->set_description(
+      "Loads a state machine from an XML file that demonstrates ROS interface "
+      "serialization and executes it.");
+  sm->set_sigint_handler(true);
+
+  // Publisher for visualizing the state machine
+  yasmin_viewer::YasminViewerPub yasmin_pub(sm,
+                                            "YASMIN_ROS_SERIALIZATION_DEMO");
 
   // Execute the state machine
   try {
@@ -2991,8 +3505,8 @@ int main(int argc, char *argv[]) {
 #include <string>
 #include <vector>
 
-#include "geometry_msgs/msg/pose.hpp"
-#include "nav2_msgs/action/navigate_to_pose.hpp"
+#include <geometry_msgs/msg/pose.hpp>
+#include <nav2_msgs/action/navigate_to_pose.hpp>
 
 #include "yasmin/blackboard.hpp"
 #include "yasmin/cb_state.hpp"
@@ -3221,6 +3735,190 @@ int main(int argc, char *argv[]) {
 
 </details>
 
+## Cross‑Language ROS Interface Communication
+
+When mixing **Python** and **C++** states in the same YASMIN state
+machine, the blackboard can be used to exchange data between them.
+However, due to language boundaries, only data types that can be safely
+serialized across runtimes should be used.
+
+### Supported Blackboard Types
+
+The following types are guaranteed to work between Python and C++:
+
+| Type                             | Description           |
+| -------------------------------- | --------------------- |
+| `int`                            | Integer values        |
+| `float`                          | Floating-point values |
+| `bool`                           | Boolean values        |
+| `string`                         | UTF-8 text            |
+| `bytes` / `std::vector<uint8_t>` | Binary data           |
+
+### Sharing ROS Interfaces Between Languages
+
+ROS messages cannot be directly stored in the blackboard when
+communicating between Python and C++ states. Instead, they should be **serialized into raw bytes**.
+
+#### Option A — Serialization States
+
+YASMIN provides dedicated states for this in `yasmin_ros`:
+
+| State                    | Language | Direction                              |
+| ------------------------ | -------- | -------------------------------------- |
+| `RosSerializeCppState`   | C++      | ROS interface → `std::vector<uint8_t>` |
+| `RosDeserializeCppState` | C++      | `std::vector<uint8_t>` → ROS interface |
+| `RosSerializePyState`    | Python   | ROS interface → `bytes`                |
+| `RosDeserializePyState`  | Python   | `bytes` → ROS interface                |
+
+All four states read from the blackboard key `input` and write their result to `output`.
+The target interface type is configured through the `interface_type` parameter
+(e.g. `geometry_msgs/msg/Pose`).
+
+```python
+from yasmin_ros import RosSerializePyState, RosDeserializePyState
+
+serialize_state = RosSerializePyState()
+serialize_state.set_parameter("interface_type", "geometry_msgs/msg/Pose")
+serialize_state.configure()
+```
+
+The C++ states are registered as pluginlib plugins (`yasmin_ros/RosSerializeCppState`,
+`yasmin_ros/RosDeserializeCppState`) and can be used directly from XML state machine files.
+
+#### Option B — Low-level helper utilities
+
+YASMIN also exposes low-level serialization utilities in:
+
+    yasmin_ros/interface_serialization.hpp
+
+These allow converting ROS interfaces to binary data inline inside a custom state.
+
+### Example (C++)
+
+```cpp
+#include <geometry_msgs/msg/pose.hpp>
+
+#include "yasmin_ros/interface_serialization.hpp"
+
+geometry_msgs::msg::Pose pose;
+pose.position.x = 1.0;
+pose.position.y = 2.0;
+pose.position.z = 3.0;
+
+auto bytes = yasmin_ros::serialize_interface<geometry_msgs::msg::Pose>(pose);
+blackboard->set<std::vector<uint8_t>>("pose_bytes", bytes);
+```
+
+### Example (Python)
+
+```python
+import rclpy.serialization
+from geometry_msgs.msg import Pose
+
+pose_bytes = blackboard["pose_bytes"]
+pose = rclpy.serialization.deserialize_message(pose_bytes, Pose)
+```
+
+## TF States
+
+The `TfBufferState` (available in both C++ and Python through `yasmin_ros`) creates a shared
+[tf2](https://wiki.ros.org/tf2) buffer and transform listener and stores them in the YASMIN
+blackboard under the keys `tf_buffer` and `tf_listener`. Subsequent states retrieve these objects
+from the blackboard to perform transform lookups without duplicating listener infrastructure.
+
+### TfBufferState
+
+|                 |                                   |
+| --------------- | --------------------------------- |
+| **Outcomes**    | `succeeded`, `aborted`            |
+| **Output keys** | `tf_buffer`, `tf_listener`        |
+| **Parameters**  | `cache_time_sec` (default `10.0`) |
+| **Plugin name** | `yasmin_ros/TfBufferState`        |
+
+#### Python Example
+
+```python
+import rclpy
+from tf2_ros import Buffer, TransformListener
+
+import yasmin
+from yasmin import Blackboard, State, StateMachine
+from yasmin_ros import TfBufferState, set_ros_loggers
+from yasmin_ros.basic_outcomes import SUCCEED, ABORT
+
+
+class LookupTransformState(State):
+    def __init__(self):
+        super().__init__([SUCCEED, ABORT])
+
+    def execute(self, blackboard: Blackboard) -> str:
+        tf_buffer: Buffer = blackboard["tf_buffer"]
+        try:
+            t = tf_buffer.lookup_transform("map", "base_link", rclpy.time.Time())
+            yasmin.YASMIN_LOG_INFO(
+                f"x={t.transform.translation.x:.3f} "
+                f"y={t.transform.translation.y:.3f}"
+            )
+            return SUCCEED
+        except Exception as exc:
+            yasmin.YASMIN_LOG_WARN(f"Lookup failed: {exc}")
+            return ABORT
+
+
+def main():
+    rclpy.init()
+    set_ros_loggers()
+
+    tf_state = TfBufferState()
+    tf_state.set_parameter("cache_time_sec", 10.0)
+    tf_state.configure()
+
+    sm = StateMachine(outcomes=["done", "failed"])
+    sm.add_state("INIT_TF", tf_state, {SUCCEED: "LOOKUP", ABORT: "failed"})
+    sm.add_state("LOOKUP", LookupTransformState(), {SUCCEED: "done", ABORT: "failed"})
+
+    outcome = sm()
+    yasmin.YASMIN_LOG_INFO(outcome)
+    rclpy.shutdown()
+
+
+if __name__ == "__main__":
+    main()
+```
+
+#### C++ Example
+
+```cpp
+#include "yasmin_ros/tf_buffer_state.hpp"
+#include "yasmin_ros/basic_outcomes.hpp"
+#include "yasmin/state_machine.hpp"
+#include <tf2_ros/buffer.hpp>
+
+// ... (define your transform-using state)
+
+int main(int argc, char *argv[]) {
+  rclcpp::init(argc, argv);
+
+  auto sm = std::make_shared<yasmin::StateMachine>(
+      std::vector<std::string>{"done", "failed"});
+
+  sm->add_state("INIT_TF",
+                std::make_shared<yasmin_ros::TfBufferState>(),
+                {{yasmin_ros::basic_outcomes::SUCCEED, "LOOKUP"},
+                 {yasmin_ros::basic_outcomes::ABORT, "failed"}});
+
+  // Subsequent states read tf_buffer from the blackboard:
+  //   auto tf_buffer =
+  //       blackboard->get<std::shared_ptr<tf2_ros::Buffer>>("tf_buffer");
+  //   auto transform = tf_buffer->lookupTransform("map", "base_link",
+  //                                               tf2::TimePointZero);
+
+  std::string outcome = (*sm)();
+  rclcpp::shutdown();
+  return 0;
+}
+```
+
 ## YASMIN Editor
 
 The **YASMIN Editor** is a graphical user interface application for building YASMIN state machines using state plugins. It enables intuitive creation of state machines through drag-and-drop functionality, allowing you to:
@@ -3243,7 +3941,7 @@ ros2 run yasmin_editor yasmin_editor
 
 ## YASMIN Viewer
 
-The **YASMIN Viewer** provides a convenient way to monitor **YASMIN**'s Finite State Machines (FSM). It is built using **Flask** and **ReactJS** and includes a filter to focus on a single FSM at a time.
+The **YASMIN Viewer** provides a convenient way to monitor **YASMIN**'s Finite State Machines (FSM). It is built using a C++ HTTP server (Boost Beast) with a **Mermaid.js** front-end and includes a filter to focus on a single FSM at a time.
 
 ![YASMIN Viewer](./docs/viewer.gif)
 
@@ -3264,6 +3962,148 @@ ros2 run yasmin_viewer yasmin_viewer_node --ros-args -p host:=127.0.0.1 -p port:
 ```
 
 After running the command, access your state machines at http://127.0.0.1:5032/.
+
+## YASMIN CLI
+
+The **YASMIN CLI** extends the `ros2` command-line interface with the `yasmin` verb, providing tools to discover, inspect, validate, run, and test YASMIN state plugins and XML state machines. It is built as a [ros2cli](https://github.com/ros2/ros2cli) extension and supports tab completion.
+
+### Available Commands
+
+| Command    | Description                                                                   |
+| ---------- | ----------------------------------------------------------------------------- |
+| `list`     | List discovered YASMIN plugins (C++, Python, and XML state machines)          |
+| `info`     | Show detailed metadata for a specific plugin (outcomes, keys, parameters)     |
+| `print`    | Parse and display the structure of an XML state machine file                  |
+| `validate` | Validate one or all XML state machines by loading them through the factory    |
+| `run`      | Run a state machine from an XML file, with optional input/parameter overrides |
+| `test`     | Test a single state plugin in an auto-generated temporary state machine       |
+| `edit`     | Open an XML state machine in the YASMIN Editor GUI                            |
+| `viewer`   | Start the YASMIN Viewer web server for real-time FSM monitoring               |
+
+### Usage Examples
+
+```shell
+# List all discovered plugins (states and XML state machines)
+ros2 yasmin list
+
+# Filter by plugin type
+ros2 yasmin list --type cpp
+ros2 yasmin list --type xml
+
+# Search plugins by name
+ros2 yasmin list --search foo
+
+# Show detailed info about a specific plugin
+ros2 yasmin info <plugin_id>
+
+# Print the structure of an XML state machine
+ros2 yasmin print /path/to/state_machine.xml
+
+# Validate a specific XML state machine
+ros2 yasmin validate /path/to/state_machine.xml
+
+# Validate all XML state machines from installed packages
+ros2 yasmin validate
+
+# Run a state machine from an XML file
+ros2 yasmin run /path/to/state_machine.xml
+
+# Run with input key and parameter overrides
+ros2 yasmin run /path/to/state_machine.xml --input key1=value1 --param param1=value2
+
+# Test a single state plugin in isolation
+ros2 yasmin test <plugin_id>
+ros2 yasmin test <plugin_id> --input key1=value1
+
+# Open the editor (optionally with an XML file)
+ros2 yasmin edit
+ros2 yasmin edit /path/to/state_machine.xml
+
+# Start the viewer
+ros2 yasmin viewer
+ros2 yasmin viewer --host 0.0.0.0 --port 8080
+```
+
+## YASMIN Factory
+
+The **YASMIN Factory** enables the creation of state machines from XML configuration files using a plugin architecture. States are registered as plugins via `pluginlib`, allowing both C++ and Python states to be loaded dynamically at runtime.
+
+### Getting Started
+
+```shell
+ros2 run yasmin_factory yasmin_factory_node --ros-args -p state_machine_file:=/path/to/state_machine.xml
+```
+
+For detailed information on XML syntax, plugin creation, and cross-language support, see the [XML State Machines documentation](./docs/xml_factory.html).
+
+## YASMIN PCL
+
+The **YASMIN PCL** package provides predefined states for [Point Cloud Library (PCL)](https://pointclouds.org/) operations, enabling point cloud processing pipelines within YASMIN state machines.
+
+### Available States
+
+**Filters:**
+
+- `CropBoxState` — Crop a point cloud to a specified bounding box
+- `ExtractIndicesState` — Extract points by index
+- `PassThroughState` — Filter points along an axis within a range
+- `ProjectInliersState` — Project points onto a model
+- `RadiusOutlierRemovalState` — Remove outliers based on radius neighbor count
+- `RandomSampleState` — Randomly downsample a point cloud
+- `StatisticalOutlierRemovalState` — Remove statistical outliers
+- `VoxelGridState` — Downsample using a voxel grid
+
+**I/O:**
+
+- `LoadPcdState` / `SavePcdState` — Read and write PCD files
+- `LoadPlyState` / `SavePlyState` — Read and write PLY files
+- `PclToRosPointCloud2State` — Convert PCL point cloud to ROS `PointCloud2`
+- `RosToPclPointCloud2State` — Convert ROS `PointCloud2` to PCL point cloud
+
+## YASMIN Plugins Manager
+
+The **YASMIN Plugins Manager** discovers and caches all YASMIN plugins across the ROS 2 workspace. It supports three plugin types: C++ states exported via `pluginlib`, Python `State` subclasses found by package introspection, and XML state machines located in package share directories. Discovered metadata (outcomes, keys, parameters) is shared with the [CLI](#yasmin-cli), Editor, and Factory tools.
+
+Run a discovery scan with:
+
+```shell
+ros2 run yasmin_plugins_manager discover_plugins
+```
+
+Force a full rescan (ignore cache):
+
+```shell
+ros2 run yasmin_plugins_manager discover_plugins --force-refresh
+```
+
+Discovery results are cached in `~/.cache/yasmin_plugins_manager/plugins_cache.json` (override with the `YASMIN_CACHE` env var). The cache is invalidated automatically on ROS environment changes, file modifications, or package list changes.
+
+### Ignoring Packages and Files
+
+Three mechanisms are available to exclude plugins from discovery.
+
+**Environment variable** — comma-, semicolon-, or colon-separated package names. The ignore list is stored as part of the cache state, so changing it automatically invalidates the cache and triggers re-discovery:
+
+```shell
+export YASMIN_DISCOVERY_IGNORE_PACKAGES="pkg_a,pkg_b"
+```
+
+**Package-level** — add the following export to the package's `package.xml`:
+
+```xml
+<export>
+  <yasmin_plugins_manager ignore="true"/>
+</export>
+```
+
+**File-level** — place this comment as the first non-empty line of an XML state machine file:
+
+```xml
+<!-- YASMIN_IGNORE_DISCOVERY -->
+<StateMachine>
+  ...
+</StateMachine>
+```
 
 ## Citations
 

@@ -1,4 +1,4 @@
-// Copyright (C) 2025 Miguel Ángel González Santamarta
+// Copyright (C) 2026 Maik Knof
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -32,7 +32,7 @@ int main(int argc, char *argv[]) {
 
   // Set up ROS 2 loggers
   yasmin_ros::set_ros_loggers();
-  YASMIN_LOG_INFO("yasmin_factory_demo");
+  YASMIN_LOG_INFO("yasmin_ros_serialization_demo");
 
   // Create the factory and state machine in a scope to ensure proper cleanup
   yasmin_factory::YasminFactory factory;
@@ -45,23 +45,27 @@ int main(int argc, char *argv[]) {
       ([]() {
         std::filesystem::path p;
         ament_index_cpp::get_package_share_directory("yasmin_demos", p);
-        return (p / "state_machines/demo_2.xml").string();
+        return (p / "state_machines/demo_3.xml").string();
       })();
 #else
       ament_index_cpp::get_package_share_directory("yasmin_demos") +
-      "/state_machines/demo_2.xml";
+      "/state_machines/demo_3.xml";
 #endif
 #else
       ament_index_cpp::get_package_share_directory("yasmin_demos") +
-      "/state_machines/demo_2.xml";
+      "/state_machines/demo_3.xml";
 #endif
 
   // Create the state machine from the XML file
   auto sm = factory.create_sm_from_file(xml_file);
+  sm->set_description(
+      "Loads a state machine from an XML file that demonstrates ROS interface "
+      "serialization and executes it.");
   sm->set_sigint_handler(true);
 
   // Publisher for visualizing the state machine
-  yasmin_viewer::YasminViewerPub yasmin_pub(sm, "YASMIN_FACTORY_DEMO");
+  yasmin_viewer::YasminViewerPub yasmin_pub(sm,
+                                            "YASMIN_ROS_SERIALIZATION_DEMO");
 
   // Execute the state machine
   try {

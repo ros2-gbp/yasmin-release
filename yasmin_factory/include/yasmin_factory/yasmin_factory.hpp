@@ -16,14 +16,15 @@
 #ifndef YASMIN_FACTORY__YASMIN_FACTORY_HPP_
 #define YASMIN_FACTORY__YASMIN_FACTORY_HPP_
 
-#include <string>
-#include <vector>
-
-#include <pluginlib/class_loader.hpp>
 #include <pybind11/embed.h>
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 #include <tinyxml2.h>
+
+#include <string>
+#include <vector>
+
+#include <pluginlib/class_loader.hpp>
 
 #include "yasmin/blackboard.hpp"
 #include "yasmin/concurrence.hpp"
@@ -52,6 +53,12 @@ public:
    * @param py_state The Python state object (kept alive).
    */
   PythonStateHolder(yasmin::State::SharedPtr cpp_state, py::object py_state);
+
+  /**
+   * @brief Synchronizes the wrapper parameter view with the Python state and
+   *        delegates configuration to the underlying state.
+   */
+  void configure() override;
 
   /**
    * @brief Delegates execution to the underlying Python state.
@@ -214,6 +221,15 @@ private:
   get_optional_attribute(tinyxml2::XMLElement *element,
                          const std::string &attr_name,
                          const std::string &default_value = "") const;
+
+  void add_blackboard_keys(yasmin::State::SharedPtr owner,
+                           tinyxml2::XMLElement *parent) const;
+
+  void add_parameters(yasmin::State::SharedPtr owner,
+                      tinyxml2::XMLElement *parent) const;
+
+  yasmin::ParameterMappings
+  get_parameter_mappings(tinyxml2::XMLElement *parent) const;
 };
 
 } // namespace yasmin_factory

@@ -13,15 +13,16 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+#include "yasmin_ros/get_parameters_state.hpp"
+
 #include <any>
 #include <string>
 #include <unordered_map>
 
-#include "rclcpp/rclcpp.hpp"
+#include <rclcpp/rclcpp.hpp>
 
 #include "yasmin/types.hpp"
 #include "yasmin_ros/basic_outcomes.hpp"
-#include "yasmin_ros/get_parameters_state.hpp"
 
 using namespace yasmin_ros;
 
@@ -30,6 +31,18 @@ GetParametersState::GetParametersState(
     rclcpp::Node::SharedPtr node)
     : yasmin::State({basic_outcomes::SUCCEED, basic_outcomes::ABORT}),
       parameters_(parameters) {
+
+  this->set_outcome_description(basic_outcomes::SUCCEED,
+                                "All parameters retrieved successfully");
+  this->set_outcome_description(
+      basic_outcomes::ABORT,
+      "Failed to retrieve parameters due to unsupported type or other error");
+
+  for (const auto &param : parameters) {
+    const std::string &param_name = param.first;
+    const std::any &default_value = param.second;
+    this->add_output_key(param_name, "");
+  }
 
   if (node == nullptr) {
     this->node_ = YasminNode::get_instance();

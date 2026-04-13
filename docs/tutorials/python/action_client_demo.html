@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
@@ -41,6 +41,7 @@
           <li><a href="../../main_concepts.html">Main Concepts</a></li>
           <li><a href="../../xml_factory.html">XML State Machines</a></li>
           <li><a href="../../packages.html">Packages Overview</a></li>
+          <li><a href="../../yasmin_api.html">API Reference</a></li>
         </ul>
 
         <h3>Tutorials</h3>
@@ -114,7 +115,24 @@
         <ul>
           <li><a href="../../yasmin_editor.html">YASMIN Editor</a></li>
           <li><a href="../../yasmin_factory.html">YASMIN Factory</a></li>
+          <li><a href="../../yasmin_cli.html">YASMIN CLI</a></li>
           <li><a href="../../yasmin_viewer.html">YASMIN Viewer</a></li>
+        </ul>
+
+        <h3>Extensions</h3>
+        <ul>
+          <li><a href="../../yasmin_pcl.html">YASMIN PCL</a></li>
+          <li>
+            <a href="../../yasmin_ros_serialization.html"
+              >ROS Serialization States</a
+            >
+          </li>
+          <li><a href="../../yasmin_ros_tf.html">TF States</a></li>
+          <li>
+            <a href="../../yasmin_plugins_manager.html"
+              >YASMIN Plugins Manager</a
+            >
+          </li>
         </ul>
 
         <h3>Resources</h3>
@@ -157,7 +175,7 @@
           constructor takes six parameters: the action type
           (<code>Fibonacci</code>), the action name (<code>"/fibonacci"</code>),
           a callback to create the goal, optional custom outcomes (we use
-          <code>None</code> to accept defaults: SUCCEED, ABORT, CANCEL), a
+          <code>set()</code> to accept defaults: SUCCEED, ABORT, CANCEL), a
           response handler, and a feedback handler. The
           <code>create_goal_handler</code> retrieves the Fibonacci order from
           the blackboard and creates a goal request. The
@@ -170,6 +188,7 @@
 
         <pre><code class="language-python">from yasmin_ros import ActionState
 from example_interfaces.action import Fibonacci
+from yasmin_ros.basic_outcomes import SUCCEED
 
 class FibonacciState(ActionState):
     """
@@ -191,9 +210,17 @@ class FibonacciState(ActionState):
             Fibonacci,  # action type
             "/fibonacci",  # action name
             self.create_goal_handler,  # callback to create the goal
-            None,  # outcomes. Includes (SUCCEED, ABORT, CANCEL)
+            set(),  # outcomes. Includes (SUCCEED, ABORT, CANCEL)
             self.response_handler,  # callback to process the response
             self.print_feedback,  # callback to process the feedback
+        )
+        self.set_description(
+            "Calls the ROS2 Fibonacci action server and computes the Fibonacci sequence up to the requested order."
+        )
+        self.add_input_key("n", "Order of the Fibonacci sequence to compute.", 10)
+        self.add_output_key(
+            "fibo_res",
+            "Computed Fibonacci sequence returned by the action server.",
         )
 
     def create_goal_handler(self, blackboard: Blackboard) -&gt; Fibonacci.Goal:
@@ -301,6 +328,23 @@ def print_result(blackboard: Blackboard) -&gt; str:
 
     # Create a finite state machine (FSM)
     sm = StateMachine(outcomes=["outcome4"], handle_sigint=True)
+    sm.set_description(
+        "Calls a Fibonacci action server, stores the resulting sequence in the blackboard, and prints the result."
+    )
+    sm.add_input_key("n", "Order of the Fibonacci sequence to compute.", 10)
+    sm.add_output_key(
+        "fibo_res",
+        "Computed Fibonacci sequence returned by the action server.",
+    )
+
+    printing_result_state = CbState([SUCCEED], print_result)
+    printing_result_state.set_description(
+        "Reads the computed Fibonacci sequence from the blackboard and logs it."
+    )
+    printing_result_state.add_input_key(
+        "fibo_res",
+        "Computed Fibonacci sequence returned by the action server.",
+    )
 
     # Add states to the FSM
     sm.add_state(
@@ -314,7 +358,7 @@ def print_result(blackboard: Blackboard) -&gt; str:
     )
     sm.add_state(
         "PRINTING_RESULT",
-        CbState([SUCCEED], print_result),
+        printing_result_state,
         transitions={
             SUCCEED: "outcome4",
         },

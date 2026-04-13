@@ -25,6 +25,7 @@
 
 #include "yasmin/blackboard.hpp"
 #include "yasmin/state.hpp"
+#include "yasmin/state_machine_cancel_exception.hpp"
 
 namespace yasmin {
 
@@ -97,7 +98,8 @@ public:
    */
   void add_state(const std::string &name, State::SharedPtr state,
                  const Transitions &transitions = {},
-                 const Remappings &remappings = {});
+                 const Remappings &remappings = {},
+                 const ParameterMappings &parameter_mappings = {});
 
   /**
    * @brief Sets the name of the state machine.
@@ -171,6 +173,24 @@ public:
   void add_end_cb(EndCallbackType cb);
 
   /**
+   * @brief Sets parameter mappings for a child state.
+   *
+   * Each mapping entry is interpreted as:
+   *   child_parameter -> parent_parameter
+   *
+   * @param state_name The child state name.
+   * @param parameter_mappings The parameter mappings to apply.
+   */
+  void set_parameter_mappings(const std::string &state_name,
+                              const ParameterMappings &parameter_mappings);
+
+  /**
+   * @brief Gets all parameter mappings.
+   * @return A constant reference to the parameter mappings.
+   */
+  const ParameterMappingsMap &get_parameter_mappings() const noexcept;
+
+  /**
    * @brief Validates the state machine configuration.
    *
    * @param strict Whether the validation is strict, which means checking if all
@@ -187,6 +207,8 @@ public:
    * @throws std::runtime_error If the execution cannot be completed due to
    *                            invalid states or transitions.
    */
+  void configure() override;
+
   std::string execute(Blackboard::SharedPtr blackboard) override;
 
   /**
@@ -207,9 +229,23 @@ public:
   using State::operator();
 
   /**
-   * @brief Cancels the current state execution.
+   * @brief Cancels the currently active child state.
+   *
+   * This lightweight cancel request is forwarded to the active child state. If
+   * the state machine continues executing afterwards, its running status is
+   * restored inside the execution loop so later cancel requests can still be
+   * propagated.
    */
   void cancel_state() override;
+
+  /**
+   * @brief Cancels the complete state machine execution.
+   *
+   * This requests a hard stop of the current state machine. The request is
+   * propagated recursively to an active child state machine and causes the
+   * execution loop to abort by throwing StateMachineCancelException.
+   */
+  void cancel_state_machine();
 
   /**
    * @brief Sets whether the state machine should handle SIGINT for cancel.
@@ -234,6 +270,8 @@ private:
   TransitionsMap transitions;
   /// A dictionary of remappings to set in the blackboard in each transition
   RemappingsMap remappings;
+  /// Per-child parameter mappings applied during configure()
+  ParameterMappingsMap parameter_mappings;
 
   /// Name of the start state
   std::string start_state;
@@ -246,6 +284,12 @@ private:
 
   /// Flag to indicate if the state machine has been validated
   std::atomic_bool validated{false};
+  /// Flag to indicate if the state machine has been configured
+  std::atomic_bool configured{false};
+  /// Flag to indicate whether the execute loop is currently active
+  std::atomic_bool execution_active{false};
+  /// Flag to indicate that a hard state machine cancel was requested
+  std::atomic_bool cancel_state_machine_requested{false};
 
   /// Start callbacks executed before the state machine
   std::vector<StartCallbackType> start_cbs;
@@ -260,6 +304,14 @@ private:
    * @param state_name The name of the state to set as the current state.
    */
   void set_current_state(const std::string &state_name);
+
+  /**
+   * @brief Applies this container's parameter mappings to a direct child.
+   * @param state_name The child state name.
+   * @param state The child state instance.
+   */
+  void apply_parameter_mappings(const std::string &state_name,
+                                const State::SharedPtr &state);
 
   /**
    * @brief Calls start callbacks with the given blackboard and start state.
@@ -291,6 +343,33 @@ private:
    */
   void call_end_cbs(Blackboard::SharedPtr blackboard,
                     const std::string &outcome);
+
+  /**
+   * @brief Compose parent and state blackboard remappings.
+   *
+   * The state remappings are resolved against the currently active parent
+   * remappings. If a state target already points to a remapped parent key,
+   * the resulting mapping is flattened to the final parent target.
+   *
+   * @param parent_remappings Remappings currently active in the parent scope.
+   * @param state_remappings Remappings defined by the current state.
+   * @return Combined remapping table with state entries resolved through the
+   * parent scope.
+   */
+  static Remappings compose_remappings(const Remappings &parent_remappings,
+                                       const Remappings &state_remappings);
+
+  /**
+   * @brief Waits until a current state is available while execution is active.
+   * @return The current state name, or an empty string if execution is no
+   * longer active.
+   */
+  std::string wait_for_current_state();
+
+  /**
+   * @brief Throws if a hard state machine cancel was requested.
+   */
+  void throw_if_cancel_state_machine_requested();
 };
 
 } // namespace yasmin

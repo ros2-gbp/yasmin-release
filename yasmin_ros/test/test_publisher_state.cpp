@@ -13,14 +13,14 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-#include <chrono>
 #include <gtest/gtest.h>
+
+#include <chrono>
 #include <memory>
 #include <thread>
 
-#include "std_msgs/msg/string.hpp"
-
-#include "rclcpp/rclcpp.hpp"
+#include <rclcpp/rclcpp.hpp>
+#include <std_msgs/msg/string.hpp>
 
 #include "yasmin/types.hpp"
 #include "yasmin_ros/basic_outcomes.hpp"
@@ -37,7 +37,11 @@ class TestPublisherState : public ::testing::Test {
 protected:
   static void SetUpTestCase() { rclcpp::init(0, nullptr); }
 
-  static void TearDownTestCase() { rclcpp::shutdown(); }
+  static void TearDownTestCase() {
+    yasmin_ros::ROSClientsCache::clear_all();
+    yasmin_ros::YasminNode::destroy_instance();
+    rclcpp::shutdown();
+  }
 };
 
 TEST_F(TestPublisherState, TestPublisher) {

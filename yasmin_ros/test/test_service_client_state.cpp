@@ -13,12 +13,13 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-#include <chrono>
 #include <gtest/gtest.h>
+
+#include <chrono>
 #include <memory>
 #include <thread>
 
-#include "example_interfaces/srv/add_two_ints.hpp"
+#include <example_interfaces/srv/add_two_ints.hpp>
 
 #include "yasmin/types.hpp"
 #include "yasmin_ros/action_state.hpp"
@@ -74,6 +75,8 @@ protected:
     }
     aux_node.reset();
     executor.reset();
+    yasmin_ros::ROSClientsCache::clear_all();
+    yasmin_ros::YasminNode::destroy_instance();
     rclcpp::shutdown();
   }
 };

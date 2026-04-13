@@ -18,14 +18,9 @@
 #define YASMIN__CONCURRENCE_HPP_
 
 #include <atomic>
-#include <iostream>
 #include <mutex>
 #include <string>
 #include <thread>
-
-#ifdef __GNUG__     // If using GCC/G++
-#include <cxxabi.h> // For abi::__cxa_demangle
-#endif
 
 #include "yasmin/blackboard.hpp"
 #include "yasmin/state.hpp"
@@ -60,10 +55,23 @@ protected:
 
   /// The set of possible outcomes
   Outcomes possible_outcomes;
+  /// Per-child parameter mappings applied during configure()
+  ParameterMappingsMap parameter_mappings;
 
 private:
   /// Mutex for intermediate outcome map
   std::mutex intermediate_outcome_mutex;
+
+  /// Flag to indicate if this concurrence state has been configured
+  std::atomic_bool configured{false};
+
+  /**
+   * @brief Applies this container's parameter mappings to a direct child.
+   * @param state_name The child state name.
+   * @param state The child state instance.
+   */
+  void apply_parameter_mappings(const std::string &state_name,
+                                const State::SharedPtr &state);
 
   /// @brief Helper function to generate a set of possible outcomes from an
   /// outcome map
@@ -89,7 +97,28 @@ public:
    * that outcome.
    */
   Concurrence(const StateMap &states, const std::string &default_outcome,
-              const OutcomeMap &outcome_map);
+              const OutcomeMap &outcome_map,
+              const ParameterMappingsMap &parameter_mappings = {});
+
+  /**
+   * @brief Sets parameter mappings for a child state.
+   * @param state_name The child state name.
+   * @param parameter_mappings Mapping entries child_parameter ->
+   * parent_parameter.
+   */
+  void set_parameter_mappings(const std::string &state_name,
+                              const ParameterMappings &parameter_mappings);
+
+  /**
+   * @brief Returns the parameter mappings for this concurrence state.
+   * @return A constant reference to the parameter mappings.
+   */
+  const ParameterMappingsMap &get_parameter_mappings() const noexcept;
+
+  /**
+   * @brief Configures this concurrence state and all of its children.
+   */
+  void configure() override;
 
   /**
    * @brief Executes the state's specific logic.

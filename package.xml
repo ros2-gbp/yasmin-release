@@ -1,12 +1,13 @@
 <?xml version="1.0"?>
 <package format="3">
   <name>yasmin_factory</name>
-  <version>4.2.4</version>
+  <version>5.0.0</version>
   <description>YASMIN factory to create FSMs from XML files</description>
   <maintainer email="mgons@unileon.es">Miguel Ángel González Santamarta</maintainer>
   <license>GPL-3.0</license>
   <buildtool_depend>ament_cmake</buildtool_depend>
   <buildtool_depend>ament_cmake_python</buildtool_depend>
+  <depend>ament_index_cpp</depend>
   <depend>python3-dev</depend>
   <depend>pluginlib</depend>
   <depend>pybind11-dev</depend>
@@ -22,5 +23,6 @@
   <test_depend>ament_cmake_pytest</test_depend>
   <export>
     <build_type>ament_cmake</build_type>
+    <yasmin_plugins_manager ignore="true"/>
   </export>
 </package>

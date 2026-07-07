@@ -1,63 +1,60 @@
 # Copyright (C) 2026 Maik Knof
 #
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
 #
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
-# You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <https://www.gnu.org/licenses/>.
-"""Inline-editable free-form text block for the editor canvas."""
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 from __future__ import annotations
 
 from typing import Any, Optional
 
-from PyQt5.QtCore import QPointF, QRectF, Qt
-from PyQt5.QtGui import QBrush, QFont, QKeySequence, QPen, QTextCursor, QTextDocument
-from PyQt5.QtWidgets import QGraphicsItem, QGraphicsRectItem, QGraphicsTextItem, QMenu
-
+from yasmin_editor.qt_compat import Qt, QtCore, QtGui, QtWidgets, exec_menu
 from yasmin_editor.editor_gui.colors import PALETTE
 from yasmin_editor.editor_gui.nodes.base_node import BaseNodeMixin
 from yasmin_editor.model.text_block import TextBlock
 
 
-class TextBlockEditorItem(QGraphicsTextItem):
+class TextBlockEditorItem(QtWidgets.QGraphicsTextItem):
     """Text item that provides inline editing helpers for text blocks."""
 
     def __init__(self, node: "TextBlockNode") -> None:
         super().__init__(node)
         self.node = node
         self.setTabChangesFocus(False)
-        self.setTextInteractionFlags(Qt.NoTextInteraction)
-        self.setAcceptedMouseButtons(Qt.NoButton)
+        self.setTextInteractionFlags(Qt.TextInteractionFlag.NoTextInteraction)
+        self.setAcceptedMouseButtons(Qt.MouseButton.NoButton)
 
     def focusOutEvent(self, event: Any) -> None:
         super().focusOutEvent(event)
         self.node.finish_editing()
 
     def keyPressEvent(self, event: Any) -> None:
-        if event.key() == Qt.Key_Escape:
+        if event.key() == Qt.Key.Key_Escape:
             self.node.cancel_editing()
             event.accept()
             return
 
-        if event.matches(QKeySequence.Bold):
+        if event.matches(QtGui.QKeySequence.StandardKey.Bold):
             self._wrap_selection("**", "**")
             event.accept()
             return
 
-        if event.matches(QKeySequence.Italic):
+        if event.matches(QtGui.QKeySequence.StandardKey.Italic):
             self._wrap_selection("_", "_")
             event.accept()
             return
 
-        if event.key() == Qt.Key_Return and bool(event.modifiers() & Qt.ControlModifier):
+        if event.key() == Qt.Key.Key_Return and bool(
+            event.modifiers() & Qt.KeyboardModifier.ControlModifier
+        ):
             self.node.finish_editing()
             event.accept()
             return
@@ -74,13 +71,13 @@ class TextBlockEditorItem(QGraphicsTextItem):
         else:
             cursor.insertText(f"{prefix}{suffix}")
             for _ in range(len(suffix)):
-                cursor.movePosition(QTextCursor.Left)
+                cursor.movePosition(QtGui.QTextCursor.Left)
             self.setTextCursor(cursor)
 
         self.node.update_geometry_from_document()
 
 
-class TextBlockNode(QGraphicsRectItem, BaseNodeMixin):
+class TextBlockNode(BaseNodeMixin, QtWidgets.QGraphicsRectItem):
     """Graphical free-form text block with inline editing and Markdown preview."""
 
     _PADDING_X = 12.0
@@ -100,12 +97,12 @@ class TextBlockNode(QGraphicsRectItem, BaseNodeMixin):
 
         self._initialize_base_node_graphics(x, y)
         self.setZValue(-1.0)
-        self.setBrush(QBrush(PALETTE.ui_panel_alt_bg))
+        self.setBrush(QtGui.QBrush(PALETTE.ui_panel_alt_bg))
         self.setPen(self._default_pen())
 
         self.text_item = TextBlockEditorItem(self)
         self.text_item.setDefaultTextColor(PALETTE.text_primary)
-        self._base_font = QFont()
+        self._base_font = QtGui.QFont()
         self._base_font.setPointSize(self._BASE_FONT_POINT_SIZE)
         self.text_item.setFont(self._base_font)
 
@@ -124,8 +121,8 @@ class TextBlockNode(QGraphicsRectItem, BaseNodeMixin):
         self.update_content_view()
         self.update_tooltip()
 
-    def _default_pen(self) -> QPen:
-        pen = QPen(PALETTE.ui_border, 1, Qt.DashLine)
+    def _default_pen(self) -> QtGui.QPen:
+        pen = QtGui.QPen(PALETTE.ui_border, 1, Qt.PenStyle.DashLine)
         return pen
 
     def update_tooltip(self) -> None:
@@ -135,9 +132,11 @@ class TextBlockNode(QGraphicsRectItem, BaseNodeMixin):
             f"{preview}\n\nDouble-click to edit inline. Ctrl+B / Ctrl+I insert Markdown markers. Ctrl+Enter finishes editing."
         )
 
-    def _create_document(self, content: str, markdown_enabled: bool) -> QTextDocument:
+    def _create_document(
+        self, content: str, markdown_enabled: bool
+    ) -> QtGui.QTextDocument:
         """Create a fresh text document for the requested rendering mode."""
-        document = QTextDocument(self.text_item)
+        document = QtGui.QTextDocument(self.text_item)
         document.setDocumentMargin(0.0)
         document.setDefaultFont(self._base_font)
 
@@ -166,11 +165,15 @@ class TextBlockNode(QGraphicsRectItem, BaseNodeMixin):
         """Refresh the displayed text based on the current edit mode."""
         if self._is_editing:
             self._apply_edit_content()
-            self.text_item.setTextInteractionFlags(Qt.TextEditorInteraction)
-            self.text_item.setAcceptedMouseButtons(Qt.AllButtons)
+            self.text_item.setTextInteractionFlags(
+                Qt.TextInteractionFlag.TextEditorInteraction
+            )
+            self.text_item.setAcceptedMouseButtons(Qt.MouseButton.AllButtons)
         else:
-            self.text_item.setTextInteractionFlags(Qt.NoTextInteraction)
-            self.text_item.setAcceptedMouseButtons(Qt.NoButton)
+            self.text_item.setTextInteractionFlags(
+                Qt.TextInteractionFlag.NoTextInteraction
+            )
+            self.text_item.setAcceptedMouseButtons(Qt.MouseButton.NoButton)
             self._apply_rendered_content()
         self.update_geometry_from_document()
 
@@ -180,7 +183,7 @@ class TextBlockNode(QGraphicsRectItem, BaseNodeMixin):
         width = max(self._MIN_WIDTH, text_rect.width() + 2.0 * self._PADDING_X)
         height = max(self._MIN_HEIGHT, text_rect.height() + 2.0 * self._PADDING_Y)
         self.prepareGeometryChange()
-        self.setRect(QRectF(0.0, 0.0, width, height))
+        self.setRect(QtCore.QRectF(0.0, 0.0, width, height))
         self.text_item.setPos(self._PADDING_X, self._PADDING_Y)
 
     def enter_edit_mode(self) -> None:
@@ -201,19 +204,30 @@ class TextBlockNode(QGraphicsRectItem, BaseNodeMixin):
         self._is_editing = True
         self.setSelected(True)
         self.update_content_view()
-        self.text_item.setFocus(Qt.MouseFocusReason)
+        self.text_item.setFocus(Qt.FocusReason.MouseFocusReason)
         cursor = self.text_item.textCursor()
-        cursor.movePosition(QTextCursor.End)
+        cursor.movePosition(QtGui.QTextCursor.End)
         self.text_item.setTextCursor(cursor)
 
     def finish_editing(self) -> None:
         """Persist inline edits and switch back to preview mode."""
         if not self._is_editing:
             return
+        previous_content = self.model.content
         self.model.content = self.text_item.toPlainText()
         self._is_editing = False
         self.update_content_view()
         self.update_tooltip()
+
+        if (
+            previous_content != self.model.content
+            and self.scene()
+            and self.scene().views()
+        ):
+            canvas = self.scene().views()[0]
+            editor_ref = getattr(canvas, "editor_ref", None)
+            if editor_ref is not None:
+                editor_ref.record_history_checkpoint()
 
     def cancel_editing(self) -> None:
         """Discard the current inline edits and restore the last saved content."""
@@ -228,50 +242,45 @@ class TextBlockNode(QGraphicsRectItem, BaseNodeMixin):
         """Apply the current read-only mode to the text block."""
         if readonly and self._is_editing:
             self.finish_editing()
-        self.setFlag(QGraphicsItem.ItemIsMovable, not readonly)
+        self.setFlag(QtWidgets.QGraphicsItem.GraphicsItemFlag.ItemIsMovable, not readonly)
         if readonly:
-            self.text_item.setTextInteractionFlags(Qt.NoTextInteraction)
-            self.text_item.setAcceptedMouseButtons(Qt.NoButton)
+            self.text_item.setTextInteractionFlags(
+                Qt.TextInteractionFlag.NoTextInteraction
+            )
+            self.text_item.setAcceptedMouseButtons(Qt.MouseButton.NoButton)
 
     def mouseDoubleClickEvent(self, event: Any) -> None:
         """Enter inline editing when the block is double-clicked."""
         self.enter_edit_mode()
         event.accept()
 
-    def contextMenuEvent(self, event: Any) -> None:
-        """Show a small context menu for inline editing and deletion."""
-        editor_ref = None
-        if self.scene() and self.scene().views():
-            canvas = self.scene().views()[0]
-            if hasattr(canvas, "editor_ref"):
-                editor_ref = canvas.editor_ref
-
-        readonly = bool(editor_ref and editor_ref.is_read_only_mode())
-        menu = QMenu()
+    def _on_context_menu(self, editor: Any, event: Any) -> bool:
+        readonly = editor.is_read_only_mode()
+        menu = QtWidgets.QMenu()
         edit_action = menu.addAction("View Text" if readonly else "Edit Text")
         delete_action = None if readonly else menu.addAction("Delete")
-        action = menu.exec_(event.screenPos())
+        action = exec_menu(menu, event.screenPos())
 
         if action == edit_action:
-            self.setSelected(True)
             if not readonly:
                 self.enter_edit_mode()
-            event.accept()
-            return
+            return True
 
-        if action == delete_action and editor_ref is not None:
-            self.setSelected(True)
-            editor_ref.delete_selected()
-            event.accept()
-            return
+        if action == delete_action:
+            editor.delete_selected()
+            return True
+        return False
 
-        super().contextMenuEvent(event)
-
-    def itemChange(self, change: QGraphicsItem.GraphicsItemChange, value: Any) -> Any:
-        if change == QGraphicsItem.ItemPositionChange and isinstance(value, QPointF):
+    def itemChange(
+        self, change: QtWidgets.QGraphicsItem.GraphicsItemChange, value: Any
+    ) -> Any:
+        if (
+            change == QtWidgets.QGraphicsItem.GraphicsItemChange.ItemPositionChange
+            and isinstance(value, QtCore.QPointF)
+        ):
             value = self.constrain_position_to_parent(value, top_margin=10.0)
 
-        elif change == QGraphicsItem.ItemSelectedChange:
+        elif change == QtWidgets.QGraphicsItem.GraphicsItemChange.ItemSelectedChange:
             self.update_selection_pen(bool(value), self._default_pen())
 
         return super().itemChange(change, value)

@@ -1,24 +1,22 @@
-#!/usr/bin/env python3
-
 # Copyright (C) 2026 Maik Knof
 #
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
 #
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
-# You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 from __future__ import annotations
 
 from pathlib import Path
 from xml.etree import ElementTree as ET
+from typing import List
 
 from yasmin_editor.io import model_from_xml
 from yasmin_editor.model import validate_model
@@ -51,43 +49,43 @@ def add_print_verb(subparsers):
     parser.set_defaults(main=_main_print)
 
 
-def _format_name_list(values: list[str]) -> str:
+def _format_name_list(values: List[str]) -> str:
     return f"[{', '.join(values)}]" if values else "[]"
 
 
-def _find_immediate_children(element: ET.Element, child_tag: str) -> list[ET.Element]:
+def _find_immediate_children(element: ET.Element, child_tag: str) -> List[ET.Element]:
     return [child for child in element if strip_namespace(child.tag) == child_tag]
 
 
-def _collect_declared_params(element: ET.Element) -> list[ET.Element]:
+def _collect_declared_params(element: ET.Element) -> List[ET.Element]:
     return _find_immediate_children(element, "Param")
 
 
-def _collect_declared_keys(element: ET.Element) -> list[ET.Element]:
+def _collect_declared_keys(element: ET.Element) -> List[ET.Element]:
     return _find_immediate_children(element, "Key")
 
 
-def _collect_param_remaps(element: ET.Element) -> list[ET.Element]:
+def _collect_param_remaps(element: ET.Element) -> List[ET.Element]:
     return _find_immediate_children(element, "ParamRemap")
 
 
-def _collect_remaps(element: ET.Element) -> list[ET.Element]:
+def _collect_remaps(element: ET.Element) -> List[ET.Element]:
     return _find_immediate_children(element, "Remap")
 
 
-def _collect_transitions(element: ET.Element) -> list[ET.Element]:
+def _collect_transitions(element: ET.Element) -> List[ET.Element]:
     return _find_immediate_children(element, "Transition")
 
 
-def _collect_final_outcomes(element: ET.Element) -> list[ET.Element]:
+def _collect_final_outcomes(element: ET.Element) -> List[ET.Element]:
     return _find_immediate_children(element, "FinalOutcome")
 
 
-def _collect_state_children(element: ET.Element) -> list[ET.Element]:
+def _collect_state_children(element: ET.Element) -> List[ET.Element]:
     return [child for child in element if strip_namespace(child.tag) in STATE_TAGS]
 
 
-def _element_outcomes(element: ET.Element) -> list[str]:
+def _element_outcomes(element: ET.Element) -> List[str]:
     outcomes = element.attrib.get("outcomes", "")
     return [outcome for outcome in outcomes.split() if outcome]
 
@@ -99,7 +97,7 @@ def _format_param_line(param_elem: ET.Element) -> str:
     default_type = param_elem.attrib.get("default_type")
 
     line = f"- {parameter_name}"
-    metadata_parts: list[str] = []
+    metadata_parts: List[str] = []
 
     if default_value is not None:
         metadata_parts.append(f"default='{default_value}'")
@@ -122,7 +120,7 @@ def _format_key_line(key_elem: ET.Element) -> str:
     default_type = key_elem.attrib.get("default_type")
 
     line = f"- {key_name}"
-    metadata_parts: list[str] = []
+    metadata_parts: List[str] = []
 
     if key_type:
         metadata_parts.append(f"type={key_type}")
@@ -187,7 +185,7 @@ def _format_state_header(element: ET.Element) -> str:
     return element.attrib.get("name", tag)
 
 
-def _append_lines(lines: list[str], indent: int, title: str, values: list[str]) -> None:
+def _append_lines(lines: List[str], indent: int, title: str, values: List[str]) -> None:
     if not values:
         return
 
@@ -196,7 +194,7 @@ def _append_lines(lines: list[str], indent: int, title: str, values: list[str]) 
         lines.append(f"{'  ' * (indent + 1)}{value}")
 
 
-def _render_state_tree(element: ET.Element, indent: int, lines: list[str]) -> None:
+def _render_state_tree(element: ET.Element, indent: int, lines: List[str]) -> None:
     tag = strip_namespace(element.tag)
 
     if tag in CONTAINER_TAGS:
@@ -298,7 +296,7 @@ def _render_state_tree(element: ET.Element, indent: int, lines: list[str]) -> No
 
 
 def _render_state_machine(root: ET.Element) -> str:
-    lines: list[str] = []
+    lines: List[str] = []
     _render_state_tree(root, 0, lines)
     return "\n".join(lines)
 

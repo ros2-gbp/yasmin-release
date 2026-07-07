@@ -1,25 +1,18 @@
 # Copyright (C) 2026 Maik Knof
 #
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
 #
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
-# You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
-"""Static editor palette definitions.
-
-This module intentionally contains only palette data to keep the theme setup
-separate from stylesheet generation and environment handling.
-"""
-
-from PyQt5.QtGui import QColor
+from yasmin_editor.qt_compat import QtGui
 
 from yasmin_editor.editor_gui.theme.palette import (
     DARKMODE_PALETTE_NAME,
@@ -28,9 +21,9 @@ from yasmin_editor.editor_gui.theme.palette import (
 )
 
 
-def _color(red: int, green: int, blue: int) -> QColor:
+def _color(red: int, green: int, blue: int) -> QtGui.QColor:
     """Create a QColor from RGB values."""
-    return QColor(red, green, blue)
+    return QtGui.QColor(red, green, blue)
 
 
 PALETTES = {
@@ -70,6 +63,8 @@ PALETTES = {
         container_xml_pen=_color(168, 104, 10),
         container_concurrence_fill=_color(255, 235, 205),
         container_concurrence_pen=_color(177, 120, 34),
+        container_orthogonal_fill=_color(230, 220, 255),
+        container_orthogonal_pen=_color(110, 70, 180),
         container_state_machine_fill=_color(220, 235, 255),
         container_state_machine_pen=_color(69, 106, 162),
         final_outcome_fill=_color(215, 55, 55),
@@ -77,6 +72,13 @@ PALETTES = {
         selection_pen=_color(255, 200, 0),
         blackboard_highlight_pen=_color(255, 170, 0),
         blackboard_highlight_fill=_color(255, 255, 170),
+        start_indicator_connector=_color(47, 111, 205),
+        start_indicator_outer_fill=_color(221, 235, 255),
+        start_indicator_outer_pen=_color(47, 111, 205),
+        start_indicator_inner_fill=_color(255, 255, 255),
+        start_indicator_inner_pen=_color(31, 90, 166),
+        start_indicator_arrow=_color(31, 90, 166),
+        start_indicator_label=_color(47, 111, 205),
         runtime_highlight_pen=_color(46, 150, 76),
         runtime_highlight_fill=_color(198, 244, 210),
         runtime_transition_pen=_color(34, 122, 194),
@@ -136,6 +138,8 @@ PALETTES = {
         container_xml_pen=_color(96, 64, 24),
         container_concurrence_fill=_color(95, 81, 55),
         container_concurrence_pen=_color(62, 53, 36),
+        container_orthogonal_fill=_color(80, 60, 110),
+        container_orthogonal_pen=_color(130, 80, 190),
         container_state_machine_fill=_color(67, 92, 120),
         container_state_machine_pen=_color(38, 56, 76),
         final_outcome_fill=_color(178, 60, 60),
@@ -143,6 +147,13 @@ PALETTES = {
         selection_pen=_color(255, 210, 90),
         blackboard_highlight_pen=_color(255, 196, 64),
         blackboard_highlight_fill=_color(125, 110, 42),
+        start_indicator_connector=_color(255, 210, 90),
+        start_indicator_outer_fill=_color(44, 88, 56),
+        start_indicator_outer_pen=_color(255, 210, 90),
+        start_indicator_inner_fill=_color(35, 38, 43),
+        start_indicator_inner_pen=_color(116, 214, 146),
+        start_indicator_arrow=_color(116, 214, 146),
+        start_indicator_label=_color(255, 210, 90),
         runtime_highlight_pen=_color(116, 214, 146),
         runtime_highlight_fill=_color(44, 88, 56),
         runtime_transition_pen=_color(128, 192, 255),

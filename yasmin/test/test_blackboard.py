@@ -1,19 +1,19 @@
 # Copyright (C) 2023 Miguel Ángel González Santamarta
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
 
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-
-# You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <https://www.gnu.org/licenses/>.
-
-
+import copy
 import unittest
 from yasmin import Blackboard
 
@@ -49,6 +49,41 @@ class TestBlackboard(unittest.TestCase):
         self.blackboard.set("foo", "foo")
         self.blackboard.set_remappings({"bar": "foo"})
         self.assertEqual("foo", self.blackboard.get("bar"))
+
+    def test_copy_constructor_keeps_remappings_local_and_shares_values(self):
+        self.blackboard["foo"] = "foo"
+        self.blackboard["count"] = 1
+
+        blackboard_copy = Blackboard(self.blackboard)
+
+        self.blackboard.set_remappings({"alias": "foo"})
+        self.assertEqual({"alias": "foo"}, self.blackboard.get_remappings())
+        self.assertEqual({}, blackboard_copy.get_remappings())
+        self.assertEqual("foo", self.blackboard["alias"])
+        self.assertFalse("alias" in blackboard_copy)
+
+        blackboard_copy.set_remappings({"copy_alias": "foo"})
+        self.assertEqual({"alias": "foo"}, self.blackboard.get_remappings())
+        self.assertEqual({"copy_alias": "foo"}, blackboard_copy.get_remappings())
+        self.assertEqual("foo", blackboard_copy["copy_alias"])
+        self.assertFalse("copy_alias" in self.blackboard)
+
+        self.blackboard["count"] = 2
+        self.assertEqual(2, self.blackboard["count"])
+        self.assertEqual(2, blackboard_copy["count"])
+
+    def test_copy_module_uses_blackboard_copy_constructor(self):
+        self.blackboard["foo"] = "foo"
+        self.blackboard.set_remappings({"alias": "foo"})
+
+        blackboard_copy = copy.copy(self.blackboard)
+
+        self.assertEqual({"alias": "foo"}, blackboard_copy.get_remappings())
+
+        self.blackboard.set_remappings({"other_alias": "foo"})
+        self.assertEqual({"alias": "foo"}, blackboard_copy.get_remappings())
+        self.assertEqual({"other_alias": "foo"}, self.blackboard.get_remappings())
+        self.assertEqual("foo", blackboard_copy["alias"])
 
     def test_set_get_string(self):
         """Test setting and getting string values"""

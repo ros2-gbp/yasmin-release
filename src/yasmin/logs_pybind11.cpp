@@ -1,17 +1,16 @@
 // Copyright (C) 2025 Miguel Ángel González Santamarta
 //
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
 //
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
+//     http://www.apache.org/licenses/LICENSE-2.0
 //
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 #include <pybind11/functional.h>
 #include <pybind11/pybind11.h>
@@ -60,9 +59,9 @@ PYBIND11_MODULE(logs, m) {
       "log_error",
       [](const std::string &file, const std::string &function, int line,
          const std::string &text) {
-        if (yasmin::log_level >= yasmin::ERROR) {
-          yasmin::log_message(yasmin::ERROR, file.c_str(), function.c_str(),
-                              line, text.c_str());
+        if (yasmin::log_level >= yasmin::LogLevel::ERROR) {
+          yasmin::log_message(yasmin::LogLevel::ERROR, file.c_str(),
+                              function.c_str(), line, text.c_str());
         }
       },
       py::arg("file"), py::arg("function"), py::arg("line"), py::arg("text"),
@@ -72,9 +71,9 @@ PYBIND11_MODULE(logs, m) {
       "log_warn",
       [](const std::string &file, const std::string &function, int line,
          const std::string &text) {
-        if (yasmin::log_level >= yasmin::WARN) {
-          yasmin::log_message(yasmin::WARN, file.c_str(), function.c_str(),
-                              line, text.c_str());
+        if (yasmin::log_level >= yasmin::LogLevel::WARN) {
+          yasmin::log_message(yasmin::LogLevel::WARN, file.c_str(),
+                              function.c_str(), line, text.c_str());
         }
       },
       py::arg("file"), py::arg("function"), py::arg("line"), py::arg("text"),
@@ -84,9 +83,9 @@ PYBIND11_MODULE(logs, m) {
       "log_info",
       [](const std::string &file, const std::string &function, int line,
          const std::string &text) {
-        if (yasmin::log_level >= yasmin::INFO) {
-          yasmin::log_message(yasmin::INFO, file.c_str(), function.c_str(),
-                              line, text.c_str());
+        if (yasmin::log_level >= yasmin::LogLevel::INFO) {
+          yasmin::log_message(yasmin::LogLevel::INFO, file.c_str(),
+                              function.c_str(), line, text.c_str());
         }
       },
       py::arg("file"), py::arg("function"), py::arg("line"), py::arg("text"),
@@ -96,9 +95,9 @@ PYBIND11_MODULE(logs, m) {
       "log_debug",
       [](const std::string &file, const std::string &function, int line,
          const std::string &text) {
-        if (yasmin::log_level >= yasmin::DEBUG) {
-          yasmin::log_message(yasmin::DEBUG, file.c_str(), function.c_str(),
-                              line, text.c_str());
+        if (yasmin::log_level >= yasmin::LogLevel::DEBUG) {
+          yasmin::log_message(yasmin::LogLevel::DEBUG, file.c_str(),
+                              function.c_str(), line, text.c_str());
         }
       },
       py::arg("file"), py::arg("function"), py::arg("line"), py::arg("text"),

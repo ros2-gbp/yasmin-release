@@ -1,23 +1,20 @@
-#!/usr/bin/env python3
 # Copyright (C) 2026 Maik Knof
 #
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
 #
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
-# You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <https://www.gnu.org/licenses/>.
-"""State machine model."""
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 from __future__ import annotations
-
-from dataclasses import dataclass, field
+from typing import List, Dict, Tuple, Set, Union
+from yasmin_editor.dataclass_compat import dataclass, field
 
 from .layout import Layout
 from .state import State
@@ -29,11 +26,11 @@ from .transition import Transition
 class StateMachine(State):
     """Represents a YASMIN state machine container."""
 
-    start_state: str | None = None
-    states: dict[str, State] = field(default_factory=dict)
-    transitions: dict[str, list[Transition]] = field(default_factory=dict)
+    start_state: Union[str, None] = None
+    states: Dict[str, State] = field(default_factory=dict)
+    transitions: Dict[str, List[Transition]] = field(default_factory=dict)
     layout: Layout = field(default_factory=Layout)
-    text_blocks: list[TextBlock] = field(default_factory=list)
+    text_blocks: List[TextBlock] = field(default_factory=list)
 
     @property
     def is_container(self) -> bool:
@@ -44,8 +41,8 @@ class StateMachine(State):
         self,
         name: str,
         *,
-        exclude_state: str | None = None,
-        exclude_outcome: str | None = None,
+        exclude_state: Union[str, None] = None,
+        exclude_outcome: Union[str, None] = None,
     ) -> None:
         """Validate that a child state or final outcome name is available."""
         if name in self.states and name != exclude_state:
@@ -87,6 +84,7 @@ class StateMachine(State):
                 item.source_outcome == transition.source_outcome
                 and item.target == transition.target
             ):
+                item.target_instance_id = transition.target_instance_id
                 return
         transition_list.append(transition)
 
@@ -146,8 +144,6 @@ class StateMachine(State):
             for transition in transitions:
                 if transition.target == old_name:
                     transition.target = new_name
-        if isinstance(state, StateMachine):
-            state.rename_transition_owner(old_name, new_name)
         if self.start_state == old_name:
             self.start_state = new_name
         self.layout.rename_state_position(old_name, new_name)
@@ -156,9 +152,10 @@ class StateMachine(State):
         """Rename a final outcome and update all related references."""
         if old_name == new_name:
             return
+        if self.get_outcome(old_name) is None:
+            return
         self._assert_child_name_available(new_name, exclude_outcome=old_name)
         State.rename_outcome(self, old_name, new_name)
-        self.rename_transition_owner(old_name, new_name)
         for transitions in self.transitions.values():
             for transition in transitions:
                 if transition.target == old_name:
@@ -177,8 +174,8 @@ class StateMachine(State):
         transitions = self.transitions.get(state_name, [])
         if not transitions:
             return
-        deduplicated: list[Transition] = []
-        seen: set[tuple[str, str]] = set()
+        deduplicated: List[Transition] = []
+        seen: Set[Tuple[str, str]] = set()
         for transition in transitions:
             source_outcome = (
                 new_outcome
@@ -204,14 +201,14 @@ class StateMachine(State):
             transitions[:] = [item for item in transitions if item.target != name]
         self.layout.remove_outcome_position(name)
 
-    def get_state(self, name: str) -> State | None:
+    def get_state(self, name: str) -> Union[State, None]:
         """Return a child state by name."""
         return self.states.get(name)
 
     def to_string(self, indent: int = 0) -> str:
         """Return a human-readable representation of the state machine."""
         prefix = " " * indent
-        lines: list[str] = []
+        lines: List[str] = []
         header = f"{prefix}StateMachine(name={self.name!r}"
         if self.start_state:
             header += f", start_state={self.start_state!r}"
@@ -249,10 +246,7 @@ class StateMachine(State):
         if self.text_blocks:
             lines.append(f"{prefix}  text blocks:")
             for text_block in self.text_blocks:
-                preview = text_block.content.replace("\n", "\\n")
-                lines.append(
-                    f"{prefix}    - ({text_block.x:.2f}, {text_block.y:.2f}): {preview}"
-                )
+                lines.extend(text_block.to_text_block_lines(prefix))
         if self.outcomes:
             lines.append(f"{prefix}  final outcomes:")
             for outcome in self.outcomes:

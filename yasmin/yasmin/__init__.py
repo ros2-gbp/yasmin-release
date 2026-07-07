@@ -1,28 +1,30 @@
 # Copyright (C) 2025 Miguel Ángel González Santamarta
 #
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
 #
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
-# You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 import os
 import inspect
 import logging
 from typing import List, Union
 
+from yasmin.callback_signal import CallbackSignal, CallbackSignalFuture
+from yasmin.blackboard import Blackboard
 from yasmin.state import State
 from yasmin.concurrence import Concurrence
 from yasmin.cb_state import CbState
-from yasmin.blackboard import Blackboard
 from yasmin.state_machine import StateMachine
+from yasmin.join_state import JoinState
+from yasmin.orthogonal_state import OrthogonalState
 from yasmin.logs import (
     LogLevel,
     get_log_level,
@@ -47,10 +49,10 @@ def get_caller_info() -> List[Union[str, int]]:
     @return: A tuple containing the file name, function name, and line number.
     @rtype: tuple[str, str, int]
     """
-    frame = inspect.stack()[2]
-    file = os.path.basename(frame.filename)
-    line = frame.lineno
-    function = frame.function
+    frame = inspect.currentframe().f_back.f_back
+    file = os.path.basename(frame.f_code.co_filename)
+    line = frame.f_lineno
+    function = frame.f_code.co_name
     return file, function, line
 
 
@@ -82,92 +84,44 @@ def py_default_log_message(
 def set_py_loggers() -> None:
     """
     Set the Python logging function for YASMIN.
-
-    @param log_function: The logging function to set.
-    @type log_function: callable
     """
     logging.basicConfig(level=logging.NOTSET, format="%(message)s")
     set_loggers(py_default_log_message)
 
 
-def YASMIN_LOG_ERROR(text: str) -> None:
-    """
-    Log an error message with the caller's information.
+def _make_log_wrapper(log_func, name):
+    def wrapper(text: str) -> None:
+        file, function, line = get_caller_info()
+        log_func(file, function, line, str(text))
 
-    This function formats the log message to include the file name, function
-    name, and line number where the log function was called.
-
-    @param text: The error message to log.
-    @type text: str
-
-    @return: None
-    """
-    file, function, line = get_caller_info()
-    log_error(file, function, line, str(text))
+    wrapper.__name__ = name
+    return wrapper
 
 
-def YASMIN_LOG_WARN(text: str) -> None:
-    """
-    Log a warning message with the caller's information.
-
-    This function formats the log message to include the file name, function
-    name, and line number where the log function was called.
-
-    @param text: The warning message to log.
-    @type text: str
-
-    @return: None
-    """
-    file, function, line = get_caller_info()
-    log_warn(file, function, line, str(text))
-
-
-def YASMIN_LOG_INFO(text: str) -> None:
-    """
-    Log an informational message with the caller's information.
-
-    This function formats the log message to include the file name, function
-    name, and line number where the log function was called.
-
-    @param text: The informational message to log.
-    @type text: str
-
-    @return: None
-    """
-    file, function, line = get_caller_info()
-    log_info(file, function, line, str(text))
-
-
-def YASMIN_LOG_DEBUG(text: str) -> None:
-    """
-    Log a debug message with the caller's information.
-
-    This function formats the log message to include the file name, function
-    name, and line number where the log function was called.
-
-    @param text: The debug message to log.
-    @type text: str
-
-    @return: None
-    """
-    file, function, line = get_caller_info()
-    log_debug(file, function, line, str(text))
+YASMIN_LOG_ERROR = _make_log_wrapper(log_error, "YASMIN_LOG_ERROR")
+YASMIN_LOG_WARN = _make_log_wrapper(log_warn, "YASMIN_LOG_WARN")
+YASMIN_LOG_INFO = _make_log_wrapper(log_info, "YASMIN_LOG_INFO")
+YASMIN_LOG_DEBUG = _make_log_wrapper(log_debug, "YASMIN_LOG_DEBUG")
 
 
 __all__ = [
-    State,
-    Concurrence,
-    CbState,
-    Blackboard,
-    StateMachine,
-    get_log_level,
-    set_log_level,
-    log_level_to_name,
-    set_loggers,
-    set_default_loggers,
-    set_py_loggers,
-    YASMIN_LOG_ERROR,
-    YASMIN_LOG_WARN,
-    YASMIN_LOG_INFO,
-    YASMIN_LOG_DEBUG,
+    "State",
+    "Concurrence",
+    "JoinState",
+    "OrthogonalState",
+    "CbState",
+    "CallbackSignal",
+    "CallbackSignalFuture",
+    "Blackboard",
+    "StateMachine",
+    "get_log_level",
+    "set_log_level",
+    "log_level_to_name",
+    "set_loggers",
+    "set_default_loggers",
+    "set_py_loggers",
+    "YASMIN_LOG_ERROR",
+    "YASMIN_LOG_WARN",
+    "YASMIN_LOG_INFO",
+    "YASMIN_LOG_DEBUG",
 ]

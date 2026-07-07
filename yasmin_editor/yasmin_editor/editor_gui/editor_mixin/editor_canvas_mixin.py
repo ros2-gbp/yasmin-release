@@ -1,32 +1,31 @@
 # Copyright (C) 2026 Maik Knof
 #
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
 #
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
-# You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
-import os
-from typing import List, Optional
+from typing import Optional, Union
 
-from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QBrush, QPen
-from PyQt5.QtWidgets import QLabel, QMessageBox, QPushButton
-
+from yasmin_editor.qt_compat import Qt, QtGui, QtWidgets
+from yasmin_editor.editor_gui.canvas_logic import (
+    breadcrumb_label,
+    is_read_only_mode as canvas_is_read_only_mode,
+    resolve_xml_state_file_path,
+    state_has_available_outcomes,
+)
 from yasmin_editor.editor_gui.colors import PALETTE
 from yasmin_editor.editor_gui.connection_line import ConnectionLine
 from yasmin_editor.editor_gui.nodes.container_state_node import ContainerStateNode
 from yasmin_editor.editor_gui.nodes.final_outcome_node import FinalOutcomeNode
 from yasmin_editor.editor_gui.nodes.state_node import StateNode
-from yasmin_editor.editor_gui.nodes.text_block_node import TextBlockNode
-from yasmin_editor.model.concurrence import Concurrence
 
 
 class EditorCanvasMixin:
@@ -38,7 +37,7 @@ class EditorCanvasMixin:
                 return item
         return None
 
-    def find_selected_state_node(self) -> Optional[StateNode | ContainerStateNode]:
+    def find_selected_state_node(self) -> Optional[Union[StateNode, ContainerStateNode]]:
         return self.find_selected_item((StateNode, ContainerStateNode))
 
     def find_selected_container(self) -> Optional[ContainerStateNode]:
@@ -49,7 +48,7 @@ class EditorCanvasMixin:
     ) -> Optional[ContainerStateNode]:
         container = self.find_selected_container()
         if container is None:
-            QMessageBox.warning(self, "Error", message)
+            QtWidgets.QMessageBox.warning(self, "Error", message)
         return container
 
     def delete_connection_item(self, connection: ConnectionLine) -> None:
@@ -66,7 +65,7 @@ class EditorCanvasMixin:
             existing_connection.update_position()
         self.refresh_connection_port_visibility()
 
-    def iter_state_subtree_items(self, state_node: StateNode | ContainerStateNode):
+    def iter_state_subtree_items(self, state_node: Union[StateNode, ContainerStateNode]):
         yield state_node
         if isinstance(state_node, ContainerStateNode):
             for child_state in state_node.child_states.values():
@@ -113,7 +112,7 @@ class EditorCanvasMixin:
             return
 
         try:
-            connection.label_bg.setBrush(QBrush(PALETTE.connection_label_bg))
+            connection.label_bg.setBrush(QtGui.QBrush(PALETTE.connection_label_bg))
             connection._update_label_style(is_selected)
         except RuntimeError:
             return
@@ -130,45 +129,45 @@ class EditorCanvasMixin:
         try:
             if isinstance(item, StateNode):
                 item.setBrush(
-                    QBrush(
+                    QtGui.QBrush(
                         PALETTE.state_fill(
                             item.plugin_info.plugin_type if item.plugin_info else None
                         )
                     )
                 )
                 item.setPen(
-                    QPen(PALETTE.selection_pen, 4)
+                    QtGui.QPen(PALETTE.selection_pen, 4)
                     if is_selected
-                    else QPen(PALETTE.state_pen, 3)
+                    else QtGui.QPen(PALETTE.state_pen, 3)
                 )
             elif isinstance(item, ContainerStateNode):
                 if getattr(item, "is_xml_reference", False):
-                    item.setBrush(QBrush(PALETTE.container_xml_fill))
+                    item.setBrush(QtGui.QBrush(PALETTE.container_xml_fill))
                     item.setPen(
-                        QPen(PALETTE.selection_pen, 4)
+                        QtGui.QPen(PALETTE.selection_pen, 4)
                         if is_selected
-                        else QPen(PALETTE.container_xml_pen, 3)
+                        else QtGui.QPen(PALETTE.container_xml_pen, 3)
                     )
                 elif item.is_concurrence:
-                    item.setBrush(QBrush(PALETTE.container_concurrence_fill))
+                    item.setBrush(QtGui.QBrush(PALETTE.container_concurrence_fill))
                     item.setPen(
-                        QPen(PALETTE.selection_pen, 4)
+                        QtGui.QPen(PALETTE.selection_pen, 4)
                         if is_selected
-                        else QPen(PALETTE.container_concurrence_pen, 3)
+                        else QtGui.QPen(PALETTE.container_concurrence_pen, 3)
                     )
                 else:
-                    item.setBrush(QBrush(PALETTE.container_state_machine_fill))
+                    item.setBrush(QtGui.QBrush(PALETTE.container_state_machine_fill))
                     item.setPen(
-                        QPen(PALETTE.selection_pen, 4)
+                        QtGui.QPen(PALETTE.selection_pen, 4)
                         if is_selected
-                        else QPen(PALETTE.container_state_machine_pen, 3)
+                        else QtGui.QPen(PALETTE.container_state_machine_pen, 3)
                     )
             elif isinstance(item, FinalOutcomeNode):
-                item.setBrush(QBrush(PALETTE.final_outcome_fill))
+                item.setBrush(QtGui.QBrush(PALETTE.final_outcome_fill))
                 item.setPen(
-                    QPen(PALETTE.selection_pen, 4)
+                    QtGui.QPen(PALETTE.selection_pen, 4)
                     if is_selected
-                    else QPen(PALETTE.final_outcome_pen, 3)
+                    else QtGui.QPen(PALETTE.final_outcome_pen, 3)
                 )
         except RuntimeError:
             return
@@ -188,24 +187,18 @@ class EditorCanvasMixin:
         margin = 10.0
         padded = bounds.adjusted(-margin, -margin, margin, margin)
         self.canvas.scene.setSceneRect(padded)
-        self.canvas.fitInView(padded, Qt.KeepAspectRatio)
+        self.canvas.fitInView(padded, Qt.AspectRatioMode.KeepAspectRatio)
         self.canvas.centerOn(bounds.center())
 
     def _get_breadcrumb_label(self, index: int, container_model: object) -> str:
-        if index == 0:
-            return "root"
-
         self._ensure_external_xml_state()
-        if (
-            self.extern_xml is not None
-            and self.extern_xml_source_state is not None
-            and self.extern_xml_path_start_index is not None
-            and index == self.extern_xml_path_start_index
-            and container_model is self.extern_xml
-        ):
-            return str(self.extern_xml_source_state.name)
-
-        return str(container_model.name)
+        return breadcrumb_label(
+            index,
+            container_model,
+            extern_xml=self.extern_xml,
+            extern_xml_source_state=self.extern_xml_source_state,
+            extern_xml_path_start_index=self.extern_xml_path_start_index,
+        )
 
     def refresh_breadcrumbs(self) -> None:
         if not hasattr(self, "breadcrumb_layout"):
@@ -218,18 +211,18 @@ class EditorCanvasMixin:
 
         for index, container_model in enumerate(self.current_container_path):
             label = self._get_breadcrumb_label(index, container_model)
-            button = QPushButton(label)
+            button = QtWidgets.QPushButton(label)
             button.setFlat(True)
             button.clicked.connect(
                 lambda _checked=False, idx=index: self.navigate_to_container_index(idx)
             )
             self.breadcrumb_layout.addWidget(button)
             if index < len(self.current_container_path) - 1:
-                self.breadcrumb_layout.addWidget(QLabel(">"))
+                self.breadcrumb_layout.addWidget(QtWidgets.QLabel(">"))
 
         self.breadcrumb_layout.addStretch()
 
-        fit_button = QPushButton("Fit")
+        fit_button = QtWidgets.QPushButton("Fit")
         fit_button.clicked.connect(self.fit_current_view)
         self.breadcrumb_layout.addWidget(fit_button)
 
@@ -265,8 +258,10 @@ class EditorCanvasMixin:
                 if self.state_uses_blackboard_key(state_node, selected_key):
                     self.apply_default_visual_state(state_node)
                     try:
-                        state_node.setPen(QPen(PALETTE.blackboard_highlight_pen, 5))
-                        state_node.setBrush(QBrush(PALETTE.blackboard_highlight_fill))
+                        state_node.setPen(QtGui.QPen(PALETTE.blackboard_highlight_pen, 5))
+                        state_node.setBrush(
+                            QtGui.QBrush(PALETTE.blackboard_highlight_fill)
+                        )
                     except RuntimeError:
                         continue
 
@@ -284,12 +279,12 @@ class EditorCanvasMixin:
 
     def is_read_only_mode(self) -> bool:
         self._ensure_external_xml_state()
-        external_xml_read_only = (
-            self.extern_xml is not None
-            and self.extern_xml_path_start_index is not None
-            and len(self.current_container_path) > self.extern_xml_path_start_index
+        return canvas_is_read_only_mode(
+            self.runtime_mode_enabled,
+            self.extern_xml,
+            self.extern_xml_path_start_index,
+            len(self.current_container_path),
         )
-        return self.runtime_mode_enabled or external_xml_read_only
 
     def _show_read_only_message(self) -> None:
         if self.runtime_mode_enabled:
@@ -314,74 +309,16 @@ class EditorCanvasMixin:
             except Exception:
                 plugin_info = None
 
-        candidates: List[str] = []
-        for source in [plugin_info, state_model]:
-            if source is None:
-                continue
-            for attr in [
-                "file_path",
-                "xml_file",
-                "path",
-                "full_path",
-                "abs_path",
-                "filepath",
-                "file_name",
-            ]:
-                value = getattr(source, attr, None)
-                if value:
-                    candidates.append(str(value))
-
-        for candidate in candidates:
-            if os.path.isfile(candidate):
-                return candidate
-
-        package_name = None
-        file_name = None
-        for source in [plugin_info, state_model]:
-            if source is None:
-                continue
-            if not package_name:
-                package_name = getattr(source, "package_name", None)
-            if not file_name:
-                file_name = getattr(source, "file_name", None)
-
-        if file_name and package_name:
-            try:
-                from ament_index_python.packages import get_package_share_directory
-
-                share_dir = get_package_share_directory(str(package_name))
-                direct_candidate = os.path.join(share_dir, str(file_name))
-                if os.path.isfile(direct_candidate):
-                    return direct_candidate
-                for root_dir, _dirs, files in os.walk(share_dir):
-                    if os.path.basename(str(file_name)) in files:
-                        return os.path.join(root_dir, os.path.basename(str(file_name)))
-            except Exception:
-                pass
-
-        return None
+        return resolve_xml_state_file_path(plugin_info, state_model)
 
     def _state_has_available_outcomes(
         self,
-        state_node: StateNode | ContainerStateNode,
+        state_node: Union[StateNode, ContainerStateNode],
     ) -> bool:
-        if not hasattr(state_node, "model"):
-            return False
-
-        outcomes = list(getattr(state_node.model, "outcomes", []) or [])
-        if not outcomes:
-            return False
-
-        if isinstance(self.current_container_model, Concurrence):
-            return True
-
-        used_outcomes = {
-            transition.source_outcome
-            for transition in self.current_container_model.transitions.get(
-                state_node.name, []
-            )
-        }
-        return any(outcome.name not in used_outcomes for outcome in outcomes)
+        return state_has_available_outcomes(
+            getattr(state_node, "model", None),
+            self.current_container_model,
+        )
 
     def refresh_connection_port_visibility(self) -> None:
         readonly = self.is_read_only_mode()
@@ -475,7 +412,7 @@ class EditorCanvasMixin:
                 return
             xml_file_path = self._resolve_xml_state_file_path(container_node)
             if not xml_file_path:
-                QMessageBox.warning(
+                QtWidgets.QMessageBox.warning(
                     self,
                     "Error",
                     f"Unable to locate XML file for state '{container_node.name}'.",
@@ -484,7 +421,7 @@ class EditorCanvasMixin:
             try:
                 external_model = self.model_adapter.load_external_xml_model(xml_file_path)
             except Exception as exc:
-                QMessageBox.critical(
+                QtWidgets.QMessageBox.critical(
                     self,
                     "Error",
                     f"Failed to load external XML state machine:\n{exc}",

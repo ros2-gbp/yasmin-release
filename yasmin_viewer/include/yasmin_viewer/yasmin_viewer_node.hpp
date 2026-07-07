@@ -1,24 +1,23 @@
 // Copyright (C) 2026 Maik Knof
 //
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
 //
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
+//     http://www.apache.org/licenses/LICENSE-2.0
 //
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 #ifndef YASMIN_VIEWER__YASMIN_VIEWER_NODE_HPP_
 #define YASMIN_VIEWER__YASMIN_VIEWER_NODE_HPP_
 
 #include <atomic>
 #include <chrono>
-#include <map>
+#include <memory>
 #include <mutex>
 #include <string>
 #include <thread>
@@ -32,6 +31,9 @@
 #include "yasmin_msgs/msg/transition.hpp"
 
 namespace yasmin_viewer {
+
+/** @brief Forward declaration for the HTTP server acceptor. */
+struct AcceptorHolder;
 
 /**
  * @class YasminViewerNode
@@ -51,14 +53,16 @@ public:
    */
   ~YasminViewerNode() override;
 
+  /** @brief Deleted copy constructor (non-copyable). */
   YasminViewerNode(const YasminViewerNode &) = delete;
+  /** @brief Deleted copy assignment (non-copyable). */
   YasminViewerNode &operator=(const YasminViewerNode &) = delete;
 
   /**
    * @brief Returns the cached finite state machines as a JSON string.
    * @return JSON representation of all cached finite state machines.
    */
-  std::string get_fsms_json() const;
+  std::string get_fsms_json();
 
   /**
    * @brief Returns the configured web root directory.
@@ -66,18 +70,28 @@ public:
    */
   std::string get_web_root() const;
 
+  /** @brief Callback invoked when an HTTP connection is closed. */
+  void on_connection_closed() {
+    this->active_connections_.fetch_sub(1, std::memory_order_relaxed);
+  }
+
 private:
   /**
    * @struct CachedFsm
    * @brief Stores a serialized finite state machine and its last update time.
    */
   struct CachedFsm {
+    /// @brief Cached JSON representation of the FSM
     std::string json;
+    /// @brief Timestamp when this cache entry was created
     std::chrono::steady_clock::time_point timestamp;
   };
 
+  /// @brief Alias for the StateMachine ROS2 message type
   using StateMachineMsg = yasmin_msgs::msg::StateMachine;
+  /// @brief Alias for the State ROS2 message type
   using StateMsg = yasmin_msgs::msg::State;
+  /// @brief Alias for the Transition ROS2 message type
   using TransitionMsg = yasmin_msgs::msg::Transition;
 
   /**
@@ -105,8 +119,7 @@ private:
    * @brief Removes expired finite state machines from the cache.
    * @param now Current time used for age comparison.
    */
-  void
-  prune_expired_locked(const std::chrono::steady_clock::time_point &now) const;
+  void prune_expired_locked(const std::chrono::steady_clock::time_point &now);
 
   /**
    * @brief Escapes a string for safe JSON serialization.
@@ -140,7 +153,7 @@ private:
   /// Mutex protecting access to the finite state machine cache.
   mutable std::mutex fsms_mutex_;
   /// Cache of serialized finite state machines indexed by name.
-  mutable std::unordered_map<std::string, CachedFsm> fsms_;
+  std::unordered_map<std::string, CachedFsm> fsms_;
 
   /// Subscription for incoming state machine descriptions.
   rclcpp::Subscription<StateMachineMsg>::SharedPtr fsm_sub_;
@@ -158,6 +171,14 @@ private:
   std::atomic_bool server_running_;
   /// Background thread executing the embedded web server.
   std::thread server_thread_;
+  /// Maximum number of concurrent HTTP connections.
+  static constexpr uint32_t kMaxConnections = 64;
+  /// Number of currently active HTTP connections.
+  std::atomic<uint32_t> active_connections_{0};
+
+  /// Asio acceptor holder (created in start_server, used by
+  /// run_server/stop_server).
+  std::unique_ptr<AcceptorHolder> acceptor_holder_;
 };
 
 } // namespace yasmin_viewer

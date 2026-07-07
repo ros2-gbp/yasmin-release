@@ -1,26 +1,25 @@
 // Copyright (C) 2025 Pedro Edom Nunes
 //
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
 //
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
+//     http://www.apache.org/licenses/LICENSE-2.0
 //
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+#ifndef YASMIN_DEMOS_FOO_STATE_HPP_
+#define YASMIN_DEMOS_FOO_STATE_HPP_
 
 #include <string>
 
 #include <yasmin/blackboard.hpp>
 #include <yasmin/state.hpp>
 #include <yasmin/types.hpp>
-
-#ifndef YASMIN_DEMOS_FOO_STATE_H
-#define YASMIN_DEMOS_FOO_STATE_H
 
 /**
  * @brief Represents the "Foo" state in the state machine.
@@ -38,7 +37,7 @@ public:
   /**
    * @brief Destructs the FooState object.
    */
-  ~FooState();
+  ~FooState() override = default;
 
   /**
    * @brief Configures the state-local parameters.
@@ -62,9 +61,12 @@ public:
   int counter;
 
 private:
+  /// @brief Prefix for the counter output
   std::string counter_prefix_;
+  /// @brief Maximum count before the state resets
   int max_count_;
+  /// @brief Sleep duration in milliseconds between increments
   int sleep_ms_;
 };
 
-#endif // YASMIN_DEMOS_FOO_STATE_H
+#endif // YASMIN_DEMOS_FOO_STATE_HPP_

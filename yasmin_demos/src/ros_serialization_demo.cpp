@@ -1,29 +1,27 @@
 // Copyright (C) 2026 Maik Knof
 //
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
 //
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
+//     http://www.apache.org/licenses/LICENSE-2.0
 //
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
-#include <filesystem>
-#include <iostream>
 #include <memory>
 #include <string>
 
-#include <ament_index_cpp/get_package_share_directory.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include "yasmin/state_machine.hpp"
+#include "yasmin_demos/share_directory.hpp"
 #include "yasmin_factory/yasmin_factory.hpp"
 #include "yasmin_ros/ros_logs.hpp"
+#include "yasmin_ros/yasmin_node.hpp"
 #include "yasmin_viewer/yasmin_viewer_pub.hpp"
 
 int main(int argc, char *argv[]) {
@@ -39,22 +37,7 @@ int main(int argc, char *argv[]) {
 
   // Load state machine from XML file
   std::string xml_file =
-#if __has_include("rclcpp/version.h")
-#include "rclcpp/version.h"
-#if RCLCPP_VERSION_GTE(29, 5, 1)
-      ([]() {
-        std::filesystem::path p;
-        ament_index_cpp::get_package_share_directory("yasmin_demos", p);
-        return (p / "state_machines/demo_3.xml").string();
-      })();
-#else
-      ament_index_cpp::get_package_share_directory("yasmin_demos") +
-      "/state_machines/demo_3.xml";
-#endif
-#else
-      ament_index_cpp::get_package_share_directory("yasmin_demos") +
-      "/state_machines/demo_3.xml";
-#endif
+      yasmin_demos::get_share_file_path("state_machines/demo_3.xml");
 
   // Create the state machine from the XML file
   auto sm = factory.create_sm_from_file(xml_file);
@@ -63,17 +46,21 @@ int main(int argc, char *argv[]) {
       "serialization and executes it.");
   sm->set_sigint_handler(true);
 
-  // Publisher for visualizing the state machine
-  yasmin_viewer::YasminViewerPub yasmin_pub(sm,
-                                            "YASMIN_ROS_SERIALIZATION_DEMO");
+  {
+    // Publisher for visualizing the state machine
+    yasmin_viewer::YasminViewerPub yasmin_pub(sm,
+                                              "YASMIN_ROS_SERIALIZATION_DEMO");
 
-  // Execute the state machine
-  try {
-    std::string outcome = (*sm.get())();
-    YASMIN_LOG_INFO(outcome.c_str());
-  } catch (const std::exception &e) {
-    YASMIN_LOG_WARN(e.what());
+    // Execute the state machine
+    try {
+      std::string outcome = (*sm.get())();
+      YASMIN_LOG_INFO(outcome.c_str());
+    } catch (const std::exception &e) {
+      YASMIN_LOG_WARN(e.what());
+    }
   }
+
+  yasmin_ros::YasminNode::destroy_instance();
 
   // Shutdown ROS 2
   rclcpp::shutdown();

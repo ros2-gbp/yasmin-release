@@ -1,33 +1,51 @@
 // Copyright (C) 2026 Maik Knof
 //
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
 //
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
+//     http://www.apache.org/licenses/LICENSE-2.0
 //
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 #include "yasmin_viewer/yasmin_viewer_node.hpp"
 
-#include <cctype>
-#include <cstdio>
 #include <filesystem>
 #include <fstream>
 #include <sstream>
 #include <stdexcept>
 #include <utility>
 
+#if __has_include("rclcpp/version.h")
+#include "rclcpp/version.h"
+#if RCLCPP_VERSION_GTE(32, 0, 0)
+#include <ament_index_cpp/get_package_share_path.hpp>
+#else
 #include <ament_index_cpp/get_package_share_directory.hpp>
+#endif
+#else
+#include <ament_index_cpp/get_package_share_directory.hpp>
+#endif
+
 #include <boost/asio.hpp>
 #include <boost/beast/core.hpp>
 #include <boost/beast/http.hpp>
 #include <boost/beast/version.hpp>
+
+namespace {
+
+std::string resolve_host(const std::string &host) {
+  if (host == "0.0.0.0" || host == "::" || host == "localhost") {
+    return "127.0.0.1";
+  }
+  return host;
+}
+
+} // namespace
 
 namespace asio = boost::asio;
 namespace beast = boost::beast;
@@ -35,6 +53,15 @@ namespace http = beast::http;
 using tcp = asio::ip::tcp;
 
 namespace yasmin_viewer {
+
+struct AcceptorHolder {
+  asio::io_context io_context;
+  tcp::acceptor acceptor;
+
+  AcceptorHolder(const std::string &host, unsigned short port)
+      : io_context(1),
+        acceptor(io_context, {asio::ip::make_address(host), port}) {}
+};
 namespace {
 
 std::string mime_type(const std::string &path) {
@@ -72,10 +99,6 @@ std::string mime_type(const std::string &path) {
   return "application/octet-stream";
 }
 
-bool is_path_safe(const std::string &request_target) {
-  return request_target.find("..") == std::string::npos;
-}
-
 std::string read_file(const std::filesystem::path &path) {
   std::ifstream file(path, std::ios::binary);
   if (!file.is_open()) {
@@ -99,15 +122,33 @@ std::filesystem::path resolve_file_path(const std::string &web_root,
     target = target.substr(0, query_separator);
   }
 
-  if (!is_path_safe(target)) {
-    throw std::runtime_error("Unsafe path requested");
-  }
-
   if (!target.empty() && target.front() == '/') {
     target.erase(target.begin());
   }
 
-  return std::filesystem::path(web_root) / target;
+  std::error_code ec;
+  std::filesystem::path web_root_normalized =
+      std::filesystem::weakly_canonical(web_root, ec);
+
+  if (ec) {
+    throw std::runtime_error("Invalid web root");
+  }
+
+  std::filesystem::path resolved =
+      (web_root_normalized / target).lexically_normal();
+
+  std::string resolved_str = resolved.string();
+  std::string web_root_str = web_root_normalized.string();
+
+  if (resolved_str.find(web_root_str) != 0) {
+    throw std::runtime_error("Path traversal detected");
+  }
+
+  if (!std::filesystem::exists(resolved, ec) || ec) {
+    throw std::runtime_error("File not found");
+  }
+
+  return resolved;
 }
 
 http::response<http::string_body> make_response(http::status status,
@@ -177,6 +218,7 @@ void handle_session(tcp::socket socket, YasminViewerNode *node) {
   }
 
   socket.shutdown(tcp::socket::shutdown_send, error_code);
+  node->on_connection_closed();
 }
 
 } // namespace
@@ -188,19 +230,15 @@ YasminViewerNode::YasminViewerNode()
   this->declare_parameter<int64_t>("port", 5000);
   this->declare_parameter<double>("max_age_seconds", 3.0);
 
-  host_ = this->get_parameter("host").as_string();
-  port_ = this->get_parameter("port").as_int();
-  max_age_seconds_ = this->get_parameter("max_age_seconds").as_double();
+  this->host_ = this->get_parameter("host").as_string();
+  this->port_ = this->get_parameter("port").as_int();
+  this->max_age_seconds_ = this->get_parameter("max_age_seconds").as_double();
 
   web_root_ =
 #if __has_include("rclcpp/version.h")
-#include "rclcpp/version.h"
-#if RCLCPP_VERSION_GTE(29, 5, 1)
-      ([]() {
-        std::filesystem::path p;
-        ament_index_cpp::get_package_share_directory("yasmin_viewer", p);
-        return (p / "web").string();
-      })();
+#if RCLCPP_VERSION_GTE(32, 0, 0)
+      (ament_index_cpp::get_package_share_path("yasmin_viewer") / "web")
+          .string();
 #else
       ament_index_cpp::get_package_share_directory("yasmin_viewer") + "/web";
 #endif
@@ -208,28 +246,28 @@ YasminViewerNode::YasminViewerNode()
       ament_index_cpp::get_package_share_directory("yasmin_viewer") + "/web";
 #endif
 
-  fsm_sub_ = this->create_subscription<StateMachineMsg>(
+  this->fsm_sub_ = this->create_subscription<StateMachineMsg>(
       "/fsm_viewer", 10,
       std::bind(&YasminViewerNode::fsm_viewer_cb, this, std::placeholders::_1));
 
   this->start_server();
 
   RCLCPP_INFO(this->get_logger(), "Started YASMIN viewer on http://%s:%ld",
-              host_.c_str(), static_cast<long>(port_));
+              this->host_.c_str(), static_cast<long>(this->port_));
 }
 
 YasminViewerNode::~YasminViewerNode() { this->stop_server(); }
 
-std::string YasminViewerNode::get_fsms_json() const {
+std::string YasminViewerNode::get_fsms_json() {
   const auto now = std::chrono::steady_clock::now();
-  std::lock_guard<std::mutex> lock(fsms_mutex_);
-  prune_expired_locked(now);
+  std::lock_guard<std::mutex> lock(this->fsms_mutex_);
+  this->prune_expired_locked(now);
 
   std::ostringstream stream;
   stream << "{";
 
   bool first_entry = true;
-  for (const auto &[name, cached_fsm] : fsms_) {
+  for (const auto &[name, cached_fsm] : this->fsms_) {
     if (!first_entry) {
       stream << ",";
     }
@@ -241,7 +279,7 @@ std::string YasminViewerNode::get_fsms_json() const {
   return stream.str();
 }
 
-std::string YasminViewerNode::get_web_root() const { return web_root_; }
+std::string YasminViewerNode::get_web_root() const { return this->web_root_; }
 
 void YasminViewerNode::fsm_viewer_cb(const StateMachineMsg::SharedPtr msg) {
   if (!msg || msg->states.empty()) {
@@ -252,55 +290,61 @@ void YasminViewerNode::fsm_viewer_cb(const StateMachineMsg::SharedPtr msg) {
   const std::string fsm_name = msg->states.front().name;
   const std::string json = state_machine_to_json(*msg);
 
-  std::lock_guard<std::mutex> lock(fsms_mutex_);
-  prune_expired_locked(now);
-  fsms_[fsm_name] = CachedFsm{json, now};
+  std::lock_guard<std::mutex> lock(this->fsms_mutex_);
+  this->prune_expired_locked(now);
+  this->fsms_[fsm_name] = CachedFsm{json, now};
 }
 
 void YasminViewerNode::start_server() {
-  server_running_.store(true);
-  server_thread_ = std::thread(&YasminViewerNode::run_server, this);
+  this->acceptor_holder_ = std::make_unique<AcceptorHolder>(
+      resolve_host(this->host_), static_cast<unsigned short>(this->port_));
+  this->server_running_.store(true);
+  this->server_thread_ = std::thread(&YasminViewerNode::run_server, this);
 }
 
 void YasminViewerNode::stop_server() {
-  server_running_.store(false);
+  this->server_running_.store(false);
 
-  if (server_thread_.joinable()) {
-    try {
-      asio::io_context io_context;
-      tcp::resolver resolver(io_context);
-      const std::string wake_host = (host_ == "0.0.0.0" || host_ == "::")
-                                        ? "127.0.0.1"
-                                    : host_ == "localhost" ? "127.0.0.1"
-                                                           : host_;
-      auto endpoints = resolver.resolve(wake_host, std::to_string(port_));
-      tcp::socket socket(io_context);
-      asio::connect(socket, endpoints);
-      socket.close();
-    } catch (const std::exception &) {
-    }
-    server_thread_.join();
+  if (this->acceptor_holder_) {
+    beast::error_code ec;
+    this->acceptor_holder_->acceptor.cancel(ec);
+  }
+
+  if (this->server_thread_.joinable()) {
+    this->server_thread_.join();
   }
 }
 
 void YasminViewerNode::run_server() {
   try {
-    asio::io_context io_context(1);
-    const auto address =
-        asio::ip::make_address(host_ == "localhost" ? "127.0.0.1" : host_);
-    tcp::acceptor acceptor(io_context,
-                           {address, static_cast<unsigned short>(port_)});
+    if (!this->acceptor_holder_) {
+      RCLCPP_ERROR(this->get_logger(), "Acceptor not initialized");
+      return;
+    }
 
-    while (rclcpp::ok() && server_running_.load()) {
+    auto &acceptor = this->acceptor_holder_->acceptor;
+    auto &io_context = this->acceptor_holder_->io_context;
+
+    while (rclcpp::ok() && this->server_running_.load()) {
       tcp::socket socket(io_context);
       beast::error_code error_code;
       acceptor.accept(socket, error_code);
 
       if (error_code) {
-        if (server_running_.load()) {
+        if (this->server_running_.load()) {
           RCLCPP_WARN(this->get_logger(), "Accept failed: %s",
                       error_code.message().c_str());
         }
+        continue;
+      }
+
+      uint32_t prev =
+          this->active_connections_.fetch_add(1, std::memory_order_relaxed);
+
+      if (prev >= YasminViewerNode::kMaxConnections) {
+        this->active_connections_.fetch_sub(1, std::memory_order_relaxed);
+        RCLCPP_WARN(this->get_logger(),
+                    "Too many connections, dropping client");
         continue;
       }
 
@@ -313,12 +357,12 @@ void YasminViewerNode::run_server() {
 }
 
 void YasminViewerNode::prune_expired_locked(
-    const std::chrono::steady_clock::time_point &now) const {
-  const auto max_age = std::chrono::duration<double>(max_age_seconds_);
+    const std::chrono::steady_clock::time_point &now) {
+  const auto max_age = std::chrono::duration<double>(this->max_age_seconds_);
 
-  for (auto iterator = fsms_.begin(); iterator != fsms_.end();) {
+  for (auto iterator = this->fsms_.begin(); iterator != this->fsms_.end();) {
     if ((now - iterator->second.timestamp) > max_age) {
-      iterator = fsms_.erase(iterator);
+      iterator = this->fsms_.erase(iterator);
     } else {
       ++iterator;
     }

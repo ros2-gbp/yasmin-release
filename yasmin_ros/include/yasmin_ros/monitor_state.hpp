@@ -1,17 +1,16 @@
 // Copyright (C) 2023 Miguel Ángel González Santamarta
 //
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
 //
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
+//     http://www.apache.org/licenses/LICENSE-2.0
 //
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 #ifndef YASMIN_ROS__MONITOR_STATE_HPP_
 #define YASMIN_ROS__MONITOR_STATE_HPP_
@@ -32,8 +31,6 @@
 #include "yasmin_ros/basic_outcomes.hpp"
 #include "yasmin_ros/yasmin_node.hpp"
 
-using std::placeholders::_1;
-
 namespace yasmin_ros {
 
 /**
@@ -47,7 +44,7 @@ namespace yasmin_ros {
  */
 template <typename MsgT> class MonitorState : public yasmin::State {
 
-  /// Function type for handling messages from topic.
+  /// @brief Function type for handling messages from topic.
   using MonitorHandler = std::function<std::string(
       yasmin::Blackboard::SharedPtr, std::shared_ptr<MsgT>)>;
 
@@ -67,7 +64,7 @@ public:
    * @param qos Quality of Service settings for the topic.
    * @param msg_queue The maximum number of messages to queue.
    * @param timeout The time in seconds to wait for messages before timing out.
-   * @param maximum_retry Maximum retries of the service if it returns timeout.
+   * @param maximum_retry Maximum retries of the monitor if it returns timeout.
    * Default is 3.
    */
   MonitorState(const std::string &topic_name, const yasmin::Outcomes &outcomes,
@@ -87,7 +84,7 @@ public:
    * @param callback_group The callback group for the subscription.
    * @param msg_queue The maximum number of messages to queue.
    * @param timeout The time in seconds to wait for messages before timing out.
-   * @param maximum_retry Maximum retries of the service if it returns timeout.
+   * @param maximum_retry Maximum retries of the monitor if it returns timeout.
    * Default is 3.
    *
    */
@@ -109,7 +106,7 @@ public:
    * @param qos Quality of Service settings for the topic.
    * @param msg_queue The maximum number of messages to queue.
    * @param timeout The time in seconds to wait for messages before timing out.
-   * @param maximum_retry Maximum retries of the service if it returns timeout.
+   * @param maximum_retry Maximum retries of the monitor if it returns timeout.
    * Default is 3.
    */
   MonitorState(const rclcpp::Node::SharedPtr &node,
@@ -149,7 +146,8 @@ public:
     options.callback_group = callback_group;
     this->sub = this->node_->create_subscription<MsgT>(
         this->topic_name, this->qos,
-        std::bind(&MonitorState::callback, this, _1), options);
+        std::bind(&MonitorState::callback, this, std::placeholders::_1),
+        options);
   }
 
   /**
@@ -167,10 +165,12 @@ public:
     while (this->msg_list.empty()) {
 
       if (this->timeout > 0) {
-        wait_status =
-            this->msg_cond.wait_for(lock, std::chrono::seconds(this->timeout));
+        const auto timeout_dur = std::chrono::seconds(this->timeout);
+        wait_status = this->msg_cond.wait_for(lock, timeout_dur);
       } else {
-        this->msg_cond.wait(lock);
+        this->msg_cond.wait(lock, [this]() {
+          return !this->msg_list.empty() || this->is_canceled();
+        });
       }
 
       if (this->is_canceled()) {
@@ -186,8 +186,8 @@ public:
           YASMIN_LOG_WARN("Retrying to wait for topic '%s' (%d/%d)",
                           this->topic_name.c_str(), retry_count,
                           this->maximum_retry);
-          wait_status = this->msg_cond.wait_for(
-              lock, std::chrono::seconds(this->timeout));
+          const auto timeout_dur = std::chrono::seconds(this->timeout);
+          wait_status = this->msg_cond.wait_for(lock, timeout_dur);
         } else {
           return basic_outcomes::TIMEOUT;
         }
@@ -217,32 +217,32 @@ public:
   }
 
 protected:
-  /// Shared pointer to the ROS 2 node.
+  /// @brief Shared pointer to the ROS 2 node.
   rclcpp::Node::SharedPtr node_;
 
 private:
-  /// Subscription to the ROS 2 topic.
+  /// @brief Subscription to the ROS 2 topic.
   std::shared_ptr<rclcpp::Subscription<MsgT>> sub;
 
-  /// Name of the topic to monitor.
+  /// @brief Name of the topic to monitor.
   std::string topic_name;
-  /// Quality of Service settings for the topic.
+  /// @brief Quality of Service settings for the topic.
   rclcpp::QoS qos;
 
-  /// List to store queued messages.
+  /// @brief List to store queued messages.
   std::vector<std::shared_ptr<MsgT>> msg_list;
-  /// Callback function to handle incoming messages.
+  /// @brief Callback function to handle incoming messages.
   MonitorHandler monitor_handler;
-  /// Maximum number of messages to queue.
+  /// @brief Maximum number of messages to queue.
   int msg_queue;
-  /// Timeout in seconds for message reception.
+  /// @brief Timeout in seconds for message reception.
   int timeout;
-  /// Maximum number of retries.
+  /// @brief Maximum number of retries.
   int maximum_retry;
 
-  /// Condition variable for action completion.
+  /// @brief Condition variable for action completion.
   std::condition_variable msg_cond;
-  /// Mutex for protecting action completion.
+  /// @brief Mutex for protecting action completion.
   std::mutex msg_mutex;
 
   /**
@@ -254,6 +254,7 @@ private:
    * @param msg The message received from the topic.
    */
   void callback(const typename MsgT::SharedPtr msg) {
+    std::lock_guard<std::mutex> lock(this->msg_mutex);
 
     this->msg_list.push_back(msg);
 

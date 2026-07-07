@@ -1,23 +1,21 @@
 // Copyright (C) 2023 Miguel Ángel González Santamarta
 //
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
 //
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
+//     http://www.apache.org/licenses/LICENSE-2.0
 //
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 #ifndef YASMIN__STATE_HPP_
 #define YASMIN__STATE_HPP_
 
 #include <atomic>
-#include <functional>
 #include <string>
 #include <unordered_map>
 
@@ -59,6 +57,7 @@ private:
    * Metadata is stored externally (not as a direct member) to preserve
    * ABI compatibility with plugins compiled against earlier versions of
    * the State class.
+   * @return Reference to the internal StateMetadata.
    */
   StateMetadata &get_metadata_ref() const;
 
@@ -87,7 +86,7 @@ public:
    * @brief Constructs a State with a set of possible outcomes.
    * @param outcomes A set of possible outcomes for this state.
    */
-  State(const Outcomes &outcomes);
+  State(Outcomes outcomes);
 
   /**
    * @brief Virtual destructor.
@@ -373,6 +372,18 @@ public:
    * @return A constant reference to the state metadata.
    */
   const StateMetadata &get_metadata() const;
+
+  /**
+   * @brief Returns the actual state object, unwrapping any proxies.
+   *
+   * The default implementation returns `this`. Wrappers such as
+   * PythonStateHolder override this to expose the inner C++ state so
+   * that type-sensitive code (e.g. OrthogonalState discovering
+   * JoinState instances) can find the real state through the wrapper.
+   *
+   * @return Pointer to the effective state object.
+   */
+  virtual State *get_inner_state() { return this; }
 
   /**
    * @brief Converts the state to a string representation.

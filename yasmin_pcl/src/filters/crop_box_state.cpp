@@ -1,17 +1,16 @@
 // Copyright (C) 2026 Maik Knof
 //
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
 //
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
+//     http://www.apache.org/licenses/LICENSE-2.0
 //
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 #include "yasmin_pcl/filters/crop_box_state.hpp"
 
@@ -31,31 +30,31 @@
 namespace yasmin_pcl::filters {
 
 CropBoxState::CropBoxState() : yasmin::State({"succeeded", "aborted"}) {
-  min_x_ = -1.0F;
-  min_y_ = -1.0F;
-  min_z_ = -1.0F;
-  min_w_ = 1.0F;
-  max_x_ = 1.0F;
-  max_y_ = 1.0F;
-  max_z_ = 1.0F;
-  max_w_ = 1.0F;
-  translation_x_ = 0.0F;
-  translation_y_ = 0.0F;
-  translation_z_ = 0.0F;
-  rotation_roll_ = 0.0F;
-  rotation_pitch_ = 0.0F;
-  rotation_yaw_ = 0.0F;
-  use_transform_ = false;
-  transform_translation_x_ = 0.0F;
-  transform_translation_y_ = 0.0F;
-  transform_translation_z_ = 0.0F;
-  transform_roll_ = 0.0F;
-  transform_pitch_ = 0.0F;
-  transform_yaw_ = 0.0F;
-  negative_ = false;
-  keep_organized_ = false;
-  user_filter_value_ = std::numeric_limits<float>::quiet_NaN();
-  extract_removed_indices_ = false;
+  this->min_x_ = -1.0F;
+  this->min_y_ = -1.0F;
+  this->min_z_ = -1.0F;
+  this->min_w_ = 1.0F;
+  this->max_x_ = 1.0F;
+  this->max_y_ = 1.0F;
+  this->max_z_ = 1.0F;
+  this->max_w_ = 1.0F;
+  this->translation_x_ = 0.0F;
+  this->translation_y_ = 0.0F;
+  this->translation_z_ = 0.0F;
+  this->rotation_roll_ = 0.0F;
+  this->rotation_pitch_ = 0.0F;
+  this->rotation_yaw_ = 0.0F;
+  this->use_transform_ = false;
+  this->transform_translation_x_ = 0.0F;
+  this->transform_translation_y_ = 0.0F;
+  this->transform_translation_z_ = 0.0F;
+  this->transform_roll_ = 0.0F;
+  this->transform_pitch_ = 0.0F;
+  this->transform_yaw_ = 0.0F;
+  this->negative_ = false;
+  this->keep_organized_ = false;
+  this->user_filter_value_ = std::numeric_limits<float>::quiet_NaN();
+  this->extract_removed_indices_ = false;
 
   this->set_description("Applies pcl::CropBox to a pcl::PCLPointCloud2 stored "
                         "in the blackboard.");
@@ -131,37 +130,35 @@ CropBoxState::CropBoxState() : yasmin::State({"succeeded", "aborted"}) {
                        "Removed point indices stored as pcl::Indices.");
 }
 
-CropBoxState::~CropBoxState() {}
-
 void CropBoxState::configure() {
-  min_x_ = this->get_parameter<float>("min_x");
-  min_y_ = this->get_parameter<float>("min_y");
-  min_z_ = this->get_parameter<float>("min_z");
-  min_w_ = this->get_parameter<float>("min_w");
-  max_x_ = this->get_parameter<float>("max_x");
-  max_y_ = this->get_parameter<float>("max_y");
-  max_z_ = this->get_parameter<float>("max_z");
-  max_w_ = this->get_parameter<float>("max_w");
-  translation_x_ = this->get_parameter<float>("translation_x");
-  translation_y_ = this->get_parameter<float>("translation_y");
-  translation_z_ = this->get_parameter<float>("translation_z");
-  rotation_roll_ = this->get_parameter<float>("rotation_roll");
-  rotation_pitch_ = this->get_parameter<float>("rotation_pitch");
-  rotation_yaw_ = this->get_parameter<float>("rotation_yaw");
-  use_transform_ = this->get_parameter<bool>("use_transform");
-  transform_translation_x_ =
+  this->min_x_ = this->get_parameter<float>("min_x");
+  this->min_y_ = this->get_parameter<float>("min_y");
+  this->min_z_ = this->get_parameter<float>("min_z");
+  this->min_w_ = this->get_parameter<float>("min_w");
+  this->max_x_ = this->get_parameter<float>("max_x");
+  this->max_y_ = this->get_parameter<float>("max_y");
+  this->max_z_ = this->get_parameter<float>("max_z");
+  this->max_w_ = this->get_parameter<float>("max_w");
+  this->translation_x_ = this->get_parameter<float>("translation_x");
+  this->translation_y_ = this->get_parameter<float>("translation_y");
+  this->translation_z_ = this->get_parameter<float>("translation_z");
+  this->rotation_roll_ = this->get_parameter<float>("rotation_roll");
+  this->rotation_pitch_ = this->get_parameter<float>("rotation_pitch");
+  this->rotation_yaw_ = this->get_parameter<float>("rotation_yaw");
+  this->use_transform_ = this->get_parameter<bool>("use_transform");
+  this->transform_translation_x_ =
       this->get_parameter<float>("transform_translation_x");
-  transform_translation_y_ =
+  this->transform_translation_y_ =
       this->get_parameter<float>("transform_translation_y");
-  transform_translation_z_ =
+  this->transform_translation_z_ =
       this->get_parameter<float>("transform_translation_z");
-  transform_roll_ = this->get_parameter<float>("transform_roll");
-  transform_pitch_ = this->get_parameter<float>("transform_pitch");
-  transform_yaw_ = this->get_parameter<float>("transform_yaw");
-  negative_ = this->get_parameter<bool>("negative");
-  keep_organized_ = this->get_parameter<bool>("keep_organized");
-  user_filter_value_ = this->get_parameter<float>("user_filter_value");
-  extract_removed_indices_ =
+  this->transform_roll_ = this->get_parameter<float>("transform_roll");
+  this->transform_pitch_ = this->get_parameter<float>("transform_pitch");
+  this->transform_yaw_ = this->get_parameter<float>("transform_yaw");
+  this->negative_ = this->get_parameter<bool>("negative");
+  this->keep_organized_ = this->get_parameter<bool>("keep_organized");
+  this->user_filter_value_ = this->get_parameter<float>("user_filter_value");
+  this->extract_removed_indices_ =
       this->get_parameter<bool>("extract_removed_indices");
 }
 
@@ -175,23 +172,25 @@ std::string CropBoxState::execute(yasmin::Blackboard::SharedPtr blackboard) {
       return "aborted";
     }
 
-    pcl::CropBox<pcl::PCLPointCloud2> filter(extract_removed_indices_);
+    pcl::CropBox<pcl::PCLPointCloud2> filter(this->extract_removed_indices_);
     filter.setInputCloud(input_cloud);
-    filter.setMin(Eigen::Vector4f(min_x_, min_y_, min_z_, min_w_));
-    filter.setMax(Eigen::Vector4f(max_x_, max_y_, max_z_, max_w_));
-    filter.setTranslation(
-        Eigen::Vector3f(translation_x_, translation_y_, translation_z_));
-    filter.setRotation(
-        Eigen::Vector3f(rotation_roll_, rotation_pitch_, rotation_yaw_));
-    filter.setNegative(negative_);
-    filter.setKeepOrganized(keep_organized_);
-    filter.setUserFilterValue(user_filter_value_);
+    filter.setMin(Eigen::Vector4f(this->min_x_, this->min_y_, this->min_z_,
+                                  this->min_w_));
+    filter.setMax(Eigen::Vector4f(this->max_x_, this->max_y_, this->max_z_,
+                                  this->max_w_));
+    filter.setTranslation(Eigen::Vector3f(
+        this->translation_x_, this->translation_y_, this->translation_z_));
+    filter.setRotation(Eigen::Vector3f(
+        this->rotation_roll_, this->rotation_pitch_, this->rotation_yaw_));
+    filter.setNegative(this->negative_);
+    filter.setKeepOrganized(this->keep_organized_);
+    filter.setUserFilterValue(this->user_filter_value_);
 
-    if (use_transform_) {
+    if (this->use_transform_) {
       filter.setTransform(common::affine_from_translation_rpy(
-          transform_translation_x_, transform_translation_y_,
-          transform_translation_z_, transform_roll_, transform_pitch_,
-          transform_yaw_));
+          this->transform_translation_x_, this->transform_translation_y_,
+          this->transform_translation_z_, this->transform_roll_,
+          this->transform_pitch_, this->transform_yaw_));
     }
 
     if (blackboard->contains("input_indices")) {
@@ -205,7 +204,7 @@ std::string CropBoxState::execute(yasmin::Blackboard::SharedPtr blackboard) {
     filter.filter(*output_cloud);
     blackboard->set<common::PclPointCloud2Ptr>("output_cloud", output_cloud);
 
-    if (extract_removed_indices_) {
+    if (this->extract_removed_indices_) {
       const auto removed_indices_ptr = filter.getRemovedIndices();
       if (removed_indices_ptr) {
         blackboard->set<common::Indices>("removed_indices",

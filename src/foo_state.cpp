@@ -1,27 +1,23 @@
 // Copyright (C) 2025 Pedro Edom Nunes
 //
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
 //
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
+//     http://www.apache.org/licenses/LICENSE-2.0
 //
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
-#include "yasmin_demos/foo_state.h"
+#include "yasmin_demos/foo_state.hpp"
 
 #include <chrono>
-#include <iostream>
 #include <memory>
 #include <string>
 #include <thread>
-
-#include <rclcpp/rclcpp.hpp>
 
 #include "yasmin/logs.hpp"
 #include "yasmin/state.hpp"
@@ -29,10 +25,10 @@
 #include "yasmin_ros/ros_logs.hpp"
 
 FooState::FooState() : yasmin::State({"outcome1", "outcome2"}) {
-  counter = 0;
-  counter_prefix_ = "Counter";
-  max_count_ = 3;
-  sleep_ms_ = 300;
+  this->counter = 0;
+  this->counter_prefix_ = "Counter";
+  this->max_count_ = 3;
+  this->sleep_ms_ = 300;
   this->set_description("Produces a counter string and stores it in the "
                         "blackboard while the counter is below the threshold.");
   this->set_outcome_description("outcome1", "Counter is below the threshold");
@@ -51,18 +47,18 @@ FooState::FooState() : yasmin::State({"outcome1", "outcome2"}) {
 };
 
 void FooState::configure() {
-  counter_prefix_ = this->get_parameter<std::string>("counter_prefix");
-  max_count_ = this->get_parameter<int>("max_count");
-  sleep_ms_ = this->get_parameter<int>("sleep_ms");
+  this->counter_prefix_ = this->get_parameter<std::string>("counter_prefix");
+  this->max_count_ = this->get_parameter<int>("max_count");
+  this->sleep_ms_ = this->get_parameter<int>("sleep_ms");
 }
 
 std::string FooState::execute(yasmin::Blackboard::SharedPtr blackboard) {
   YASMIN_LOG_INFO("Executing state FOO");
-  std::this_thread::sleep_for(std::chrono::milliseconds(sleep_ms_));
+  std::this_thread::sleep_for(std::chrono::milliseconds(this->sleep_ms_));
 
-  if (this->counter < max_count_) {
+  if (this->counter < this->max_count_) {
     this->counter += 1;
-    blackboard->set<std::string>("foo_str", counter_prefix_ + ": " +
+    blackboard->set<std::string>("foo_str", this->counter_prefix_ + ": " +
                                                 std::to_string(this->counter));
     return "outcome1";
 
@@ -70,8 +66,6 @@ std::string FooState::execute(yasmin::Blackboard::SharedPtr blackboard) {
     return "outcome2";
   }
 };
-
-FooState::~FooState() {};
 
 #include <pluginlib/class_list_macros.hpp>
 PLUGINLIB_EXPORT_CLASS(FooState, yasmin::State)

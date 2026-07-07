@@ -1,17 +1,16 @@
 // Copyright (C) 2023 Miguel Ángel González Santamarta
 //
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
 //
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
+//     http://www.apache.org/licenses/LICENSE-2.0
 //
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 #ifndef YASMIN__STATE_MACHINE_HPP_
 #define YASMIN__STATE_MACHINE_HPP_
@@ -43,14 +42,14 @@ class StateMachine : public State {
 public:
   /// Alias for a callback function executed before running the state machine.
   using StartCallbackType =
-      std::function<void(Blackboard::SharedPtr, const std::string &)>;
+      std::function<void(const Blackboard::SharedPtr &, const std::string &)>;
   /// Alias for a callback function executed before changing the state.
   using TransitionCallbackType =
-      std::function<void(Blackboard::SharedPtr, const std::string &,
+      std::function<void(const Blackboard::SharedPtr &, const std::string &,
                          const std::string &, const std::string &)>;
   /// Alias for a callback function executed after running the state machine.
   using EndCallbackType =
-      std::function<void(Blackboard::SharedPtr, const std::string &)>;
+      std::function<void(const Blackboard::SharedPtr &, const std::string &)>;
 
   /**
    * @brief Shared pointer type for StateMachine.
@@ -91,6 +90,7 @@ public:
    * @param transitions A map of transitions where the key is the outcome
    *                    and the value is the target state name.
    * @param remappings A map of remappings keys for the blackboard.
+   * @param parameter_mappings Per-child parameter mappings.
    * @throws std::logic_error If the state is already registered or is an
    * outcome.
    * @throws std::invalid_argument If any transition has empty source or target,
@@ -113,7 +113,7 @@ public:
    *
    * @return The name of the state machine.
    */
-  const std::string &get_name() const noexcept { return this->name; }
+  std::string get_name() const noexcept { return this->name; }
 
   /**
    * @brief Sets the start state for the state machine.
@@ -149,7 +149,7 @@ public:
    *
    * @return The name of the current state.
    */
-  std::string const &get_current_state() const;
+  std::string get_current_state() const;
 
   /**
    * @brief Adds a callback function to be called when the state machine starts.
@@ -193,11 +193,16 @@ public:
   /**
    * @brief Validates the state machine configuration.
    *
-   * @param strict Whether the validation is strict, which means checking if all
-   * state outcomes are used and all state machine outcomes are reached.
+   * @param strict_mode Whether the validation is strict, which means checking
+   * if all state outcomes are used and all state machine outcomes are reached.
    * @throws std::runtime_error If the state machine is misconfigured.
    */
   void validate(bool strict_mode = false);
+
+  /**
+   * @brief Configures the state machine and all child states.
+   */
+  void configure() override;
 
   /**
    * @brief Executes the state machine.
@@ -207,8 +212,6 @@ public:
    * @throws std::runtime_error If the execution cannot be completed due to
    *                            invalid states or transitions.
    */
-  void configure() override;
-
   std::string execute(Blackboard::SharedPtr blackboard) override;
 
   /**
@@ -295,7 +298,7 @@ private:
   std::vector<StartCallbackType> start_cbs;
   /// Transition callbacks executed before changing the state
   std::vector<TransitionCallbackType> transition_cbs;
-  /// End callbacks executed before the state machine
+  /// End callbacks executed after the state machine finishes
   std::vector<EndCallbackType> end_cbs;
 
   /**
@@ -370,6 +373,22 @@ private:
    * @brief Throws if a hard state machine cancel was requested.
    */
   void throw_if_cancel_state_machine_requested();
+
+  /**
+   * @brief Executes a single state transition step.
+   *
+   * Runs the child state specified by @p current_state, applies remappings,
+   * and resolves the resulting outcome (either a child state name or a
+   * state-machine-level terminal outcome).
+   *
+   * @param blackboard The shared blackboard.
+   * @param current_state The name of the state to execute.
+   * @param state_machine_ends Set to true if the outcome is terminal.
+   * @return The translated outcome following this transition.
+   */
+  std::string execute_step(Blackboard::SharedPtr blackboard,
+                           const std::string &current_state,
+                           bool &state_machine_ends);
 };
 
 } // namespace yasmin

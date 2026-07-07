@@ -1,30 +1,28 @@
 # Copyright (C) 2023 Miguel Ángel González Santamarta
 #
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
 #
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
-# You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 from threading import Event
 from typing import List, Set, Callable, Union, Type, Any
 
 from rclpy.node import Node
-from rclpy.subscription import Subscription
 from rclpy.qos import QoSProfile
 from rclpy.callback_groups import CallbackGroup
 
 import yasmin
 from yasmin import State, Blackboard
-from yasmin_ros.yasmin_node import YasminNode
 from yasmin_ros.basic_outcomes import TIMEOUT, CANCEL
+from yasmin_ros.ros_state_utils import resolve_node, setup_outcomes, cancel_with_event
 
 
 class MonitorState(State):
@@ -78,29 +76,22 @@ class MonitorState(State):
         self._timeout: int = timeout
 
         # Set outcomes
-        outcomes = set(outcomes)
-        outcomes.update({CANCEL})
+        outcomes = setup_outcomes(
+            outcomes,
+            {CANCEL},
+            add_timeout=timeout is not None,
+        )
 
-        if timeout is not None:
-            outcomes.add(TIMEOUT)
-
-        ## Shared pointer to the ROS 2 node.
-        self._node: Node = node
-
-        if self._node is None:
-            self._node = YasminNode.get_instance()
+        self._node = resolve_node(node)
 
         ## Name of the topic to monitor.
         self._topic_name: str = topic_name
 
-        ## Subscription to the ROS 2 topic.
-        self._sub: Subscription = None
         self._msg_type: Type = msg_type
         self._qos: Union[QoSProfile, int] = qos
         self._callback_group: CallbackGroup = callback_group
 
-        ## Subscription to the ROS 2 topic.
-        self._sub: Subscription = self._node.create_subscription(
+        self._sub = self._node.create_subscription(
             msg_type,
             topic_name,
             self.__callback,
@@ -151,17 +142,14 @@ class MonitorState(State):
                 return CANCEL
 
             if self._timeout is not None and not timeout_flag:
-                yasmin.YASMIN_LOG_WARN(
-                    f"Timeout reached, topic '{self._topic_name}' is not available"
-                )
-
-                if retry_count < self._maximum_retry:
-                    retry_count += 1
-                    yasmin.YASMIN_LOG_WARN(
-                        f"Retrying to wait for topic '{self._topic_name}' ({retry_count}/{self._maximum_retry})"
-                    )
-                else:
+                if retry_count >= self._maximum_retry:
                     return TIMEOUT
+
+                retry_count += 1
+                yasmin.YASMIN_LOG_WARN(
+                    f"Timeout reached, topic '{self._topic_name}' is not available "
+                    f"({retry_count}/{self._maximum_retry})"
+                )
 
         yasmin.YASMIN_LOG_INFO(f"Processing msg from topic '{self._topic_name}'")
         outcome = self._monitor_handler(blackboard, self.msg_list.pop(0))
@@ -175,5 +163,5 @@ class MonitorState(State):
         This method cancels the monitor if waiting for messages.
         """
 
-        self._msg_event.set()
+        cancel_with_event(self._msg_event)
         super().cancel_state()

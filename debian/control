@@ -1,0 +1,12 @@
+Source: ros-humble-yasmin-viewer
+Section: misc
+Priority: optional
+Maintainer: "Miguel Ángel González Santamarta" <mgons@unileon.es>
+Build-Depends: debhelper (>= 9.0.0), libboost-all-dev, ros-humble-ament-cmake, ros-humble-ament-cmake-python, ros-humble-ament-index-cpp, ros-humble-rclcpp, ros-humble-rclpy, ros-humble-yasmin, ros-humble-yasmin-msgs, ros-humble-yasmin-ros, ros-humble-ros-workspace
+Homepage: https://index.ros.org/p/yasmin_viewer/#humble
+Standards-Version: 3.9.2
+
+Package: ros-humble-yasmin-viewer
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, libboost-all-dev, ros-humble-ament-index-cpp, ros-humble-rclcpp, ros-humble-rclpy, ros-humble-yasmin, ros-humble-yasmin-msgs, ros-humble-yasmin-ros, ros-humble-ros-workspace
+Description: YASMIN viewer for FSM

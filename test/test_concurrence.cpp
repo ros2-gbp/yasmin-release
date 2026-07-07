@@ -1,17 +1,16 @@
 // Copyright (C) 2025 Miguel Ángel González Santamarta
 //
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
 //
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
+//     http://www.apache.org/licenses/LICENSE-2.0
 //
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 #include <gtest/gtest.h>
 
@@ -298,4 +297,57 @@ TEST_F(TestConcurrence,
 
   // The original source key must also not exist in the final blackboard.
   EXPECT_FALSE(blackboard->contains("foo_str"));
+}
+
+// ---------------------------------------------------------------------------
+// Validate: Concurrence recursively validates nested StateMachines
+// ---------------------------------------------------------------------------
+
+// Helper: a valid nested SM (BarState outcome1 loops back, outcome2 -> done).
+static yasmin::StateMachine::SharedPtr make_valid_nested_sm() {
+  auto sm = yasmin::StateMachine::make_shared(yasmin::Outcomes{"done"});
+  sm->add_state(
+      "WORK", std::make_shared<BarState>(),
+      yasmin::Transitions{{"outcome1", "WORK"}, {"outcome2", "done"}});
+  return sm;
+}
+
+// Helper: a strict-invalid nested SM (outcome2 of BarState has no transition).
+static yasmin::StateMachine::SharedPtr make_strict_invalid_nested_sm() {
+  auto sm = yasmin::StateMachine::make_shared(yasmin::Outcomes{"done"});
+  sm->add_state("WORK", std::make_shared<BarState>(),
+                yasmin::Transitions{{"outcome1", "done"}});
+  return sm;
+}
+
+TEST_F(TestConcurrence, TestValidatePassesForValidNestedStateMachine) {
+  auto nested = make_valid_nested_sm();
+  auto conc = yasmin::Concurrence::make_shared(
+      yasmin::StateMap{{"NESTED", nested}}, "done",
+      yasmin::OutcomeMap{{"done", {{"NESTED", "done"}}}});
+
+  EXPECT_NO_THROW(conc->validate());
+}
+
+TEST_F(TestConcurrence,
+       TestValidateThrowsWhenNestedStateMachineIsStrictInvalid) {
+  auto bad_nested = make_strict_invalid_nested_sm();
+  auto conc = yasmin::Concurrence::make_shared(
+      yasmin::StateMap{{"NESTED", bad_nested}}, "done",
+      yasmin::OutcomeMap{{"done", {{"NESTED", "done"}}}});
+
+  // strict_mode=true: outcome2 of WORK has no transition -> runtime_error
+  EXPECT_THROW(conc->validate(true), std::runtime_error);
+}
+
+TEST_F(TestConcurrence,
+       TestValidatePassesWhenNestedStateMachineIsOnlyNonStrictInvalid) {
+  // In non-strict mode the same SM should pass (missing transition is only
+  // checked in strict mode).
+  auto bad_nested = make_strict_invalid_nested_sm();
+  auto conc = yasmin::Concurrence::make_shared(
+      yasmin::StateMap{{"NESTED", bad_nested}}, "done",
+      yasmin::OutcomeMap{{"done", {{"NESTED", "done"}}}});
+
+  EXPECT_NO_THROW(conc->validate(false));
 }

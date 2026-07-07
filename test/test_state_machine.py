@@ -1,17 +1,16 @@
 # Copyright (C) 2023 Miguel Ángel González Santamarta
-
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-
-# You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 
 import threading
@@ -510,6 +509,72 @@ class TestStateMachineCancelBehavior(unittest.TestCase):
         self.assertIn("State machine canceled:", str(result.get("exception")))
         self.assertFalse(second_entered.is_set())
         self.assertEqual(sm.get_current_state(), "")
+
+
+# ---------------------------------------------------------------------------
+# Validate with nested Concurrence / OrthogonalState
+# ---------------------------------------------------------------------------
+
+
+def _make_valid_nested_sm():
+    """A valid SM: FooState outcome1 loops, outcome2 -> done."""
+    sm = StateMachine(outcomes=["done"])
+    sm.add_state("WORK", FooState(), {"outcome1": "WORK", "outcome2": "done"})
+    return sm
+
+
+def _make_strict_invalid_nested_sm():
+    """A strict-invalid SM: FooState outcome2 has no transition."""
+    sm = StateMachine(outcomes=["done"])
+    sm.add_state("WORK", FooState(), {"outcome1": "done"})
+    return sm
+
+
+class TestValidateNestedConcurrence(unittest.TestCase):
+    def test_validate_passes_for_valid_concurrence_inside_state_machine(self):
+        from yasmin import Concurrence
+
+        outer = StateMachine(outcomes=["done"])
+        conc = Concurrence(
+            states={"INNER": _make_valid_nested_sm()},
+            default_outcome="done",
+            outcome_map={"done": {"INNER": "done"}},
+        )
+        outer.add_state("CONC", conc, {"done": "done"})
+        # Should not raise
+        outer.validate()
+
+    def test_validate_throws_for_invalid_concurrence_inside_state_machine(self):
+        from yasmin import Concurrence
+
+        outer = StateMachine(outcomes=["done"])
+        conc = Concurrence(
+            states={"INNER": _make_strict_invalid_nested_sm()},
+            default_outcome="done",
+            outcome_map={"done": {"INNER": "done"}},
+        )
+        outer.add_state("CONC", conc, {"done": "done"})
+        with self.assertRaises(RuntimeError):
+            outer.validate(True)
+
+    def test_validate_passes_for_valid_orthogonal_state_inside_state_machine(self):
+        from yasmin import OrthogonalState
+
+        outer = StateMachine(outcomes=["done"])
+        ort = OrthogonalState("timeout", {"done": {"A": "done"}})
+        ort.add_region("A", _make_valid_nested_sm())
+        outer.add_state("ORT", ort, {"done": "done", "timeout": "done"})
+        outer.validate()
+
+    def test_validate_throws_for_invalid_orthogonal_state_inside_state_machine(self):
+        from yasmin import OrthogonalState
+
+        outer = StateMachine(outcomes=["done"])
+        ort = OrthogonalState("timeout", {"done": {"A": "done"}})
+        ort.add_region("A", _make_strict_invalid_nested_sm())
+        outer.add_state("ORT", ort, {"done": "done", "timeout": "done"})
+        with self.assertRaises(RuntimeError):
+            outer.validate(True)
 
 
 if __name__ == "__main__":

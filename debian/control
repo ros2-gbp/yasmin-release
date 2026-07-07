@@ -1,0 +1,12 @@
+Source: ros-jazzy-yasmin-ros
+Section: misc
+Priority: optional
+Maintainer: "Miguel Ángel González Santamarta" <mgons@unileon.es>
+Build-Depends: debhelper (>= 9.0.0), python3-pytest <!nocheck>, python3-pytest-cov <!nocheck>, ros-jazzy-ament-cmake, ros-jazzy-ament-cmake-gtest <!nocheck>, ros-jazzy-ament-cmake-pytest <!nocheck>, ros-jazzy-ament-cmake-python, ros-jazzy-example-interfaces, ros-jazzy-example-interfaces <!nocheck>, ros-jazzy-geometry-msgs, ros-jazzy-pluginlib, ros-jazzy-rclcpp, ros-jazzy-rclcpp-action, ros-jazzy-rclpy, ros-jazzy-ros-environment, ros-jazzy-std-msgs, ros-jazzy-std-msgs <!nocheck>, ros-jazzy-std-srvs, ros-jazzy-tf2, ros-jazzy-tf2 <!nocheck>, ros-jazzy-tf2-msgs, ros-jazzy-tf2-msgs <!nocheck>, ros-jazzy-tf2-py, ros-jazzy-tf2-py <!nocheck>, ros-jazzy-tf2-ros, ros-jazzy-tf2-ros <!nocheck>, ros-jazzy-tf2-ros-py, ros-jazzy-tf2-ros-py <!nocheck>, ros-jazzy-yasmin, ros-jazzy-ros-workspace
+Homepage: https://index.ros.org/p/yasmin_ros/#jazzy
+Standards-Version: 3.9.2
+
+Package: ros-jazzy-yasmin-ros
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, ros-jazzy-example-interfaces, ros-jazzy-geometry-msgs, ros-jazzy-pluginlib, ros-jazzy-rclcpp, ros-jazzy-rclcpp-action, ros-jazzy-rclpy, ros-jazzy-rosidl-runtime-py, ros-jazzy-std-msgs, ros-jazzy-std-srvs, ros-jazzy-tf2, ros-jazzy-tf2-msgs, ros-jazzy-tf2-py, ros-jazzy-tf2-ros, ros-jazzy-tf2-ros-py, ros-jazzy-yasmin, ros-jazzy-ros-workspace
+Description: YASMIN (Yet Another State MachINe) for ROS 2

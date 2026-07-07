@@ -1,23 +1,22 @@
 # Copyright (C) 2025 Georgia Tech Research Institute
 # Supported by USDA-NIFA CSIAPP Grant. No. 2023-70442-39232
 #
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-
-# You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 
 import unittest
 import time
-from yasmin import State, Concurrence
+from yasmin import State, Concurrence, StateMachine
 
 
 class FooState(State):
@@ -111,6 +110,54 @@ class TestConcurrenceConfigure(unittest.TestCase):
         self.assertEqual("done", state())
         self.assertEqual(1, child.configure_count)
         self.assertEqual("/concurrent", child.configured_topic)
+
+
+# ---------------------------------------------------------------------------
+# Validate: Concurrence recursively validates nested StateMachines
+# ---------------------------------------------------------------------------
+
+
+def _make_valid_nested_sm():
+    """A valid SM: outcome1 loops, outcome2 -> done."""
+    sm = StateMachine(outcomes=["done"])
+    sm.add_state("WORK", BarState(), {"outcome1": "WORK", "outcome2": "done"})
+    return sm
+
+
+def _make_strict_invalid_nested_sm():
+    """A strict-invalid SM: BarState outcome2 has no transition."""
+    sm = StateMachine(outcomes=["done"])
+    sm.add_state("WORK", BarState(), {"outcome1": "done"})
+    return sm
+
+
+class TestConcurrenceValidate(unittest.TestCase):
+    def test_validate_passes_for_valid_nested_state_machine(self):
+        conc = Concurrence(
+            states={"NESTED": _make_valid_nested_sm()},
+            default_outcome="done",
+            outcome_map={"done": {"NESTED": "done"}},
+        )
+        # Should not raise
+        conc.validate()
+
+    def test_validate_throws_when_nested_state_machine_is_strict_invalid(self):
+        conc = Concurrence(
+            states={"NESTED": _make_strict_invalid_nested_sm()},
+            default_outcome="done",
+            outcome_map={"done": {"NESTED": "done"}},
+        )
+        with self.assertRaises(RuntimeError):
+            conc.validate(True)
+
+    def test_validate_passes_when_nested_sm_only_strict_invalid(self):
+        # Non-strict mode must not raise even if strict would.
+        conc = Concurrence(
+            states={"NESTED": _make_strict_invalid_nested_sm()},
+            default_outcome="done",
+            outcome_map={"done": {"NESTED": "done"}},
+        )
+        conc.validate(False)
 
 
 if __name__ == "__main__":

@@ -1,17 +1,16 @@
 # Copyright (C) 2023 Miguel Ángel González Santamarta
 #
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
 #
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
-# You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 from threading import Event
 from typing import Set, Callable, Type, Any
@@ -23,9 +22,14 @@ from rclpy.callback_groups import CallbackGroup
 
 import yasmin
 from yasmin import State, Blackboard
-from yasmin_ros.yasmin_node import YasminNode
-from yasmin_ros.basic_outcomes import SUCCEED, ABORT, TIMEOUT
+from yasmin_ros.basic_outcomes import SUCCEED, ABORT, CANCEL
 from yasmin_ros.ros_clients_cache import ROSClientsCache
+from yasmin_ros.ros_state_utils import (
+    resolve_node,
+    wait_with_retry,
+    setup_outcomes,
+    cancel_with_event,
+)
 
 
 class ServiceState(State):
@@ -80,17 +84,13 @@ class ServiceState(State):
         self._response_timeout: float = response_timeout
 
         # Set outcomes
-        outcomes = set(outcomes)
-        outcomes.update({SUCCEED, ABORT})
+        outcomes = setup_outcomes(
+            outcomes,
+            {SUCCEED, ABORT},
+            add_timeout=bool(self._wait_timeout or self._response_timeout),
+        )
 
-        if self._wait_timeout or self._response_timeout:
-            outcomes.add(TIMEOUT)
-
-        ## The ROS 2 node used to communicate with the service.
-        self._node = node
-
-        if self._node is None:
-            self._node: Node = YasminNode.get_instance()
+        self._node = resolve_node(node)
 
         ## Name of the service.
         self._srv_name: str = srv_name
@@ -137,40 +137,38 @@ class ServiceState(State):
 
         yasmin.YASMIN_LOG_INFO(f"Waiting for service '{self._srv_name}'")
 
-        while not self._service_client.wait_for_service(timeout_sec=self._wait_timeout):
-            yasmin.YASMIN_LOG_WARN(
-                f"Timeout reached, service '{self._srv_name}' is not available"
-            )
-            if retry_count < self._maximum_retry:
-                retry_count += 1
-                yasmin.YASMIN_LOG_WARN(
-                    f"Retrying to connect to service '{self._srv_name}' ({retry_count}/{self._maximum_retry})"
-                )
-            else:
-                return TIMEOUT
+        outcome = wait_with_retry(
+            lambda: self._service_client.wait_for_service(timeout_sec=self._wait_timeout),
+            self._maximum_retry,
+            f"Timeout reached, service '{self._srv_name}' is not available",
+            cancel_check=self.is_canceled,
+        )
+        if outcome is not None:
+            return outcome
+
+        if self.is_canceled():
+            return CANCEL
 
         try:
             yasmin.YASMIN_LOG_INFO(f"Sending request to service '{self._srv_name}'")
 
-            # Clear the event for this service call
             self._response_received_event.clear()
 
             future = self._service_client.call_async(request)
             future.add_done_callback(self.response_callback)
 
-            # Wait for the future to complete with optional timeout
-            while not self._response_received_event.wait(self._response_timeout):
-                yasmin.YASMIN_LOG_WARN(
-                    f"Timeout reached while waiting for response from service '{self._srv_name}'"
-                )
+            outcome = wait_with_retry(
+                lambda: self._response_received_event.wait(self._response_timeout),
+                self._maximum_retry,
+                f"Timeout reached while waiting for response from "
+                f"service '{self._srv_name}'",
+                cancel_check=self.is_canceled,
+            )
+            if outcome is not None:
+                return outcome
 
-                if retry_count < self._maximum_retry:
-                    retry_count += 1
-                    yasmin.YASMIN_LOG_WARN(
-                        f"Retrying to wait for service '{self._srv_name}' response ({retry_count}/{self._maximum_retry})"
-                    )
-                else:
-                    return TIMEOUT
+            if self.is_canceled():
+                return CANCEL
 
         except Exception as e:
             yasmin.YASMIN_LOG_WARN(f"Service call failed: {e}")
@@ -181,6 +179,10 @@ class ServiceState(State):
             return outcome
 
         return SUCCEED
+
+    def cancel_state(self) -> None:
+        cancel_with_event(self._response_received_event)
+        super().cancel_state()
 
     def response_callback(self, future: Future) -> None:
         """

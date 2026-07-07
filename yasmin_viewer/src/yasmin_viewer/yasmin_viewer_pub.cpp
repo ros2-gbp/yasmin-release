@@ -1,17 +1,16 @@
 // Copyright (C) 2023 Miguel Ángel González Santamarta
 //
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
 //
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
+//     http://www.apache.org/licenses/LICENSE-2.0
 //
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 #include "yasmin_viewer/yasmin_viewer_pub.hpp"
 
@@ -72,10 +71,11 @@ std::vector<yasmin_msgs::msg::Transition> YasminViewerPub::parse_transitions(
   return transitions_list;
 }
 
-std::map<std::string, std::vector<yasmin_msgs::msg::Transition>>
+std::unordered_map<std::string, std::vector<yasmin_msgs::msg::Transition>>
 YasminViewerPub::parse_concurrence_transitions(
     yasmin::Concurrence::SharedPtr concurrence) const {
-  std::map<std::string, std::vector<yasmin_msgs::msg::Transition>> transitions;
+  std::unordered_map<std::string, std::vector<yasmin_msgs::msg::Transition>>
+      transitions;
   const auto &outcome_map = concurrence->get_outcome_map();
 
   // Add transitions for each outcome in the outcome map
@@ -107,10 +107,12 @@ void YasminViewerPub::parse_state(
   state_msg.outcomes =
       std::vector<std::string>(outcomes.begin(), outcomes.end());
 
-  // Check if state is a nested FSM or Concurrence
+  // Check if state is a nested FSM, Concurrence, or OrthogonalState
   auto fsm = std::dynamic_pointer_cast<yasmin::StateMachine>(state);
   auto concurrence = std::dynamic_pointer_cast<yasmin::Concurrence>(state);
-  state_msg.is_fsm = (fsm != nullptr) || (concurrence != nullptr);
+  auto orthogonal = std::dynamic_pointer_cast<yasmin::OrthogonalState>(state);
+  state_msg.is_fsm =
+      (fsm != nullptr) || (concurrence != nullptr) || (orthogonal != nullptr);
 
   // Add the state to the list
   states_list.push_back(state_msg);
@@ -171,9 +173,56 @@ void YasminViewerPub::parse_state(
       }
     }
   }
+  // Handle orthogonal states
+  else if (orthogonal != nullptr) {
+    const auto &regions = orthogonal->get_regions();
+    states_list[state_msg.id].current_state = -2;
+
+    for (const auto &region : regions) {
+      // Create a synthetic container node for the region
+      auto region_msg = yasmin_msgs::msg::State();
+      region_msg.id = states_list.size();
+      region_msg.parent = state_msg.id;
+      region_msg.name = region.name;
+      region_msg.is_fsm = true;
+      region_msg.current_state = -1;
+      auto region_outcomes = region.sm->get_outcomes();
+      region_msg.outcomes = std::vector<std::string>(region_outcomes.begin(),
+                                                     region_outcomes.end());
+      states_list.push_back(region_msg);
+
+      auto region_states = region.sm->get_states();
+      auto region_transitions = region.sm->get_transitions();
+
+      for (const auto &nested_state : region_states) {
+        yasmin::Transitions transitions;
+        auto trans_it = region_transitions.find(nested_state.first);
+        if (trans_it != region_transitions.end()) {
+          transitions = trans_it->second;
+        }
+
+        this->parse_state(nested_state.first, nested_state.second, transitions,
+                          states_list, region_msg.id);
+      }
+
+      std::string region_current = region.sm->get_current_state();
+      if (!region_current.empty()) {
+        for (auto &child : states_list) {
+          if (child.name == region_current && child.parent == region_msg.id) {
+            states_list[region_msg.id].current_state = child.id;
+            break;
+          }
+        }
+      }
+    }
+  }
 }
 
 void YasminViewerPub::publish_data() {
+
+  if (!rclcpp::ok()) {
+    return;
+  }
 
   try {
     this->fsm->validate();

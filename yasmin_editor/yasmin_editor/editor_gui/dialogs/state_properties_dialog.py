@@ -1,46 +1,35 @@
 # Copyright (C) 2025 Miguel Ángel González Santamarta
 #
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
 #
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
-# You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
-import os
 from typing import Dict, List, Optional, Tuple
 
-from PyQt5.QtCore import Qt
-from PyQt5.QtWidgets import (
-    QComboBox,
-    QDialog,
-    QDialogButtonBox,
-    QFormLayout,
-    QHBoxLayout,
-    QHeaderView,
-    QLabel,
-    QLineEdit,
-    QPushButton,
-    QTableWidget,
-    QTableWidgetItem,
-    QTextEdit,
-    QVBoxLayout,
-    QWidget,
-)
+from yasmin_editor.qt_compat import Qt, QtWidgets, exec_dialog
+from yasmin_plugins_manager.plugin_info import PluginInfo
 from yasmin_editor.editor_gui.dialogs.parameter_overwrite_dialog import (
     ParameterOverwriteDialog,
 )
+from yasmin_editor.editor_gui.state_properties_logic import (
+    build_description_text,
+    collect_parameter_overwrites,
+    collect_remappings,
+    declared_state_parameters,
+    plugin_entries_for_type,
+    resolve_outcomes,
+)
 
-from yasmin_plugins_manager.plugin_info import PluginInfo
 
-
-class StatePropertiesDialog(QDialog):
+class StatePropertiesDialog(QtWidgets.QDialog):
     """Dialog for setting state properties."""
 
     def __init__(
@@ -53,7 +42,7 @@ class StatePropertiesDialog(QDialog):
         declared_parent_parameters: Optional[List[Dict[str, str]]] = None,
         outcomes: Optional[List[str]] = None,
         edit_mode: bool = False,
-        parent: Optional[QDialog] = None,
+        parent: Optional[QtWidgets.QDialog] = None,
         description: str = "",
         defaults: Optional[List[Dict[str, str]]] = None,
         fallback_input_keys: Optional[List[Dict[str, str]]] = None,
@@ -84,15 +73,15 @@ class StatePropertiesDialog(QDialog):
         }
         self._enable_parameter_overwrites = enable_parameter_overwrites
 
-        layout: QFormLayout = QFormLayout(self)
+        layout: QtWidgets.QFormLayout = QtWidgets.QFormLayout(self)
         self._layout = layout
 
-        self.name_edit: QLineEdit = QLineEdit(state_name)
+        self.name_edit: QtWidgets.QLineEdit = QtWidgets.QLineEdit(state_name)
         self.name_edit.setPlaceholderText("Enter state name (required)")
         self.name_edit.setReadOnly(self.readonly)
         layout.addRow("Name:*", self.name_edit)
 
-        self.type_combo: QComboBox = QComboBox()
+        self.type_combo: QtWidgets.QComboBox = QtWidgets.QComboBox()
         self.type_combo.addItem("Python State")
         self.type_combo.addItem("C++ State")
         self.type_combo.addItem("XML File")
@@ -114,8 +103,8 @@ class StatePropertiesDialog(QDialog):
 
         layout.addRow("Type:", self.type_combo)
 
-        self.plugin_label: QLabel = QLabel("Plugin:*")
-        self.plugin_combo: QComboBox = QComboBox()
+        self.plugin_label: QtWidgets.QLabel = QtWidgets.QLabel("Plugin:*")
+        self.plugin_combo: QtWidgets.QComboBox = QtWidgets.QComboBox()
         self.available_plugins: List[PluginInfo] = available_plugins or []
         layout.addRow(self.plugin_label, self.plugin_combo)
 
@@ -129,43 +118,51 @@ class StatePropertiesDialog(QDialog):
             self.plugin_label.hide()
             self.plugin_combo.hide()
 
-        desc_label: QLabel = QLabel("<b>Description:</b>")
-        self.description_edit: QTextEdit = QTextEdit()
+        desc_label: QtWidgets.QLabel = QtWidgets.QLabel("<b>Description:</b>")
+        self.description_edit: QtWidgets.QTextEdit = QtWidgets.QTextEdit()
         self.description_edit.setMinimumHeight(240)
         self.description_edit.setMaximumHeight(320)
         self.description_edit.setReadOnly(True)
         self.description_edit.setProperty("viewerText", True)
         layout.addRow(desc_label, self.description_edit)
 
-        self.parameter_table = QTableWidget(0, 4)
+        self.parameter_table = QtWidgets.QTableWidget(0, 4)
         self.parameter_table.setHorizontalHeaderLabels(
             ["Name", "Overrides", "Type", "Default"]
         )
-        self.parameter_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
-        self.parameter_table.setSelectionBehavior(QTableWidget.SelectRows)
-        self.parameter_table.setSelectionMode(QTableWidget.SingleSelection)
+        self.parameter_table.horizontalHeader().setSectionResizeMode(
+            QtWidgets.QHeaderView.ResizeMode.Stretch
+        )
+        self.parameter_table.setSelectionBehavior(
+            QtWidgets.QAbstractItemView.SelectionBehavior.SelectRows
+        )
+        self.parameter_table.setSelectionMode(
+            QtWidgets.QAbstractItemView.SelectionMode.SingleSelection
+        )
         self.parameter_table.setMinimumHeight(100)
         self.parameter_table.setMaximumHeight(180)
-        self.parameter_table.setEditTriggers(QTableWidget.NoEditTriggers)
+        self.parameter_table.setEditTriggers(
+            QtWidgets.QAbstractItemView.EditTrigger.NoEditTriggers
+        )
         self.parameter_table.setEnabled(
             self._enable_parameter_overwrites and not self.readonly
         )
         self.parameter_table.itemDoubleClicked.connect(self.edit_parameter_overwrite_row)
 
         if self._enable_parameter_overwrites:
-            params_label = QLabel("<b>Params:</b>")
-            params_widget = QWidget()
-            params_layout = QVBoxLayout(params_widget)
+            params_label = QtWidgets.QLabel("<b>Params:</b>")
+            params_widget = QtWidgets.QWidget()
+            params_layout = QtWidgets.QVBoxLayout(params_widget)
             params_layout.setContentsMargins(0, 0, 0, 0)
             params_layout.addWidget(self.parameter_table)
 
-            param_btn_layout = QHBoxLayout()
-            add_param_btn = QPushButton("Add Param Overwrite")
+            param_btn_layout = QtWidgets.QHBoxLayout()
+            add_param_btn = QtWidgets.QPushButton("Add Param Overwrite")
             add_param_btn.setEnabled(not self.readonly)
             add_param_btn.clicked.connect(self.add_parameter_overwrite_row)
             param_btn_layout.addWidget(add_param_btn)
 
-            remove_param_btn = QPushButton("Remove Param Overwrite")
+            remove_param_btn = QtWidgets.QPushButton("Remove Param Overwrite")
             remove_param_btn.setEnabled(not self.readonly)
             remove_param_btn.clicked.connect(self.remove_parameter_overwrite_row)
             param_btn_layout.addWidget(remove_param_btn)
@@ -176,25 +173,29 @@ class StatePropertiesDialog(QDialog):
             for parameter_data in parameter_overwrites or []:
                 self._add_parameter_row_with_data(parameter_data)
 
-        remappings_label: QLabel = QLabel("<b>Remappings:</b>")
-        remappings_widget: QWidget = QWidget()
-        remappings_layout: QVBoxLayout = QVBoxLayout(remappings_widget)
+        remappings_label: QtWidgets.QLabel = QtWidgets.QLabel("<b>Remappings:</b>")
+        remappings_widget: QtWidgets.QWidget = QtWidgets.QWidget()
+        remappings_layout: QtWidgets.QVBoxLayout = QtWidgets.QVBoxLayout(
+            remappings_widget
+        )
         remappings_layout.setContentsMargins(0, 0, 0, 0)
 
-        self.remappings_table: QTableWidget = QTableWidget(0, 2)
+        self.remappings_table: QtWidgets.QTableWidget = QtWidgets.QTableWidget(0, 2)
         self.remappings_table.setHorizontalHeaderLabels(["Old Key", "New Key"])
-        self.remappings_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        self.remappings_table.horizontalHeader().setSectionResizeMode(
+            QtWidgets.QHeaderView.ResizeMode.Stretch
+        )
         self.remappings_table.setMinimumHeight(80)
         self.remappings_table.setMaximumHeight(150)
         self.remappings_table.setEnabled(not self.readonly)
         remappings_layout.addWidget(self.remappings_table)
 
-        remap_btn_layout: QHBoxLayout = QHBoxLayout()
-        add_remap_btn: QPushButton = QPushButton("Add Row")
+        remap_btn_layout: QtWidgets.QHBoxLayout = QtWidgets.QHBoxLayout()
+        add_remap_btn: QtWidgets.QPushButton = QtWidgets.QPushButton("Add Row")
         add_remap_btn.setEnabled(not self.readonly)
         add_remap_btn.clicked.connect(self.add_remapping_row)
         remap_btn_layout.addWidget(add_remap_btn)
-        remove_remap_btn: QPushButton = QPushButton("Remove Row")
+        remove_remap_btn: QtWidgets.QPushButton = QtWidgets.QPushButton("Remove Row")
         remove_remap_btn.setEnabled(not self.readonly)
         remove_remap_btn.clicked.connect(self.remove_remapping_row)
         remap_btn_layout.addWidget(remove_remap_btn)
@@ -219,7 +220,7 @@ class StatePropertiesDialog(QDialog):
 
         if self._container_kind or not self.plugin_combo.currentData():
             self.description_edit.setPlainText(
-                self._build_description_text(
+                build_description_text(
                     None,
                     fallback_description=self._base_description,
                     fallback_outcomes=self._fallback_outcomes,
@@ -229,10 +230,13 @@ class StatePropertiesDialog(QDialog):
                 )
             )
 
-        buttons: QDialogButtonBox = QDialogButtonBox(
-            QDialogButtonBox.Close
+        buttons: QtWidgets.QDialogButtonBox = QtWidgets.QDialogButtonBox(
+            QtWidgets.QDialogButtonBox.StandardButton.Close
             if self.readonly
-            else (QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+            else (
+                QtWidgets.QDialogButtonBox.StandardButton.Ok
+                | QtWidgets.QDialogButtonBox.StandardButton.Cancel
+            )
         )
         if self.readonly:
             buttons.rejected.connect(self.reject)
@@ -241,148 +245,18 @@ class StatePropertiesDialog(QDialog):
             buttons.rejected.connect(self.reject)
         layout.addWidget(buttons)
 
-    @staticmethod
-    def _normalize_display_type(type_name: str) -> str:
-        """Normalize metadata type strings for user-facing display."""
-        normalized_type = str(type_name or "").strip()
-        if not normalized_type:
-            return ""
-
-        try:
-            return PluginInfo._normalize_cpp_metadata_type(normalized_type)
-        except Exception:
-            return normalized_type
-
-    def _format_key_line(self, key_info: Dict[str, str], is_input: bool) -> str:
-        key_name = str(key_info.get("name", "")).strip()
-        key_desc = str(key_info.get("description", "")).strip()
-        key_type = self._normalize_display_type(
-            key_info.get(
-                "type",
-                key_info.get("default_value_type", key_info.get("default_type", "")),
-            )
-        )
-
-        line = key_name if key_name else "(unnamed)"
-
-        if key_desc:
-            line += f": {key_desc}"
-
-        if is_input and key_info.get("has_default"):
-            default_value = str(key_info.get("default_value", "")).strip()
-            line += f" Default: {default_value}"
-        elif is_input and key_info.get("default_value") not in (None, ""):
-            default_value = str(key_info.get("default_value", "")).strip()
-            line += f" Default: {default_value}"
-
-        if key_type:
-            line += f" ({key_type})"
-
-        return line
-
-    def _format_parameter_line(self, parameter_info: Dict[str, str]) -> str:
-        param_name = str(parameter_info.get("name", "")).strip()
-        param_desc = str(parameter_info.get("description", "")).strip()
-        param_type = self._normalize_display_type(
-            parameter_info.get(
-                "type",
-                parameter_info.get(
-                    "default_value_type", parameter_info.get("default_type", "")
-                ),
-            )
-        )
-        line = param_name if param_name else "(unnamed)"
-        if param_desc:
-            line += f": {param_desc}"
-        if parameter_info.get("has_default"):
-            line += f" Default: {str(parameter_info.get('default_value', '')).strip()}"
-        elif parameter_info.get("default_value") not in (None, ""):
-            line += f" Default: {str(parameter_info.get('default_value', '')).strip()}"
-        if param_type:
-            line += f" ({param_type})"
-        return line
-
-    def _build_description_text(
-        self,
-        plugin_info: Optional[PluginInfo],
-        fallback_description: str = "",
-        fallback_outcomes: Optional[List[str]] = None,
-        fallback_parameters: Optional[List[Dict[str, str]]] = None,
-        fallback_input_keys: Optional[List[Dict[str, str]]] = None,
-        fallback_output_keys: Optional[List[Dict[str, str]]] = None,
-    ) -> str:
-        if plugin_info:
-            base_description = str(getattr(plugin_info, "description", "") or "").strip()
-            input_keys = list(getattr(plugin_info, "input_keys", []) or [])
-            output_keys = list(getattr(plugin_info, "output_keys", []) or [])
-            parameters = list(getattr(plugin_info, "parameters", []) or [])
-            outcomes = list(getattr(plugin_info, "outcomes", []) or [])
-            outcome_descriptions = dict(
-                getattr(plugin_info, "outcome_descriptions", {}) or {}
-            )
-        else:
-            base_description = fallback_description.strip()
-            input_keys = list(fallback_input_keys or [])
-            output_keys = list(fallback_output_keys or [])
-            parameters = list(fallback_parameters or [])
-            outcomes = list(fallback_outcomes or [])
-            outcome_descriptions = {}
-
-        sections: List[str] = []
-        if base_description:
-            sections.append(base_description)
-
-        if outcomes:
-            if sections:
-                sections.append("")
-            sections.append("Outcomes:")
-            for outcome in outcomes:
-                line = f" - {outcome}"
-                desc = outcome_descriptions.get(outcome)
-                if desc:
-                    line += f": {desc}"
-                sections.append(line)
-
-        if parameters:
-            if sections:
-                sections.append("")
-            lines = ["Parameters:"]
-            for parameter_info in parameters:
-                lines.append(" - " + self._format_parameter_line(parameter_info))
-            sections.append("\n".join(lines))
-
-        if input_keys:
-            if sections:
-                sections.append("")
-            lines = ["Input Keys:"]
-            for key_info in input_keys:
-                lines.append(" - " + self._format_key_line(key_info, True))
-            sections.append("\n".join(lines))
-
-        if output_keys:
-            if sections:
-                sections.append("")
-            lines = ["Output Keys:"]
-            for key_info in output_keys:
-                lines.append(" - " + self._format_key_line(key_info, False))
-            sections.append("\n".join(lines))
-
-        return "\n".join(sections).strip()
-
     def _declared_state_parameters(self) -> List[Dict[str, str]]:
         plugin_info: Optional[PluginInfo] = (
             None if self._container_kind else self.plugin_combo.currentData()
         )
-        if plugin_info is not None:
-            return list(getattr(plugin_info, "parameters", []) or [])
-        return list(self._fallback_parameters)
+        return declared_state_parameters(plugin_info, self._fallback_parameters)
 
     def add_parameter_overwrite_row(self) -> None:
         dialog = ParameterOverwriteDialog(
             declared_parameters=self._declared_state_parameters(),
             parent=self,
         )
-        if dialog.exec_():
+        if exec_dialog(dialog):
             self._add_parameter_row_with_data(dialog.get_parameter_data())
 
     def edit_parameter_overwrite_row(self, *_args) -> None:
@@ -397,7 +271,7 @@ class StatePropertiesDialog(QDialog):
             param_data=current_data,
             parent=self,
         )
-        if dialog.exec_():
+        if exec_dialog(dialog):
             self._set_parameter_row_data(row, dialog.get_parameter_data())
 
     def remove_parameter_overwrite_row(self) -> None:
@@ -412,8 +286,12 @@ class StatePropertiesDialog(QDialog):
         default_item = self.parameter_table.item(row, 3)
         return {
             "name": name_item.text().strip() if name_item else "",
-            "child_parameter": child_item.data(Qt.UserRole) if child_item else "",
-            "description": name_item.data(Qt.UserRole) if name_item else "",
+            "child_parameter": (
+                child_item.data(Qt.ItemDataRole.UserRole) if child_item else ""
+            ),
+            "description": (
+                name_item.data(Qt.ItemDataRole.UserRole) if name_item else ""
+            ),
             "default_type": type_item.text().strip() if type_item else "",
             "default_value": default_item.text().strip() if default_item else "",
         }
@@ -425,16 +303,16 @@ class StatePropertiesDialog(QDialog):
         default_type = str(parameter_data.get("default_type", "") or "").strip()
         default_value = str(parameter_data.get("default_value", "") or "").strip()
 
-        name_item = QTableWidgetItem(name)
-        name_item.setData(Qt.UserRole, description)
+        name_item = QtWidgets.QTableWidgetItem(name)
+        name_item.setData(Qt.ItemDataRole.UserRole, description)
         if description:
             name_item.setToolTip(description)
 
-        child_item = QTableWidgetItem(child_parameter)
-        child_item.setData(Qt.UserRole, child_parameter)
+        child_item = QtWidgets.QTableWidgetItem(child_parameter)
+        child_item.setData(Qt.ItemDataRole.UserRole, child_parameter)
 
-        type_item = QTableWidgetItem(default_type)
-        default_item = QTableWidgetItem(default_value)
+        type_item = QtWidgets.QTableWidgetItem(default_type)
+        default_item = QtWidgets.QTableWidgetItem(default_value)
 
         self.parameter_table.setItem(row, 0, name_item)
         self.parameter_table.setItem(row, 1, child_item)
@@ -447,12 +325,10 @@ class StatePropertiesDialog(QDialog):
         self._set_parameter_row_data(row, parameter_data)
 
     def get_parameter_overwrites(self) -> List[Dict[str, str]]:
-        overwrites: List[Dict[str, str]] = []
-        for row in range(self.parameter_table.rowCount()):
-            row_data = self._parameter_row_data(row)
-            if row_data["name"] and row_data["child_parameter"]:
-                overwrites.append(row_data)
-        return overwrites
+        return collect_parameter_overwrites(
+            self._parameter_row_data(row)
+            for row in range(self.parameter_table.rowCount())
+        )
 
     def add_remapping_row(self) -> None:
         row = self.remappings_table.rowCount()
@@ -466,14 +342,14 @@ class StatePropertiesDialog(QDialog):
     def _add_remapping_row_with_data(self, old_key: str, new_key: str) -> None:
         row = self.remappings_table.rowCount()
         self.remappings_table.insertRow(row)
-        self.remappings_table.setItem(row, 0, QTableWidgetItem(old_key))
-        self.remappings_table.setItem(row, 1, QTableWidgetItem(new_key))
+        self.remappings_table.setItem(row, 0, QtWidgets.QTableWidgetItem(old_key))
+        self.remappings_table.setItem(row, 1, QtWidgets.QTableWidgetItem(new_key))
 
     def update_description(self) -> None:
         plugin_info: Optional[PluginInfo] = (
             None if self._container_kind else self.plugin_combo.currentData()
         )
-        description_text = self._build_description_text(
+        description_text = build_description_text(
             plugin_info,
             fallback_description=self._base_description,
             fallback_outcomes=self._fallback_outcomes,
@@ -484,32 +360,20 @@ class StatePropertiesDialog(QDialog):
         self.description_edit.setPlainText(description_text)
 
     def update_plugin_list(self) -> None:
+        """Refresh the plugin combo from the selected state type."""
+
         self.plugin_combo.clear()
         if self._container_kind:
             self.update_description()
             return
 
-        current_type: int = self.type_combo.currentIndex()
-        if current_type == 0:
-            for plugin in self.available_plugins:
-                if plugin.plugin_type == "python":
-                    self.plugin_combo.addItem(
-                        f"{plugin.module}.{plugin.class_name}", plugin
-                    )
-        elif current_type == 1:
-            for plugin in self.available_plugins:
-                if plugin.plugin_type == "cpp":
-                    self.plugin_combo.addItem(plugin.class_name, plugin)
-        elif current_type == 2:
-            for plugin in self.available_plugins:
-                if plugin.plugin_type == "xml":
-                    filename: str = os.path.basename(plugin.file_name)
-                    display_name: str = (
-                        f"{plugin.package_name}::{filename}"
-                        if plugin.package_name
-                        else filename
-                    )
-                    self.plugin_combo.addItem(display_name, plugin)
+        plugin_types = {0: "python", 1: "cpp", 2: "xml"}
+        current_type = plugin_types.get(self.type_combo.currentIndex())
+        if current_type is not None:
+            for display_name, plugin in plugin_entries_for_type(
+                self.available_plugins, current_type
+            ):
+                self.plugin_combo.addItem(display_name, plugin)
 
         self.update_description()
 
@@ -529,19 +393,19 @@ class StatePropertiesDialog(QDialog):
             None if self._container_kind else self.plugin_combo.currentData()
         )
 
-        remappings: Dict[str, str] = {}
+        remapping_rows = []
         for row in range(self.remappings_table.rowCount()):
             old_item = self.remappings_table.item(row, 0)
             new_item = self.remappings_table.item(row, 1)
-            old_key = old_item.text().strip() if old_item else ""
-            new_key = new_item.text().strip() if new_item else ""
-            if old_key and new_key:
-                remappings[old_key] = new_key
+            remapping_rows.append(
+                (
+                    old_item.text() if old_item else "",
+                    new_item.text() if new_item else "",
+                )
+            )
+        remappings = collect_remappings(remapping_rows)
 
-        if plugin and hasattr(plugin, "outcomes"):
-            outcomes_list: List[str] = list(plugin.outcomes)
-        else:
-            outcomes_list = list(self._fallback_outcomes)
+        outcomes_list = resolve_outcomes(plugin, self._fallback_outcomes)
 
         description: str = self.description_edit.toPlainText().strip()
         return (

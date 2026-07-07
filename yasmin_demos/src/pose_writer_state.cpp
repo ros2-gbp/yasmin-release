@@ -1,19 +1,18 @@
 // Copyright (C) 2026 Maik Knof
 //
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
 //
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
+//     http://www.apache.org/licenses/LICENSE-2.0
 //
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
-#include "yasmin_demos/pose_writer_state.h"
+#include "yasmin_demos/pose_writer_state.hpp"
 
 #include <memory>
 #include <string>
@@ -29,10 +28,10 @@
 #include "yasmin_ros/ros_logs.hpp"
 
 PoseWriterState::PoseWriterState() : yasmin::State({"outcome1"}) {
-  position_x_ = 1.0;
-  position_y_ = 2.0;
-  position_z_ = 3.0;
-  orientation_w_ = 1.0;
+  this->position_x_ = 1.0;
+  this->position_y_ = 2.0;
+  this->position_z_ = 3.0;
+  this->orientation_w_ = 1.0;
   this->set_description(
       "Creates a Pose message, serializes it, and stores the serialized bytes "
       "and type information in the blackboard.");
@@ -52,23 +51,23 @@ PoseWriterState::PoseWriterState() : yasmin::State({"outcome1"}) {
 }
 
 void PoseWriterState::configure() {
-  position_x_ = this->get_parameter<double>("position_x");
-  position_y_ = this->get_parameter<double>("position_y");
-  position_z_ = this->get_parameter<double>("position_z");
-  orientation_w_ = this->get_parameter<double>("orientation_w");
+  this->position_x_ = this->get_parameter<double>("position_x");
+  this->position_y_ = this->get_parameter<double>("position_y");
+  this->position_z_ = this->get_parameter<double>("position_z");
+  this->orientation_w_ = this->get_parameter<double>("orientation_w");
 }
 
 std::string PoseWriterState::execute(yasmin::Blackboard::SharedPtr blackboard) {
   YASMIN_LOG_INFO("Executing state POSE_WRITER");
 
   geometry_msgs::msg::Pose pose;
-  pose.position.x = position_x_;
-  pose.position.y = position_y_;
-  pose.position.z = position_z_;
+  pose.position.x = this->position_x_;
+  pose.position.y = this->position_y_;
+  pose.position.z = this->position_z_;
   pose.orientation.x = 0.0;
   pose.orientation.y = 0.0;
   pose.orientation.z = 0.0;
-  pose.orientation.w = orientation_w_;
+  pose.orientation.w = this->orientation_w_;
 
   const std::vector<uint8_t> pose_bytes =
       yasmin_ros::serialize_interface<geometry_msgs::msg::Pose>(pose);
@@ -80,8 +79,6 @@ std::string PoseWriterState::execute(yasmin::Blackboard::SharedPtr blackboard) {
 
   return "outcome1";
 }
-
-PoseWriterState::~PoseWriterState() {}
 
 #include <pluginlib/class_list_macros.hpp>
 PLUGINLIB_EXPORT_CLASS(PoseWriterState, yasmin::State)

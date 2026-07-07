@@ -8,13 +8,17 @@ on:
 
 jobs:
   rolling_build_and_test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     container:
-      image: ros:rolling
+      image: ghcr.io/ros-tooling/setup-ros-docker/setup-ros-docker-ubuntu-resolute-ros-rolling-ros-base:master
     steps:
+      - name: Setup ROS 2
+        uses: ros-tooling/setup-ros@v0.7
+        with:
+          required-ros-distributions: rolling
       - name: Build and Test
         uses: ros-tooling/action-ros-ci@v0.4
         with:
-          package-name: yasmin yasmin_ros yasmin_factory yasmin_pcl
+          package-name: yasmin yasmin_ros yasmin_factory yasmin_pcl yasmin_editor
           target-ros2-distro: rolling
           coverage-result: false

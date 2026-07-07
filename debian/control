@@ -1,0 +1,12 @@
+Source: ros-lyrical-yasmin-msgs
+Section: misc
+Priority: optional
+Maintainer: "Miguel Ángel González Santamarta" <mgons@unileon.es>
+Build-Depends: debhelper (>= 9.0.0), ros-lyrical-ament-cmake, ros-lyrical-rosidl-default-generators, ros-lyrical-ros-workspace, ros-lyrical-rosidl-typesupport-fastrtps-c, ros-lyrical-rosidl-typesupport-fastrtps-cpp
+Homepage: https://index.ros.org/p/yasmin_msgs/#lyrical
+Standards-Version: 3.9.2
+
+Package: ros-lyrical-yasmin-msgs
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, ros-lyrical-rosidl-default-generators, ros-lyrical-ros-workspace
+Description: Msgs of (Yet Another State MachINe)

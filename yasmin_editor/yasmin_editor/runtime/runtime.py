@@ -1,33 +1,23 @@
-#!/usr/bin/env python3
-
 # Copyright (C) 2026 Maik Knof
 #
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
 #
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
-# You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <https://www.gnu.org/licenses/>.
-
-"""Runtime execution backend for the YASMIN editor.
-
-The runtime keeps a live state machine instance, mirrors its execution state into
-Qt signals, and provides a small control surface for play, pause, step, cancel,
-and shutdown.
-"""
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 from __future__ import annotations
 
 import threading
-from typing import Any, Iterable, Optional
+from typing import Any, Iterable, List, Optional, Set, Tuple, Union
 
-from PyQt5.QtCore import QObject, pyqtSignal
+from yasmin_editor.qt_compat import pyqtSignal, QtCore
 from yasmin_editor.runtime.logging import RuntimeLogger
 from yasmin_editor.runtime.traversal import (
     child_state,
@@ -43,7 +33,7 @@ from yasmin import Blackboard, StateMachine
 from yasmin_factory import YasminFactory
 
 
-class Runtime(QObject):
+class Runtime(QtCore.QObject):
     """Execute and observe a YASMIN state machine instance.
 
     The class exposes Qt signals so the editor can react to state changes,
@@ -68,6 +58,7 @@ class Runtime(QObject):
         self.factory = YasminFactory()
         self.sm: Optional[StateMachine] = None
         self.bb: Blackboard = Blackboard()
+        self.shell_bb: Blackboard = Blackboard(self.bb)
 
         self._running = False
         self._blocked = False
@@ -78,8 +69,8 @@ class Runtime(QObject):
         self._last_state_ref: Optional[Any] = None
         self._shutting_down = False
 
-        self._active_path: tuple[str, ...] = tuple()
-        self._last_transition: Optional[tuple[tuple[str, ...], tuple[str, ...], str]] = (
+        self._active_path: Tuple[str, ...] = tuple()
+        self._last_transition: Optional[Tuple[Tuple[str, ...], Tuple[str, ...], str]] = (
             None
         )
 
@@ -90,7 +81,7 @@ class Runtime(QObject):
 
         self._step_mode = False
         self._breakpoint_lock = threading.Lock()
-        self._breakpoints_before: set[tuple[str, ...]] = set()
+        self._breakpoints_before: Set[Tuple[str, ...]] = set()
         self._pause_status_message: Optional[str] = None
 
         self.logger = RuntimeLogger(
@@ -149,17 +140,17 @@ class Runtime(QObject):
         """Return the previously active runtime state object."""
         return self._last_state_ref
 
-    def get_active_path(self) -> tuple[str, ...]:
+    def get_active_path(self) -> Tuple[str, ...]:
         """Return the last known active path inside the loaded machine."""
         return self._active_path
 
     def get_last_transition(
         self,
-    ) -> Optional[tuple[tuple[str, ...], tuple[str, ...], str]]:
+    ) -> Optional[Tuple[Tuple[str, ...], Tuple[str, ...], str]]:
         """Return the most recently observed transition."""
         return self._last_transition
 
-    def get_logs(self) -> list[str]:
+    def get_logs(self) -> List[str]:
         """Return a copy of the collected runtime log lines."""
         return self.logger.get_logs()
 
@@ -169,7 +160,7 @@ class Runtime(QObject):
 
     def set_log_level(
         self,
-        level: yasmin.LogLevel | str,
+        level: Union[yasmin.LogLevel, str],
         emit_status: bool = True,
     ) -> None:
         """Update the runtime log level and re-apply the logger callback.
@@ -190,6 +181,7 @@ class Runtime(QObject):
             self.logger.configure()
             self.sm = self.factory.create_sm_from_file(path)
             self.bb = Blackboard()
+            self.shell_bb = Blackboard(self.bb)
             self._register_callbacks()
         except Exception as exc:
             self.sm = None
@@ -335,9 +327,9 @@ class Runtime(QObject):
 
     def _resolve_state_machine_cancel_exception_types(
         self,
-    ) -> tuple[type[BaseException], ...]:
+    ) -> Tuple[type[BaseException], ...]:
         """Return known Python exception types for full state-machine cancelation."""
-        exception_types: list[type[BaseException]] = []
+        exception_types: List[type[BaseException]] = []
 
         for owner in (yasmin, getattr(yasmin, "state_machine", None)):
             exception_type = getattr(owner, "StateMachineCancelException", None)
@@ -447,7 +439,7 @@ class Runtime(QObject):
 
     def _set_last_transition(
         self,
-        transition: Optional[tuple[tuple[str, ...], tuple[str, ...], str]],
+        transition: Optional[Tuple[Tuple[str, ...], Tuple[str, ...], str]],
     ) -> None:
         """Store the most recent transition and append a readable log line."""
         if self._last_transition == transition:
@@ -455,7 +447,7 @@ class Runtime(QObject):
         self._last_transition = transition
         self.active_transition_changed.emit(transition)
 
-    def _resolve_state_reference(self, path: tuple[str, ...]) -> Optional[Any]:
+    def _resolve_state_reference(self, path: Tuple[str, ...]) -> Optional[Any]:
         """Resolve a live state object from a runtime path."""
         if self.sm is None or not path:
             return None
@@ -468,25 +460,25 @@ class Runtime(QObject):
 
     def _update_shell_state_refs(
         self,
-        current_path: tuple[str, ...],
-        last_path: Optional[tuple[str, ...]] = None,
+        current_path: Tuple[str, ...],
+        last_path: Optional[Tuple[str, ...]] = None,
     ) -> None:
         """Update the live state references exposed in the shell."""
         if last_path is not None:
             self._last_state_ref = self._resolve_state_reference(last_path)
         self._current_state_ref = self._resolve_state_reference(current_path)
 
-    def _resolve_container(self, path: tuple[str, ...]) -> Optional[Any]:
+    def _resolve_container(self, path: Tuple[str, ...]) -> Optional[Any]:
         """Resolve a container object for the given path inside the live machine."""
         return resolve_container(self.sm, path)
 
     def _expand_to_deepest_known_path(
-        self, base_path: tuple[str, ...]
-    ) -> tuple[str, ...]:
+        self, base_path: Tuple[str, ...]
+    ) -> Tuple[str, ...]:
         """Expand a container path down to the deepest active child path."""
         return expand_to_deepest_known_path(self.sm, base_path)
 
-    def _resolve_initial_active_path(self) -> tuple[str, ...]:
+    def _resolve_initial_active_path(self) -> Tuple[str, ...]:
         """Return the initial path that should be highlighted before execution."""
         return self._expand_to_deepest_known_path(tuple())
 
@@ -514,13 +506,13 @@ class Runtime(QObject):
             if status_message:
                 self._pause_status_message = str(status_message)
 
-    def _has_breakpoint(self, state_path: tuple[str, ...]) -> bool:
+    def _has_breakpoint(self, state_path: Tuple[str, ...]) -> bool:
         """Return whether a breakpoint exists for the given state path."""
         normalized = tuple(str(item) for item in state_path)
         with self._breakpoint_lock:
             return normalized in self._breakpoints_before
 
-    def _request_breakpoint_pause(self, state_path: tuple[str, ...]) -> bool:
+    def _request_breakpoint_pause(self, state_path: Tuple[str, ...]) -> bool:
         """Arm a pause request when a matching breakpoint is reached."""
         normalized = tuple(str(item) for item in state_path)
         if not normalized or not self._has_breakpoint(normalized):
@@ -558,9 +550,9 @@ class Runtime(QObject):
         if self.sm is None:
             return
 
-        visited: set[int] = set()
+        visited: Set[int] = set()
 
-        def walk(container: Any, prefix: tuple[str, ...]) -> None:
+        def walk(container: Any, prefix: Tuple[str, ...]) -> None:
             if container is None:
                 return
 
@@ -613,7 +605,7 @@ class Runtime(QObject):
         self,
         bb: Blackboard,
         start_state: str,
-        prefix: tuple[str, ...] = tuple(),
+        prefix: Tuple[str, ...] = tuple(),
     ) -> None:
         """Handle a state start callback from the live runtime."""
         if self._disposed:
@@ -636,7 +628,7 @@ class Runtime(QObject):
         self,
         bb: Blackboard,
         outcome: str,
-        prefix: tuple[str, ...] = tuple(),
+        prefix: Tuple[str, ...] = tuple(),
     ) -> None:
         """Handle the completion of a container or the root machine."""
         if self._disposed:
@@ -665,46 +657,37 @@ class Runtime(QObject):
         from_state: str,
         to_state: str,
         outcome: str,
-        prefix: tuple[str, ...] = tuple(),
+        prefix: Tuple[str, ...] = tuple(),
     ) -> None:
-        """Handle transitions and expose the current blackboard safely."""
+        """Handle transitions while keeping shell remappings isolated."""
         if self._disposed:
             return
 
-        # Store blackboard remappings temporarily so the editor can inspect the
-        # raw key space without mutating the runtime-visible mapping.
-        remappings = dict(bb.get_remappings())
+        from_path = prefix + (str(from_state),)
+        to_path = prefix + (str(to_state),)
 
-        try:
-            bb.set_remappings({})
+        self.logger.append(
+            f"[TRANSITION] {' / '.join(from_path)} "
+            f"--[{outcome}]--> {' / '.join(to_path)}"
+        )
+        self._set_last_transition((from_path, to_path, str(outcome)))
 
-            from_path = prefix + (str(from_state),)
-            to_path = prefix + (str(to_state),)
+        self._set_active_path(from_path)
+        self._current_state_ref = self._resolve_state_reference(from_path)
 
-            self.logger.append(
-                f"[TRANSITION] {' / '.join(from_path)} "
-                f"--[{outcome}]--> {' / '.join(to_path)}"
-            )
-            self._set_last_transition((from_path, to_path, str(outcome)))
+        with self._pause_condition:
+            if self._step_mode:
+                self._step_mode = False
+                self._pause_requested = True
 
-            self._set_active_path(from_path)
-            self._current_state_ref = self._resolve_state_reference(from_path)
-
-            with self._pause_condition:
-                if self._step_mode:
-                    self._step_mode = False
-                    self._pause_requested = True
-
-            if self._has_breakpoint(to_path):
-                self._update_shell_state_refs(to_path, from_path)
-                self._set_active_path(to_path)
-                self._current_state_ref = self._resolve_state_reference(to_path)
-                self._request_breakpoint_pause(to_path)
-                self._pause_if_requested()
-
-            active_path = self._expand_to_deepest_known_path(to_path)
-            self._update_shell_state_refs(active_path, from_path)
-            self._set_active_path(active_path)
+        if self._has_breakpoint(to_path):
+            self._update_shell_state_refs(to_path, from_path)
+            self._set_active_path(to_path)
+            self._current_state_ref = self._resolve_state_reference(to_path)
+            self._request_breakpoint_pause(to_path)
             self._pause_if_requested()
-        finally:
-            bb.set_remappings(remappings)
+
+        active_path = self._expand_to_deepest_known_path(to_path)
+        self._update_shell_state_refs(active_path, from_path)
+        self._set_active_path(active_path)
+        self._pause_if_requested()

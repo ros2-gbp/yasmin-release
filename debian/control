@@ -1,0 +1,12 @@
+Source: ros-rolling-yasmin-cli
+Section: misc
+Priority: optional
+Maintainer: "Maik Knof" <maik.knof@gmx.de>
+Build-Depends: debhelper (>= 9.0.0), ros-rolling-ros-workspace, python3-all, python3-setuptools, dh-python
+Homepage: https://index.ros.org/p/yasmin_cli/#rolling
+Standards-Version: 3.9.2
+
+Package: ros-rolling-yasmin-cli
+Architecture: any
+Depends: ${python3:Depends}, ${misc:Depends}, ros-rolling-ament-index-python, ros-rolling-rclpy, ros-rolling-ros2cli, ros-rolling-yasmin, ros-rolling-yasmin-factory, ros-rolling-yasmin-plugins-manager, ros-rolling-ros-workspace
+Description: CLI tools for inspecting YASMIN states and metadata.

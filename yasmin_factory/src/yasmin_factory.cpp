@@ -1,17 +1,16 @@
 // Copyright (C) 2025 Miguel Ángel González Santamarta
 //
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
 //
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
+//     http://www.apache.org/licenses/LICENSE-2.0
 //
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 #include <algorithm>
 #include <cctype>
@@ -21,7 +20,16 @@
 #include <unordered_map>
 #include <vector>
 
+#if __has_include("rclcpp/version.h")
+#include "rclcpp/version.h"
+#if RCLCPP_VERSION_GTE(32, 0, 0)
+#include <ament_index_cpp/get_package_share_path.hpp>
+#else
 #include <ament_index_cpp/get_package_share_directory.hpp>
+#endif
+#else
+#include <ament_index_cpp/get_package_share_directory.hpp>
+#endif
 
 #include "yasmin/blackboard_pywrapper.hpp"
 #include "yasmin/types.hpp"
@@ -371,6 +379,10 @@ PythonStateHolder::PythonStateHolder(yasmin::State::SharedPtr cpp_state,
   }
 }
 
+yasmin::State *PythonStateHolder::get_inner_state() {
+  return this->cpp_state_.get();
+}
+
 void PythonStateHolder::configure() {
   for (const auto &parameter : this->get_parameters()) {
     if (!this->cpp_state_->is_parameter_declared(parameter.name)) {
@@ -412,7 +424,33 @@ void YasminFactory::cleanup() {
   }
 }
 
+namespace {
+PyThreadState *saved_gil_state = nullptr;
+
+void gil_before_fork() {
+  // Acquire the GIL if Python is initialized before saving/releasing it.
+  // This ensures PyEval_SaveThread is called with the GIL held.
+  if (Py_IsInitialized()) {
+    // If GIL is not held, acquire it first
+    PyGILState_STATE gstate = PyGILState_Ensure();
+    saved_gil_state = PyEval_SaveThread();
+    // Note: PyEval_SaveThread releases the GIL, so PyGILState_Release
+    // is not called here.
+  }
+}
+
+void gil_after_join() {
+  if (saved_gil_state) {
+    PyEval_RestoreThread(saved_gil_state);
+    saved_gil_state = nullptr;
+  }
+}
+} // namespace
+
 void YasminFactory::initialize_python() {
+  // Set GIL hooks for OrthogonalState region threads
+  yasmin::OrthogonalState::set_thread_hooks(gil_before_fork, gil_after_join);
+
   if (!py_initialized_) {
     // Check if Python is already initialized (e.g., by ROS or another module)
     if (!Py_IsInitialized()) {
@@ -659,6 +697,14 @@ YasminFactory::create_concurrence(tinyxml2::XMLElement *conc_elem) {
       std::string name = this->get_required_attribute(child, "name");
       states[name] = this->create_sm(child);
       parameter_mappings[name] = this->get_parameter_mappings(child);
+    } else if (child_name == "OrthogonalState") {
+      std::string name = this->get_required_attribute(child, "name");
+      states[name] = this->create_orthogonal_state(child);
+      parameter_mappings[name] = this->get_parameter_mappings(child);
+    } else if (child_name == "JoinState") {
+      std::string name = this->get_required_attribute(child, "name");
+      states[name] = this->create_join_state(child);
+      parameter_mappings[name] = this->get_parameter_mappings(child);
     }
   }
 
@@ -726,6 +772,78 @@ YasminFactory::create_concurrence(tinyxml2::XMLElement *conc_elem) {
   return concurrence;
 }
 
+yasmin::OrthogonalState::SharedPtr
+YasminFactory::create_orthogonal_state(tinyxml2::XMLElement *orth_elem) {
+  std::string default_outcome =
+      this->get_optional_attribute(orth_elem, "default_outcome", "");
+
+  yasmin::OutcomeMap outcome_map;
+
+  // Parse outcome map (same schema as Concurrence)
+  for (tinyxml2::XMLElement *child = orth_elem->FirstChildElement(); child;
+       child = child->NextSiblingElement()) {
+    const std::string child_tag = child->Name();
+    if (child_tag == "OutcomeMap") {
+      const std::string outcome_to =
+          this->get_required_attribute(child, "outcome");
+      outcome_map[outcome_to] = {};
+
+      for (tinyxml2::XMLElement *item = child->FirstChildElement("Item"); item;
+           item = item->NextSiblingElement("Item")) {
+        const std::string state_name =
+            this->get_required_attribute(item, "state");
+        const std::string outcome =
+            this->get_required_attribute(item, "outcome");
+        outcome_map[outcome_to][state_name] = outcome;
+      }
+    } else if (child_tag == "Outcome") {
+      const std::string outcome_to = this->get_required_attribute(child, "to");
+      outcome_map[outcome_to] = {};
+
+      for (tinyxml2::XMLElement *transition =
+               child->FirstChildElement("Transition");
+           transition;
+           transition = transition->NextSiblingElement("Transition")) {
+        const std::string state_name =
+            this->get_required_attribute(transition, "state");
+        const std::string outcome =
+            this->get_required_attribute(transition, "outcome");
+        outcome_map[outcome_to][state_name] = outcome;
+      }
+    }
+  }
+
+  auto ort = yasmin::OrthogonalState::make_shared(default_outcome, outcome_map);
+
+  // Parse regions
+  for (tinyxml2::XMLElement *child = orth_elem->FirstChildElement(); child;
+       child = child->NextSiblingElement()) {
+    if (std::string(child->Name()) != "Region") {
+      continue;
+    }
+
+    std::string region_name = this->get_required_attribute(child, "name");
+    auto region_sm = this->create_sm(child);
+    region_sm->set_name(region_name);
+    ort->add_region(region_name, region_sm);
+  }
+
+  this->add_blackboard_keys(ort, orth_elem);
+  this->add_parameters(ort, orth_elem);
+
+  return ort;
+}
+
+yasmin::JoinState::SharedPtr
+YasminFactory::create_join_state(tinyxml2::XMLElement *join_elem) {
+  const std::string sync_id =
+      this->get_optional_attribute(join_elem, "sync_id", "");
+  const std::string outcome =
+      this->get_optional_attribute(join_elem, "outcome", "joined");
+
+  return std::make_shared<yasmin::JoinState>(sync_id, outcome);
+}
+
 yasmin::StateMachine::SharedPtr
 YasminFactory::create_sm(tinyxml2::XMLElement *root) {
 
@@ -740,11 +858,9 @@ YasminFactory::create_sm(tinyxml2::XMLElement *root) {
       try {
 
 #if __has_include("rclcpp/version.h")
-#include "rclcpp/version.h"
-#if RCLCPP_VERSION_GTE(29, 5, 1)
-        std::filesystem::path pkg_path;
-        ament_index_cpp::get_package_share_directory(package, pkg_path);
-        package_path = pkg_path.string();
+#if RCLCPP_VERSION_GTE(32, 0, 0)
+        package_path =
+            ament_index_cpp::get_package_share_path(package).string();
 #else
         package_path = ament_index_cpp::get_package_share_directory(package);
 #endif
@@ -792,7 +908,8 @@ YasminFactory::create_sm(tinyxml2::XMLElement *root) {
 
     std::string child_name = child->Name();
     if (child_name != "State" && child_name != "Concurrence" &&
-        child_name != "StateMachine") {
+        child_name != "StateMachine" && child_name != "OrthogonalState" &&
+        child_name != "JoinState") {
       continue;
     }
 
@@ -829,6 +946,10 @@ YasminFactory::create_sm(tinyxml2::XMLElement *root) {
       state = this->create_concurrence(child);
     } else if (child_name == "StateMachine") {
       state = this->create_sm(child);
+    } else if (child_name == "OrthogonalState") {
+      state = this->create_orthogonal_state(child);
+    } else if (child_name == "JoinState") {
+      state = this->create_join_state(child);
     } else {
       continue;
     }

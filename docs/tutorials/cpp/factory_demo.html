@@ -39,6 +39,7 @@
           <li><a href="../../index.html">Introduction</a></li>
           <li><a href="../../docker.html">Docker Environment</a></li>
           <li><a href="../../main_concepts.html">Main Concepts</a></li>
+          <li><a href="../../callback_signal.html">Callback Signal</a></li>
           <li><a href="../../xml_factory.html">XML State Machines</a></li>
           <li><a href="../../packages.html">Packages Overview</a></li>
           <li><a href="../../yasmin_api.html">API Reference</a></li>
@@ -73,7 +74,17 @@
             Advanced
             <ul>
               <li><a href="factory_demo.html">Factory (XML)</a></li>
+              <li><a href="multiple_states_demo.html">Multiple States</a></li>
               <li><a href="nav2_demo.html">Nav2 Demo</a></li>
+              <li><a href="orthogonal_demo.html">Orthogonal Regions</a></li>
+              <li>
+                <a href="orthogonal_sync_demo.html"
+                  >Orthogonal Regions with Sync</a
+                >
+              </li>
+              <li>
+                <a href="ros_serialization_demo.html">ROS Serialization</a>
+              </li>
             </ul>
           </li>
         </ul>
@@ -112,7 +123,25 @@
             Advanced
             <ul>
               <li><a href="../python/factory_demo.html">Factory (XML)</a></li>
+              <li>
+                <a href="../python/multiple_states_demo.html"
+                  >Multiple States</a
+                >
+              </li>
               <li><a href="../python/nav2_demo.html">Nav2 Demo</a></li>
+              <li>
+                <a href="../python/orthogonal_demo.html">Orthogonal Regions</a>
+              </li>
+              <li>
+                <a href="../python/orthogonal_sync_demo.html"
+                  >Orthogonal Regions with Sync</a
+                >
+              </li>
+              <li>
+                <a href="../python/ros_serialization_demo.html"
+                  >ROS Serialization</a
+                >
+              </li>
             </ul>
           </li>
         </ul>
@@ -201,13 +230,12 @@
           package.
         </p>
 
-        <pre><code class="language-cpp">#include &lt;iostream&gt;
-#include &lt;memory&gt;
+        <pre><code class="language-cpp">#include &lt;memory&gt;
 #include &lt;string&gt;
 
-#include "ament_index_cpp/get_package_share_directory.hpp"
-#include "rclcpp/rclcpp.hpp"
+#include &lt;rclcpp/rclcpp.hpp&gt;
 #include "yasmin/state_machine.hpp"
+#include "yasmin_demos/share_directory.hpp"
 #include "yasmin_factory/yasmin_factory.hpp"
 #include "yasmin_ros/ros_logs.hpp"
 #include "yasmin_viewer/yasmin_viewer_pub.hpp"
@@ -224,23 +252,8 @@ int main(int argc, char *argv[]) {
   yasmin_factory::YasminFactory factory;
 
   // Load state machine from XML file
-  std::string xml_file =
-#if __has_include("rclcpp/version.h")
-#include "rclcpp/version.h"
-#if RCLCPP_VERSION_GTE(29, 5, 1)
-      ([]() {
-        std::filesystem::path p;
-        ament_index_cpp::get_package_share_directory("yasmin_demos", p);
-        return (p / "state_machines/demo_2.xml").string();
-      })();
-#else
-      ament_index_cpp::get_package_share_directory("yasmin_demos") +
-      "/state_machines/demo_2.xml";
-#endif
-#else
-      ament_index_cpp::get_package_share_directory("yasmin_demos") +
-      "/state_machines/demo_2.xml";
-#endif
+  std::string xml_file = yasmin_demos::get_share_file_path(
+      "state_machines/demo_2.xml");
 
   // Create the state machine from the XML file
   auto sm = factory.create_sm_from_file(xml_file);

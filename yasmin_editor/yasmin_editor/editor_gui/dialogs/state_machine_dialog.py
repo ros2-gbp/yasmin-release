@@ -1,27 +1,20 @@
 # Copyright (C) 2025 Miguel Ángel González Santamarta
 #
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
 #
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
-# You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <https://www.gnu.org/licenses/>.
-
-"""Dialog for creating and editing state machine containers."""
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 from typing import Dict, List, Optional, Tuple
-
-from PyQt5.QtWidgets import QComboBox, QDialog, QLabel
-
-from yasmin_editor.editor_gui.dialogs.container_dialog_base import (
-    ContainerDialogBase,
-)
+from yasmin_editor.qt_compat import QtWidgets
+from yasmin_editor.editor_gui.dialogs.container_dialog_base import ContainerDialogBase
 
 
 class StateMachineDialog(ContainerDialogBase):
@@ -35,12 +28,12 @@ class StateMachineDialog(ContainerDialogBase):
         remappings: Optional[Dict[str, str]] = None,
         child_states: Optional[List[str]] = None,
         edit_mode: bool = False,
-        parent: Optional[QDialog] = None,
+        parent: Optional[QtWidgets.QDialog] = None,
         description: str = "",
         defaults: Optional[List[Dict[str, str]]] = None,
     ) -> None:
-        self.start_state_combo: Optional[QComboBox] = None
-        self.start_state_label: Optional[QLabel] = None
+        self.start_state_combo: Optional[QtWidgets.QComboBox] = None
+        self.start_state_label: Optional[QtWidgets.QLabel] = None
         self._child_states = child_states
         self._start_state = start_state
         self.defaults = defaults or []
@@ -58,7 +51,7 @@ class StateMachineDialog(ContainerDialogBase):
 
     def _create_selector_row(self) -> None:
         """Create the state machine start-state selector."""
-        self.start_state_label = QLabel("Start State:")
+        self.start_state_label = QtWidgets.QLabel("Start State:")
         self.start_state_combo = self.create_optional_combo(
             values=self._child_states,
             current_value=self._start_state,

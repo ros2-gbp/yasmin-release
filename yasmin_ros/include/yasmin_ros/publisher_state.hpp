@@ -1,17 +1,16 @@
 // Copyright (C) 2025 Miguel Ángel González Santamarta
 //
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
 //
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
+//     http://www.apache.org/licenses/LICENSE-2.0
 //
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 #ifndef YASMIN_ROS__PUBLISHER_STATE_HPP_
 #define YASMIN_ROS__PUBLISHER_STATE_HPP_
@@ -42,7 +41,7 @@ namespace yasmin_ros {
  */
 template <typename MsgT> class PublisherState : public yasmin::State {
 
-  /// Function type for creating messages for topic.
+  /// @brief Function type for creating messages for topic.
   using CreateMessageHandler =
       std::function<MsgT(yasmin::Blackboard::SharedPtr)>;
 
@@ -55,9 +54,10 @@ public:
   /**
    * @brief Construct a new PublisherState with ROS 2 node and specific QoS.
    *
-   * @param topic_name The name of the topic to monitor.
+   * @param topic_name The name of the topic to publish to.
    * @param create_message_handler A callback handler to create messages.
    * @param qos Quality of Service settings for the topic.
+   * @param callback_group The callback group for the publisher.
    */
   PublisherState(const std::string &topic_name,
                  CreateMessageHandler create_message_handler,
@@ -70,17 +70,18 @@ public:
    * @brief Construct a new PublisherState with ROS 2 node and specific QoS.
    *
    * @param node The ROS 2 node.
-   * @param topic_name The name of the topic to monitor.
+   * @param topic_name The name of the topic to publish to.
    * @param create_message_handler A callback handler to create messages.
    * @param qos Quality of Service settings for the topic.
+   * @param callback_group The callback group for the publisher.
    */
   PublisherState(const rclcpp::Node::SharedPtr &node,
                  const std::string &topic_name,
                  CreateMessageHandler create_message_handler,
                  rclcpp::QoS qos = 10,
                  rclcpp::CallbackGroup::SharedPtr callback_group = nullptr)
-      : State({basic_outcomes::SUCCEED}), topic_name(topic_name),
-        create_message_handler(create_message_handler) {
+      : State({basic_outcomes::SUCCEED, basic_outcomes::CANCEL}),
+        topic_name(topic_name), create_message_handler(create_message_handler) {
 
     this->set_outcome_description(basic_outcomes::SUCCEED,
                                   "The message was published successfully");
@@ -104,9 +105,13 @@ public:
    * @brief Execute the publishing operation.
    *
    * @param blackboard A shared pointer to the blackboard for data storage.
-   * @return A string outcome indicating the result of the monitoring operation.
+   * @return A string outcome indicating the result of the publishing operation.
    */
   std::string execute(yasmin::Blackboard::SharedPtr blackboard) override {
+
+    if (this->is_canceled()) {
+      return basic_outcomes::CANCEL;
+    }
 
     YASMIN_LOG_DEBUG("Publishing to topic '%s'", this->topic_name.c_str());
     MsgT msg = this->create_message_handler(blackboard);
@@ -115,18 +120,18 @@ public:
   }
 
 protected:
-  /// Shared pointer to the ROS 2 node.
+  /// @brief Shared pointer to the ROS 2 node.
   rclcpp::Node::SharedPtr node_;
 
 private:
-  /// Publisher to the ROS 2 topic.
+  /// @brief Publisher to the ROS 2 topic.
   std::shared_ptr<rclcpp::Publisher<MsgT>> pub;
-  /// Name of the topic to monitor.
+  /// @brief Name of the topic to publish to.
   std::string topic_name;
-  /// Callback handler to create messages.
+  /// @brief Callback handler to create messages.
   CreateMessageHandler create_message_handler;
 };
 
 } // namespace yasmin_ros
 
-#endif // YASMIN_ROS__MONITOR_STATE_HPP_
+#endif // YASMIN_ROS__PUBLISHER_STATE_HPP_

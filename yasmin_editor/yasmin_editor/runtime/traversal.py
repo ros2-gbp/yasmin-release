@@ -1,24 +1,31 @@
 # Copyright (C) 2026 Maik Knof
 #
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
 #
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
-# You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+"""Helpers for traversing live YASMIN runtime container objects.
+
+The runtime interacts with Python and C++ backed state containers. These
+helpers normalize that mixed API surface so the runtime code can reason about
+paths and nested containers without scattering compatibility checks.
+"""
 
 from __future__ import annotations
 
-from typing import Any, Optional
+from typing import Any, Dict, Optional, Set, Tuple
 
 
-def container_states(container: Any) -> dict[str, Any]:
+def container_states(container: Any) -> Dict[str, Any]:
+    """Return a normalized mapping of child state names to runtime objects."""
     if container is None:
         return {}
 
@@ -43,7 +50,7 @@ def container_states(container: Any) -> dict[str, Any]:
     if not hasattr(states, "items"):
         return {}
 
-    normalized: dict[str, Any] = {}
+    normalized: Dict[str, Any] = {}
     for name, value in states.items():
         child_state = value
         if isinstance(value, dict):
@@ -59,10 +66,12 @@ def container_states(container: Any) -> dict[str, Any]:
 
 
 def child_state(container: Any, state_name: str) -> Optional[Any]:
+    """Return one named child state from a container if it exists."""
     return container_states(container).get(str(state_name))
 
 
 def is_concurrence_object(state: Any) -> bool:
+    """Return whether the runtime object behaves like a concurrence."""
     if state is None:
         return False
 
@@ -80,6 +89,7 @@ def is_concurrence_object(state: Any) -> bool:
 
 
 def is_container_object(state: Any) -> bool:
+    """Return whether the runtime object exposes container child-state access."""
     if state is None:
         return False
     return callable(getattr(state, "_get_states_cpp", None)) or callable(
@@ -87,7 +97,8 @@ def is_container_object(state: Any) -> bool:
     )
 
 
-def resolve_container(root_container: Any, path: tuple[str, ...]) -> Optional[Any]:
+def resolve_container(root_container: Any, path: Tuple[str, ...]) -> Optional[Any]:
+    """Resolve a nested container path from the runtime root object."""
     container = root_container
     if container is None:
         return None
@@ -101,6 +112,7 @@ def resolve_container(root_container: Any, path: tuple[str, ...]) -> Optional[An
 
 
 def get_container_entry_state_name(container: Any) -> Optional[str]:
+    """Return the entry state name used when stepping into a container."""
     if container is None:
         return None
 
@@ -131,11 +143,12 @@ def get_container_entry_state_name(container: Any) -> Optional[str]:
 
 def expand_to_deepest_known_path(
     root_container: Any,
-    base_path: tuple[str, ...],
-) -> tuple[str, ...]:
+    base_path: Tuple[str, ...],
+) -> Tuple[str, ...]:
+    """Follow container entry states until the deepest known active path is reached."""
     path = tuple(base_path)
     container = resolve_container(root_container, path)
-    visited: set[int] = set()
+    visited: Set[int] = set()
 
     while is_container_object(container) and id(container) not in visited:
         if is_concurrence_object(container):

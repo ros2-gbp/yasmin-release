@@ -1,17 +1,16 @@
 # Copyright (C) 2025 Miguel Ángel González Santamarta
 #
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
 #
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
-# You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 import importlib
 import inspect
@@ -20,7 +19,7 @@ import os
 import time
 from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 import yasmin
 from ament_index_python import (
@@ -99,7 +98,7 @@ class PluginManager:
         tracked_files: List[dict] = []
         tracked_dirs: List[dict] = []
         ignored_packages_env = set(get_ignored_packages_from_env())
-        packages = list(get_packages_with_prefixes().keys())
+        packages = list(get_packages_with_prefixes())
         cpp_resource_map = self._get_cpp_plugin_resource_map()
 
         for package in tqdm(packages, desc="Loading plugins", disable=hide_progress):
@@ -163,13 +162,10 @@ class PluginManager:
         ):
             return False
 
-        for signature in cache.get("tracked_files", []):
-            if not is_stat_signature_valid(signature):
-                return False
-
-        for signature in cache.get("tracked_dirs", []):
-            if not is_stat_signature_valid(signature):
-                return False
+        for key in ("tracked_files", "tracked_dirs"):
+            for signature in cache.get(key, []):
+                if not is_stat_signature_valid(signature):
+                    return False
 
         self.cpp_plugins = [
             PluginInfo.from_cache_dict(data) for data in cache.get("cpp_plugins", [])
@@ -230,30 +226,30 @@ class PluginManager:
         """
         return "__pluginlib__plugin" in resource_type
 
-    def _get_registered_plugin_resource_list(self) -> list[str]:
+    def _get_registered_plugin_resource_list(self) -> List[str]:
         """
         Return all pluginlib-related resource types from the ament index.
 
         Returns
         -------
-        list[str]
+        List[str]
             List of pluginlib resource type names.
         """
         return list(filter(self._is_plugin_resource_type, get_resource_types()))
 
-    def _get_cpp_plugin_resource_map(self) -> dict[str, list[str]]:
+    def _get_cpp_plugin_resource_map(self) -> Dict[str, List[str]]:
         """
         Build a mapping from package name to exported plugin XML resource paths.
 
         Returns
         -------
-        dict[str, list[str]]
+        Dict[str, List[str]]
             Mapping from package name to plugin XML paths relative to the package prefix.
         """
-        resource_map: dict[str, list[str]] = {}
+        resource_map: Dict[str, List[str]] = {}
 
         for plugin_resource in self._get_registered_plugin_resource_list():
-            for package_name in get_resources(plugin_resource).keys():
+            for package_name in get_resources(plugin_resource):
                 resource_map.setdefault(package_name, [])
 
                 try:
@@ -330,7 +326,7 @@ class PluginManager:
         self,
         package_name: str,
         tracked_files: Optional[List[dict]] = None,
-        cpp_resource_map: Optional[dict[str, list[str]]] = None,
+        cpp_resource_map: Optional[Dict[str, List[str]]] = None,
     ) -> None:
         """
         Discover YASMIN C++ plugins from pluginlib exports.
@@ -344,7 +340,7 @@ class PluginManager:
             Package name to inspect.
         tracked_files : Optional[List[dict]]
             Optional list that receives signatures of parsed plugin XML files.
-        cpp_resource_map : Optional[dict[str, list[str]]]
+        cpp_resource_map : Optional[Dict[str, List[str]]]
             Optional precomputed map of package names to plugin XML resource paths.
         """
         if cpp_resource_map is None:

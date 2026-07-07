@@ -1,11 +1,11 @@
-name: Rolling Docker Push
+name: Lyrical Docker Push
 
 on:
   release:
     types: [published]
 
 jobs:
-  rolling_docker_push:
+  lyrical_docker_push:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -30,6 +30,6 @@ jobs:
       - name: Build and push docker
         uses: docker/build-push-action@v6
         with:
-          build-args: ROS_DISTRO=rolling
+          build-args: ROS_DISTRO=lyrical
           push: true
-          tags: mgons/yasmin:rolling-${{ github.event.release.tag_name }}
+          tags: mgons/yasmin:lyrical-${{ github.event.release.tag_name }}

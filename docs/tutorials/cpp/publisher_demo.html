@@ -39,6 +39,7 @@
           <li><a href="../../index.html">Introduction</a></li>
           <li><a href="../../docker.html">Docker Environment</a></li>
           <li><a href="../../main_concepts.html">Main Concepts</a></li>
+          <li><a href="../../callback_signal.html">Callback Signal</a></li>
           <li><a href="../../xml_factory.html">XML State Machines</a></li>
           <li><a href="../../packages.html">Packages Overview</a></li>
           <li><a href="../../yasmin_api.html">API Reference</a></li>
@@ -73,7 +74,17 @@
             Advanced
             <ul>
               <li><a href="factory_demo.html">Factory (XML)</a></li>
+              <li><a href="multiple_states_demo.html">Multiple States</a></li>
               <li><a href="nav2_demo.html">Nav2 Demo</a></li>
+              <li><a href="orthogonal_demo.html">Orthogonal Regions</a></li>
+              <li>
+                <a href="orthogonal_sync_demo.html"
+                  >Orthogonal Regions with Sync</a
+                >
+              </li>
+              <li>
+                <a href="ros_serialization_demo.html">ROS Serialization</a>
+              </li>
             </ul>
           </li>
         </ul>
@@ -112,7 +123,25 @@
             Advanced
             <ul>
               <li><a href="../python/factory_demo.html">Factory (XML)</a></li>
+              <li>
+                <a href="../python/multiple_states_demo.html"
+                  >Multiple States</a
+                >
+              </li>
               <li><a href="../python/nav2_demo.html">Nav2 Demo</a></li>
+              <li>
+                <a href="../python/orthogonal_demo.html">Orthogonal Regions</a>
+              </li>
+              <li>
+                <a href="../python/orthogonal_sync_demo.html"
+                  >Orthogonal Regions with Sync</a
+                >
+              </li>
+              <li>
+                <a href="../python/ros_serialization_demo.html"
+                  >ROS Serialization</a
+                >
+              </li>
             </ul>
           </li>
         </ul>
@@ -233,7 +262,7 @@ public:
           maximum is reached (to exit), or <code>"outcome2"</code> to continue
           publishing. In the main function, we create a state machine with two
           states: <code>PUBLISHING_INT</code> publishes a message and
-          transitions to <code>CHECKINNG_COUNTS</code>, which evaluates the
+          transitions to <code>CHECKING_COUNTS</code>, which evaluates the
           condition. If the maximum hasn't been reached, it loops back to
           <code>PUBLISHING_INT</code>, creating a publish-check cycle. We
           initialize the blackboard with <code>counter = 0</code> and
@@ -290,9 +319,9 @@ int main(int argc, char *argv[]) {
   sm-&gt;add_state("PUBLISHING_INT", std::make_shared&lt;PublishIntState&gt;(),
                 {
                     {yasmin_ros::basic_outcomes::SUCCEED,
-                     "CHECKINNG_COUNTS"},
+                     "CHECKING_COUNTS"},
                 });
-  sm-&gt;add_state("CHECKINNG_COUNTS", checking_counts_state,
+  sm-&gt;add_state("CHECKING_COUNTS", checking_counts_state,
                 {{"outcome1", yasmin_ros::basic_outcomes::SUCCEED},
                  {"outcome2", "PUBLISHING_INT"}});
 
@@ -337,7 +366,7 @@ int main(int argc, char *argv[]) {
 
     <footer>
       <p>
-        &copy; 2025 YASMIN Project. Licensed under GPL v3.0. | Documentation
+        &copy; 2026 YASMIN Project. Licensed under Apache-2.0. | Documentation
         generated with <a href="../../doxygen.html" target="_blank">Doxygen</a>
       </p>
     </footer>

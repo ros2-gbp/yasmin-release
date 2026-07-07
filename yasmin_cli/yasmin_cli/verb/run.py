@@ -1,27 +1,30 @@
-#!/usr/bin/env python3
-
 # Copyright (C) 2026 Maik Knof
 #
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
 #
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
-# You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 from __future__ import annotations
 
-import json
 import subprocess
 import tempfile
 import xml.etree.ElementTree as ET
 from pathlib import Path
+from typing import Dict, List, Union
+
+from yasmin_factory.type_utils import (
+    format_default_value,
+    normalize_type,
+    parse_key_value,
+)
 
 from yasmin_cli.completer import (
     get_state_machine_input_keys,
@@ -36,8 +39,8 @@ from yasmin_cli.completer import (
 INPUT_KEY_TYPES = {"in", "in/out"}
 
 
-def _parse_assignments(values: list[str], assignment_kind: str) -> dict[str, str]:
-    result: dict[str, str] = {}
+def _parse_assignments(values: List[str], assignment_kind: str) -> Dict[str, str]:
+    result: Dict[str, str] = {}
 
     for value in values:
         if "=" not in value:
@@ -58,168 +61,6 @@ def _parse_assignments(values: list[str], assignment_kind: str) -> dict[str, str
     return result
 
 
-def _normalize_type(type_name: str) -> str:
-    """Normalize XML type aliases to one canonical name shared across tools."""
-    normalized = (type_name or "").strip().lower().replace(" ", "")
-
-    alias_map = {
-        "string": "str",
-        "integer": "int",
-        "double": "float",
-        "boolean": "bool",
-        "list[string]": "list[str]",
-        "list[double]": "list[float]",
-        "list[boolean]": "list[bool]",
-        "dict[string,str]": "dict[str,str]",
-        "dict[str,string]": "dict[str,str]",
-        "dict[string,string]": "dict[str,str]",
-        "dict[string,int]": "dict[str,int]",
-        "dict[string,integer]": "dict[str,int]",
-        "dict[str,integer]": "dict[str,int]",
-        "dict[string,float]": "dict[str,float]",
-        "dict[string,double]": "dict[str,float]",
-        "dict[str,double]": "dict[str,float]",
-        "dict[string,bool]": "dict[str,bool]",
-        "dict[string,boolean]": "dict[str,bool]",
-        "dict[str,boolean]": "dict[str,bool]",
-    }
-
-    if normalized in alias_map:
-        return alias_map[normalized]
-
-    if normalized in {
-        "str",
-        "int",
-        "float",
-        "bool",
-        "list[str]",
-        "list[int]",
-        "list[float]",
-        "list[bool]",
-        "dict[str,str]",
-        "dict[str,int]",
-        "dict[str,float]",
-        "dict[str,bool]",
-    }:
-        return normalized
-
-    raise ValueError(f"Unsupported default_type '{type_name}'")
-
-
-def _load_json_value(raw_value: str, normalized_type: str):
-    """Decode the JSON representation used for list and dict default values."""
-    try:
-        return json.loads(raw_value)
-    except json.JSONDecodeError as exc:
-        raise ValueError(
-            f"Invalid value '{raw_value}' for type {normalized_type}. Expected JSON syntax."
-        ) from exc
-
-
-def _convert_value(raw_value: str, type_name: str):
-    normalized_type = _normalize_type(type_name)
-
-    if normalized_type == "str":
-        return raw_value
-
-    if normalized_type == "int":
-        try:
-            return int(raw_value)
-        except ValueError as exc:
-            raise ValueError(f"Invalid value '{raw_value}' for type int") from exc
-
-    if normalized_type == "float":
-        try:
-            return float(raw_value)
-        except ValueError as exc:
-            raise ValueError(f"Invalid value '{raw_value}' for type float") from exc
-
-    if normalized_type == "bool":
-        lowered = raw_value.strip().lower()
-        if lowered in ("true", "1", "yes", "on"):
-            return True
-        if lowered in ("false", "0", "no", "off"):
-            return False
-        raise ValueError(f"Invalid value '{raw_value}' for type bool")
-
-    if normalized_type.startswith("list["):
-        value = _load_json_value(raw_value, normalized_type)
-        if not isinstance(value, list):
-            raise ValueError(f"Invalid value '{raw_value}' for type {normalized_type}")
-
-        if normalized_type == "list[str]":
-            if not all(isinstance(item, str) for item in value):
-                raise ValueError(f"Type {normalized_type} expects only string entries")
-            return value
-
-        if normalized_type == "list[int]":
-            if not all(
-                isinstance(item, int) and not isinstance(item, bool) for item in value
-            ):
-                raise ValueError(f"Type {normalized_type} expects only integer entries")
-            return value
-
-        if normalized_type == "list[float]":
-            if not all(
-                isinstance(item, (int, float)) and not isinstance(item, bool)
-                for item in value
-            ):
-                raise ValueError(f"Type {normalized_type} expects only numeric entries")
-            return [float(item) for item in value]
-
-        if normalized_type == "list[bool]":
-            if not all(isinstance(item, bool) for item in value):
-                raise ValueError(f"Type {normalized_type} expects only boolean entries")
-            return value
-
-    if normalized_type.startswith("dict["):
-        value = _load_json_value(raw_value, normalized_type)
-        if not isinstance(value, dict) or not all(
-            isinstance(key, str) for key in value.keys()
-        ):
-            raise ValueError(f"Invalid value '{raw_value}' for type {normalized_type}")
-
-        if normalized_type == "dict[str,str]":
-            if not all(isinstance(item, str) for item in value.values()):
-                raise ValueError(f"Type {normalized_type} expects only string values")
-            return value
-
-        if normalized_type == "dict[str,int]":
-            if not all(
-                isinstance(item, int) and not isinstance(item, bool)
-                for item in value.values()
-            ):
-                raise ValueError(f"Type {normalized_type} expects only integer values")
-            return value
-
-        if normalized_type == "dict[str,float]":
-            if not all(
-                isinstance(item, (int, float)) and not isinstance(item, bool)
-                for item in value.values()
-            ):
-                raise ValueError(f"Type {normalized_type} expects only numeric values")
-            return {key: float(item) for key, item in value.items()}
-
-        if normalized_type == "dict[str,bool]":
-            if not all(isinstance(item, bool) for item in value.values()):
-                raise ValueError(f"Type {normalized_type} expects only boolean values")
-            return value
-
-    raise ValueError(f"Unsupported default_type '{type_name}'")
-
-
-def _format_default_value(value, type_name: str) -> str:
-    normalized_type = _normalize_type(type_name)
-
-    if normalized_type == "bool":
-        return "true" if value else "false"
-
-    if normalized_type.startswith("list[") or normalized_type.startswith("dict["):
-        return json.dumps(value, ensure_ascii=False, separators=(",", ":"))
-
-    return str(value)
-
-
 def _indent_xml(element: ET.Element, level: int = 0) -> None:
     indent = "\n" + level * "    "
     child_indent = "\n" + (level + 1) * "    "
@@ -238,14 +79,14 @@ def _indent_xml(element: ET.Element, level: int = 0) -> None:
         element.tail = indent
 
 
-def _find_input_key_map(root: ET.Element) -> dict[str, ET.Element]:
-    result: dict[str, ET.Element] = {}
+def _find_input_key_map(root: ET.Element) -> Dict[str, ET.Element]:
+    result: Dict[str, ET.Element] = {}
 
     for child in root:
         if strip_namespace(child.tag) != "Key":
             continue
 
-        key_type = (child.attrib.get("type") or "").strip().upper()
+        key_type = (child.attrib.get("type") or "").strip().lower()
         if key_type not in INPUT_KEY_TYPES:
             continue
 
@@ -262,8 +103,8 @@ def _find_input_key_map(root: ET.Element) -> dict[str, ET.Element]:
     return result
 
 
-def _find_parameter_map(root: ET.Element) -> dict[str, ET.Element]:
-    result: dict[str, ET.Element] = {}
+def _find_parameter_map(root: ET.Element) -> Dict[str, ET.Element]:
+    result: Dict[str, ET.Element] = {}
 
     for child in root:
         if strip_namespace(child.tag) != "Param":
@@ -278,7 +119,7 @@ def _find_parameter_map(root: ET.Element) -> dict[str, ET.Element]:
     return result
 
 
-def _find_default_element(root: ET.Element, key_name: str) -> ET.Element | None:
+def _find_default_element(root: ET.Element, key_name: str) -> Union[ET.Element, None]:
     for child in root:
         if strip_namespace(child.tag) != "Default":
             continue
@@ -289,8 +130,8 @@ def _find_default_element(root: ET.Element, key_name: str) -> ET.Element | None:
 
 def _inject_overrides_into_xml(
     xml_path: str,
-    provided_inputs: dict[str, str],
-    provided_parameters: dict[str, str],
+    provided_inputs: Dict[str, str],
+    provided_parameters: Dict[str, str],
 ) -> str:
     tree = ET.parse(xml_path)
     root = tree.getroot()
@@ -317,25 +158,25 @@ def _inject_overrides_into_xml(
     for key_name, raw_value in provided_inputs.items():
         key_element = input_key_map[key_name]
         default_type = key_element.attrib.get("default_type", "").strip()
-        typed_value = _convert_value(raw_value, default_type)
-        serialized_value = _format_default_value(typed_value, default_type)
+        typed_value = parse_key_value(raw_value, default_type)
+        serialized_value = format_default_value(typed_value, default_type)
 
         key_element.set("default_value", serialized_value)
-        key_element.set("default_type", _normalize_type(default_type))
+        key_element.set("default_type", normalize_type(default_type))
 
         default_element = _find_default_element(root, key_name)
         if default_element is not None:
             default_element.set("value", serialized_value)
-            default_element.set("type", _normalize_type(default_type))
+            default_element.set("type", normalize_type(default_type))
 
     for parameter_name, raw_value in provided_parameters.items():
         parameter_element = parameter_map[parameter_name]
         default_type = parameter_element.attrib.get("default_type", "").strip() or "str"
-        typed_value = _convert_value(raw_value, default_type)
-        serialized_value = _format_default_value(typed_value, default_type)
+        typed_value = parse_key_value(raw_value, default_type)
+        serialized_value = format_default_value(typed_value, default_type)
 
         parameter_element.set("default_value", serialized_value)
-        parameter_element.set("default_type", _normalize_type(default_type))
+        parameter_element.set("default_type", normalize_type(default_type))
 
     _indent_xml(root)
     return ET.tostring(root, encoding="unicode")

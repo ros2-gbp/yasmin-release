@@ -1,17 +1,16 @@
 // Copyright (C) 2026 Maik Knof
 //
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
 //
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
+//     http://www.apache.org/licenses/LICENSE-2.0
 //
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 #include "yasmin_pcl/io/save_ply_state.hpp"
 
@@ -29,17 +28,17 @@
 namespace yasmin_pcl::io {
 
 SavePlyState::SavePlyState() : yasmin::State({"succeeded", "aborted"}) {
-  file_path_.clear();
-  binary_mode_ = false;
-  use_camera_ = true;
-  origin_x_ = 0.0F;
-  origin_y_ = 0.0F;
-  origin_z_ = 0.0F;
-  origin_w_ = 0.0F;
-  orientation_x_ = 0.0F;
-  orientation_y_ = 0.0F;
-  orientation_z_ = 0.0F;
-  orientation_w_ = 1.0F;
+  this->file_path_.clear();
+  this->binary_mode_ = false;
+  this->use_camera_ = true;
+  this->origin_x_ = 0.0F;
+  this->origin_y_ = 0.0F;
+  this->origin_z_ = 0.0F;
+  this->origin_w_ = 0.0F;
+  this->orientation_x_ = 0.0F;
+  this->orientation_y_ = 0.0F;
+  this->orientation_z_ = 0.0F;
+  this->orientation_w_ = 1.0F;
 
   this->set_description(
       "Saves a pcl::PCLPointCloud2 cloud from the blackboard to a PLY file.");
@@ -75,25 +74,27 @@ SavePlyState::SavePlyState() : yasmin::State({"succeeded", "aborted"}) {
                       "Input cloud stored as pcl::PCLPointCloud2::Ptr.");
 }
 
-SavePlyState::~SavePlyState() {}
-
 void SavePlyState::configure() {
-  file_path_ = this->get_parameter<std::string>("file_path");
-  binary_mode_ = this->get_parameter<bool>("binary_mode");
-  use_camera_ = this->get_parameter<bool>("use_camera");
-  origin_x_ = this->get_parameter<float>("origin_x");
-  origin_y_ = this->get_parameter<float>("origin_y");
-  origin_z_ = this->get_parameter<float>("origin_z");
-  origin_w_ = this->get_parameter<float>("origin_w");
-  orientation_x_ = this->get_parameter<float>("orientation_x");
-  orientation_y_ = this->get_parameter<float>("orientation_y");
-  orientation_z_ = this->get_parameter<float>("orientation_z");
-  orientation_w_ = this->get_parameter<float>("orientation_w");
+  this->file_path_ = this->get_parameter<std::string>("file_path");
+  this->binary_mode_ = this->get_parameter<bool>("binary_mode");
+  this->use_camera_ = this->get_parameter<bool>("use_camera");
+  this->origin_x_ = this->get_parameter<float>("origin_x");
+  this->origin_y_ = this->get_parameter<float>("origin_y");
+  this->origin_z_ = this->get_parameter<float>("origin_z");
+  this->origin_w_ = this->get_parameter<float>("origin_w");
+  this->orientation_x_ = this->get_parameter<float>("orientation_x");
+  this->orientation_y_ = this->get_parameter<float>("orientation_y");
+  this->orientation_z_ = this->get_parameter<float>("orientation_z");
+  this->orientation_w_ = this->get_parameter<float>("orientation_w");
 }
 
 std::string SavePlyState::execute(yasmin::Blackboard::SharedPtr blackboard) {
   try {
-    if (file_path_.empty()) {
+    if (this->is_canceled()) {
+      return "aborted";
+    }
+
+    if (this->file_path_.empty()) {
       YASMIN_LOG_WARN("Parameter 'file_path' is empty");
       return "aborted";
     }
@@ -106,16 +107,23 @@ std::string SavePlyState::execute(yasmin::Blackboard::SharedPtr blackboard) {
       return "aborted";
     }
 
-    const Eigen::Vector4f origin(origin_x_, origin_y_, origin_z_, origin_w_);
-    const Eigen::Quaternionf orientation(orientation_w_, orientation_x_,
-                                         orientation_y_, orientation_z_);
+    if (this->is_canceled()) {
+      return "aborted";
+    }
 
-    const int result =
-        pcl::io::savePLYFile(file_path_, *input_cloud, origin, orientation,
-                             binary_mode_, use_camera_);
+    const Eigen::Vector4f origin(this->origin_x_, this->origin_y_,
+                                 this->origin_z_, this->origin_w_);
+    const Eigen::Quaternionf orientation(
+        this->orientation_w_, this->orientation_x_, this->orientation_y_,
+        this->orientation_z_);
+
+    const int result = pcl::io::savePLYFile(
+        this->file_path_, *input_cloud, origin, orientation, this->binary_mode_,
+        this->use_camera_);
 
     if (result < 0) {
-      YASMIN_LOG_WARN("Failed to write PLY file '%s'", file_path_.c_str());
+      YASMIN_LOG_WARN("Failed to write PLY file '%s'",
+                      this->file_path_.c_str());
       return "aborted";
     }
 

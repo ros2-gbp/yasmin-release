@@ -1,0 +1,12 @@
+Source: ros-jazzy-yasmin-pcl
+Section: misc
+Priority: optional
+Maintainer: "Maik Knof" <maik.knof@gmx.de>
+Build-Depends: debhelper (>= 9.0.0), libpcl-dev, ros-jazzy-ament-cmake, ros-jazzy-ament-cmake-gtest <!nocheck>, ros-jazzy-pcl-conversions, ros-jazzy-pluginlib, ros-jazzy-sensor-msgs, ros-jazzy-yasmin, ros-jazzy-ros-workspace
+Homepage: https://index.ros.org/p/yasmin_pcl/#jazzy
+Standards-Version: 3.9.2
+
+Package: ros-jazzy-yasmin-pcl
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, libpcl-dev, ros-jazzy-pcl-conversions, ros-jazzy-pluginlib, ros-jazzy-sensor-msgs, ros-jazzy-yasmin, ros-jazzy-ros-workspace
+Description: PCL-based reusable YASMIN states for PointCloud2 conversion, file I/O, and filtering.

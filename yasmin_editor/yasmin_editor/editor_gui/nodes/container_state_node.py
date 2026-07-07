@@ -1,28 +1,25 @@
 # Copyright (C) 2025 Miguel Ángel González Santamarta
 #
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
 #
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
-# You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union
 
-from PyQt5.QtCore import QPointF, Qt
-from PyQt5.QtGui import QBrush, QFont, QPen
-from PyQt5.QtWidgets import QGraphicsItem, QGraphicsRectItem, QGraphicsTextItem, QMenu
-
+from yasmin_editor.qt_compat import Qt, QtCore, QtGui, QtWidgets, exec_menu
 from yasmin_editor.editor_gui.colors import PALETTE
 from yasmin_editor.editor_gui.connection_port import ConnectionPort
 from yasmin_editor.editor_gui.nodes.base_node import BaseNodeMixin
 from yasmin_editor.model.concurrence import Concurrence
+from yasmin_editor.model.orthogonal_state import OrthogonalState
 from yasmin_editor.model.outcome import Outcome
 from yasmin_editor.model.state import State
 from yasmin_editor.model.state_machine import StateMachine
@@ -31,7 +28,7 @@ if TYPE_CHECKING:
     from yasmin_plugins_manager.plugin_info import PluginInfo
 
 
-class ContainerStateNode(QGraphicsRectItem, BaseNodeMixin):
+class ContainerStateNode(BaseNodeMixin, QtWidgets.QGraphicsRectItem):
     """Graphical representation of a nested State Machine or Concurrence."""
 
     def __init__(
@@ -40,41 +37,56 @@ class ContainerStateNode(QGraphicsRectItem, BaseNodeMixin):
         x: float,
         y: float,
         is_concurrence: bool = False,
+        is_orthogonal: bool = False,
         remappings: Optional[Dict[str, str]] = None,
         outcomes: Optional[List[str]] = None,
         start_state: Optional[str] = None,
         default_outcome: Optional[str] = None,
         description: str = "",
         defaults: Optional[List[Dict[str, str]]] = None,
-        model: Optional[Union[StateMachine, Concurrence, State]] = None,
+        model: Optional[Union[StateMachine, Concurrence, OrthogonalState, State]] = None,
         state_kind_label: Optional[str] = None,
         is_xml_reference: bool = False,
     ) -> None:
         super().__init__(-65, -40, 130, 80)
-        self.model: Union[StateMachine, Concurrence, State] = model or (
-            Concurrence(
+        if model is not None:
+            pass
+        elif is_orthogonal:
+            model = OrthogonalState(
                 name=name,
                 description=description,
                 default_outcome=default_outcome,
                 remappings=dict(remappings or {}),
                 outcomes=[Outcome(name=item) for item in outcomes or []],
             )
-            if is_concurrence
-            else StateMachine(
+        elif is_concurrence:
+            model = Concurrence(
+                name=name,
+                description=description,
+                default_outcome=default_outcome,
+                remappings=dict(remappings or {}),
+                outcomes=[Outcome(name=item) for item in outcomes or []],
+            )
+        else:
+            model = StateMachine(
                 name=name,
                 description=description,
                 start_state=start_state,
                 remappings=dict(remappings or {}),
                 outcomes=[Outcome(name=item) for item in outcomes or []],
             )
-        )
+        self.model: Union[StateMachine, Concurrence, OrthogonalState, State] = model
         self.plugin_info: Optional["PluginInfo"] = None
         self.is_state_machine = isinstance(self.model, StateMachine)
         self.is_concurrence = isinstance(self.model, Concurrence)
+        self.is_orthogonal = isinstance(self.model, OrthogonalState)
         self.is_xml_reference = bool(is_xml_reference)
-        self.state_kind_label = state_kind_label or (
-            "XML" if self.is_xml_reference else None
-        )
+        type_label = None
+        if self.is_orthogonal:
+            type_label = "ORTHOGONAL"
+        elif self.is_xml_reference:
+            type_label = "XML"
+        self.state_kind_label = state_kind_label or type_label
         self.child_states = {}
         self.final_outcomes = {}
         self.defaults: List[Dict[str, str]] = defaults or []
@@ -84,51 +96,25 @@ class ContainerStateNode(QGraphicsRectItem, BaseNodeMixin):
 
         self._apply_default_style()
 
-        self.title = QGraphicsTextItem(self.name, self)
+        self.title = QtWidgets.QGraphicsTextItem(self.name, self)
         self.title.setDefaultTextColor(PALETTE.text_primary)
-        title_font = QFont()
+        title_font = QtGui.QFont()
         title_font.setPointSize(10)
         title_font.setBold(True)
         self.title.setFont(title_font)
 
-        self.type_label = QGraphicsTextItem(self)
+        self.type_label = QtWidgets.QGraphicsTextItem(self)
         self.type_label.setDefaultTextColor(PALETTE.text_secondary)
-        type_font = QFont()
+        type_font = QtGui.QFont()
         type_font.setPointSize(8)
         type_font.setBold(True)
         self.type_label.setFont(type_font)
 
         self.connection_port = ConnectionPort(self)
         self.initialize_breakpoint_marker()
+        self.initialize_start_indicator()
         self.update_label()
         self.update_visual_elements()
-
-    @property
-    def name(self) -> str:
-        return self.model.name
-
-    @name.setter
-    def name(self, value: str) -> None:
-        self.model.name = value
-        self.update_label()
-
-    @property
-    def description(self) -> str:
-        return self.model.description
-
-    @description.setter
-    def description(self, value: str) -> None:
-        self.model.description = value
-        self.update_label()
-
-    @property
-    def remappings(self) -> Dict[str, str]:
-        return self.model.remappings
-
-    @remappings.setter
-    def remappings(self, value: Dict[str, str]) -> None:
-        self.model.remappings.clear()
-        self.model.remappings.update(value or {})
 
     @property
     def start_state(self) -> Optional[str]:
@@ -142,24 +128,31 @@ class ContainerStateNode(QGraphicsRectItem, BaseNodeMixin):
 
     @property
     def default_outcome(self) -> Optional[str]:
-        return self.model.default_outcome if isinstance(self.model, Concurrence) else None
+        return (
+            self.model.default_outcome
+            if isinstance(self.model, (Concurrence, OrthogonalState))
+            else None
+        )
 
     @default_outcome.setter
     def default_outcome(self, value: Optional[str]) -> None:
-        if isinstance(self.model, Concurrence):
+        if isinstance(self.model, (Concurrence, OrthogonalState)):
             self.model.default_outcome = value
             self.update_label()
 
     def _apply_default_style(self) -> None:
         if self.is_xml_reference:
-            self.setBrush(QBrush(PALETTE.container_xml_fill))
-            self.setPen(QPen(PALETTE.container_xml_pen, 3))
+            self.setBrush(QtGui.QBrush(PALETTE.container_xml_fill))
+            self.setPen(QtGui.QPen(PALETTE.container_xml_pen, 3))
         elif self.is_concurrence:
-            self.setBrush(QBrush(PALETTE.container_concurrence_fill))
-            self.setPen(QPen(PALETTE.container_concurrence_pen, 3))
+            self.setBrush(QtGui.QBrush(PALETTE.container_concurrence_fill))
+            self.setPen(QtGui.QPen(PALETTE.container_concurrence_pen, 3))
+        elif self.is_orthogonal:
+            self.setBrush(QtGui.QBrush(PALETTE.container_orthogonal_fill))
+            self.setPen(QtGui.QPen(PALETTE.container_orthogonal_pen, 3))
         else:
-            self.setBrush(QBrush(PALETTE.container_state_machine_fill))
-            self.setPen(QPen(PALETTE.container_state_machine_pen, 3))
+            self.setBrush(QtGui.QBrush(PALETTE.container_state_machine_fill))
+            self.setPen(QtGui.QPen(PALETTE.container_state_machine_pen, 3))
 
     def update_start_state_label(self) -> None:
         self.update_label()
@@ -169,17 +162,27 @@ class ContainerStateNode(QGraphicsRectItem, BaseNodeMixin):
 
     def update_label(self) -> None:
         self.title.setPlainText(self.name)
-        self.type_label.setPlainText(
-            self.state_kind_label
-            if self.state_kind_label
-            else ("CONCURRENCE" if self.is_concurrence else "STATE MACHINE")
-        )
+        if self.state_kind_label:
+            label_text = self.state_kind_label
+        elif self.is_orthogonal:
+            label_text = "ORTHOGONAL"
+        elif self.is_concurrence:
+            label_text = "CONCURRENCE"
+        else:
+            label_text = "STATE MACHINE"
+        self.type_label.setPlainText(label_text)
         tooltip_lines = [self.name]
         if self.description:
             tooltip_lines.append(self.description)
         if self.is_xml_reference:
             if getattr(self.model, "file_name", None):
                 tooltip_lines.append(f"XML: {self.model.file_name}")
+        elif self.is_orthogonal:
+            tooltip_lines.append(
+                f"Default: {self.default_outcome}"
+                if self.default_outcome
+                else "Default: (none)"
+            )
         elif self.is_concurrence:
             tooltip_lines.append(
                 f"Default: {self.default_outcome}"
@@ -198,72 +201,55 @@ class ContainerStateNode(QGraphicsRectItem, BaseNodeMixin):
         self.center_text_item(self.type_label, 6)
         self.connection_port.update_position_for_container()
 
-    @property
-    def parameter_mappings(self) -> Dict[str, str]:
-        return self.model.parameter_mappings
+    def _on_name_changed(self, value: str) -> None:
+        self.update_label()
 
-    @parameter_mappings.setter
-    def parameter_mappings(self, value: Dict[str, str]) -> None:
-        self.model.parameter_mappings.clear()
-        self.model.parameter_mappings.update(value or {})
+    def _on_description_changed(self, value: str) -> None:
+        self.update_label()
 
-    def mouseDoubleClickEvent(self, event: Any) -> None:
-        if self.scene() and self.scene().views():
-            canvas = self.scene().views()[0]
-            if hasattr(canvas, "editor_ref") and canvas.editor_ref:
-                self.setSelected(True)
-                if bool(event.modifiers() & Qt.ControlModifier):
-                    canvas.editor_ref.enter_container(self)
-                else:
-                    canvas.editor_ref.edit_state()
-                event.accept()
-                return
-        super().mouseDoubleClickEvent(event)
+    def _on_double_click(self, editor: Any, event: Any) -> None:
+        if bool(event.modifiers() & Qt.KeyboardModifier.ControlModifier):
+            editor.enter_container(self)
+        else:
+            editor.edit_state()
 
-    def contextMenuEvent(self, event: Any) -> None:
-        if self.scene() and self.scene().views():
-            canvas = self.scene().views()[0]
-            if hasattr(canvas, "editor_ref") and canvas.editor_ref:
-                editor = canvas.editor_ref
-                self.setSelected(True)
+    def _on_context_menu(self, editor: Any, event: Any) -> bool:
+        if getattr(editor, "runtime_mode_enabled", False):
+            if editor.show_runtime_breakpoint_menu(self, event.screenPos()):
+                return True
 
-                if getattr(editor, "runtime_mode_enabled", False):
-                    if editor.show_runtime_breakpoint_menu(self, event.screenPos()):
-                        event.accept()
-                        return
+        menu = QtWidgets.QMenu()
+        enter_action = menu.addAction("Enter")
+        menu.addSeparator()
+        edit_action = menu.addAction(
+            "View Properties" if editor.is_read_only_mode() else "Edit Properties"
+        )
+        delete_action = None if editor.is_read_only_mode() else menu.addAction("Delete")
+        action = exec_menu(menu, event.screenPos())
+        if action == enter_action:
+            editor.enter_container(self)
+            return True
+        if action == edit_action:
+            editor.edit_state()
+            return True
+        if action == delete_action:
+            editor.delete_selected()
+            return True
+        return False
 
-                menu = QMenu()
-                enter_action = menu.addAction("Enter")
-                menu.addSeparator()
-                edit_action = menu.addAction(
-                    "View Properties" if editor.is_read_only_mode() else "Edit Properties"
-                )
-                delete_action = (
-                    None if editor.is_read_only_mode() else menu.addAction("Delete")
-                )
-                action = menu.exec_(event.screenPos())
-                if action == enter_action:
-                    editor.enter_container(self)
-                    event.accept()
-                    return
-                if action == edit_action:
-                    editor.edit_state()
-                    event.accept()
-                    return
-                if action == delete_action:
-                    editor.delete_selected()
-                    event.accept()
-                    return
-        super().contextMenuEvent(event)
-
-    def itemChange(self, change: QGraphicsItem.GraphicsItemChange, value: Any) -> Any:
-        if change == QGraphicsItem.ItemPositionChange and isinstance(value, QPointF):
+    def itemChange(
+        self, change: QtWidgets.QGraphicsItem.GraphicsItemChange, value: Any
+    ) -> Any:
+        if (
+            change == QtWidgets.QGraphicsItem.GraphicsItemChange.ItemPositionChange
+            and isinstance(value, QtCore.QPointF)
+        ):
             self.update_attached_connections()
-        elif change == QGraphicsItem.ItemSelectedChange:
+        elif change == QtWidgets.QGraphicsItem.GraphicsItemChange.ItemSelectedChange:
             self.update_selection_pen(
                 bool(value), default_pen_callback=self._apply_default_style
             )
         return super().itemChange(change, value)
 
-    def get_edge_point(self, target_pos: QPointF) -> QPointF:
+    def get_edge_point(self, target_pos: QtCore.QPointF) -> QtCore.QPointF:
         return BaseNodeMixin.get_edge_point(self, target_pos)

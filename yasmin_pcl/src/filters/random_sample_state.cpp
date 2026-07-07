@@ -1,17 +1,16 @@
 // Copyright (C) 2026 Maik Knof
 //
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
 //
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
+//     http://www.apache.org/licenses/LICENSE-2.0
 //
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 #include "yasmin_pcl/filters/random_sample_state.hpp"
 
@@ -65,12 +64,12 @@ namespace yasmin_pcl::filters {
 
 RandomSampleState::RandomSampleState()
     : yasmin::State({"succeeded", "aborted"}) {
-  sample_ = 1;
-  seed_ = 0;
-  negative_ = false;
-  keep_organized_ = false;
-  user_filter_value_ = std::numeric_limits<float>::quiet_NaN();
-  extract_removed_indices_ = false;
+  this->sample_ = 1;
+  this->seed_ = 0;
+  this->negative_ = false;
+  this->keep_organized_ = false;
+  this->user_filter_value_ = std::numeric_limits<float>::quiet_NaN();
+  this->extract_removed_indices_ = false;
 
   this->set_description(
       "Applies pcl::RandomSample to a pcl::PCLPointCloud2 stored in the "
@@ -112,15 +111,13 @@ RandomSampleState::RandomSampleState()
                        "Removed point indices stored as pcl::Indices.");
 }
 
-RandomSampleState::~RandomSampleState() {}
-
 void RandomSampleState::configure() {
-  sample_ = this->get_parameter<int>("sample");
-  seed_ = this->get_parameter<int>("seed");
-  negative_ = this->get_parameter<bool>("negative");
-  keep_organized_ = this->get_parameter<bool>("keep_organized");
-  user_filter_value_ = this->get_parameter<float>("user_filter_value");
-  extract_removed_indices_ =
+  this->sample_ = this->get_parameter<int>("sample");
+  this->seed_ = this->get_parameter<int>("seed");
+  this->negative_ = this->get_parameter<bool>("negative");
+  this->keep_organized_ = this->get_parameter<bool>("keep_organized");
+  this->user_filter_value_ = this->get_parameter<float>("user_filter_value");
+  this->extract_removed_indices_ =
       this->get_parameter<bool>("extract_removed_indices");
 }
 
@@ -137,11 +134,11 @@ RandomSampleState::execute(yasmin::Blackboard::SharedPtr blackboard) {
 
     pcl::RandomSample<pcl::PCLPointCloud2> filter;
     filter.setInputCloud(input_cloud);
-    filter.setSample(static_cast<unsigned int>(sample_));
-    filter.setSeed(static_cast<unsigned int>(seed_));
-    filter.setNegative(negative_);
-    filter.setKeepOrganized(keep_organized_);
-    filter.setUserFilterValue(user_filter_value_);
+    filter.setSample(static_cast<unsigned int>(this->sample_));
+    filter.setSeed(static_cast<unsigned int>(this->seed_));
+    filter.setNegative(this->negative_);
+    filter.setKeepOrganized(this->keep_organized_);
+    filter.setUserFilterValue(this->user_filter_value_);
     common::set_optional_input_indices(filter, blackboard);
 
     common::Indices output_indices;
@@ -152,14 +149,14 @@ RandomSampleState::execute(yasmin::Blackboard::SharedPtr blackboard) {
     extractor.setInputCloud(input_cloud);
     extractor.setIndices(pcl::IndicesPtr(new pcl::Indices(output_indices)));
     extractor.setNegative(false);
-    extractor.setKeepOrganized(keep_organized_);
-    extractor.setUserFilterValue(user_filter_value_);
+    extractor.setKeepOrganized(this->keep_organized_);
+    extractor.setUserFilterValue(this->user_filter_value_);
 
     auto output_cloud = common::make_pcl_point_cloud2();
     extractor.filter(*output_cloud);
     blackboard->set<common::PclPointCloud2Ptr>("output_cloud", output_cloud);
 
-    if (extract_removed_indices_) {
+    if (this->extract_removed_indices_) {
       const auto domain_indices = make_domain_indices(input_cloud);
       blackboard->set<common::Indices>(
           "removed_indices",

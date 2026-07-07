@@ -1,25 +1,25 @@
 // Copyright (C) 2024 Miguel Ángel González Santamarta
 //
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
 //
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
+//     http://www.apache.org/licenses/LICENSE-2.0
 //
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 #include <memory>
+#include <mutex>
+#include <thread>
+#include <vector>
 
 #include <example_interfaces/action/fibonacci.hpp>
 #include <rclcpp/rclcpp.hpp>
 #include <rclcpp_action/rclcpp_action.hpp>
-
-using namespace std::placeholders;
 
 /**
  * @class FibonacciActionServer
@@ -45,6 +45,7 @@ public:
    * @param options Node options for initialization.
    */
   explicit FibonacciActionServer() : Node("fibonacci_action_server") {
+    this->threads_.reserve(8);
 
     // Callback to handle goal requests.
     auto handle_goal = [this](const rclcpp_action::GoalUUID &uuid,
@@ -72,7 +73,10 @@ public:
           auto execute_in_thread = [this, goal_handle]() {
             return this->execute(goal_handle);
           };
-          std::thread{execute_in_thread}.detach();
+          {
+            std::lock_guard<std::mutex> lock(this->threads_mutex_);
+            this->threads_.emplace_back(execute_in_thread);
+          }
         };
 
     // Create the Fibonacci action server.
@@ -82,7 +86,24 @@ public:
     RCLCPP_INFO(this->get_logger(), "Fibonacci Server started");
   }
 
+  ~FibonacciActionServer() {
+    for (auto &thread : this->threads_) {
+      if (thread.joinable()) {
+        thread.join();
+      }
+    }
+  }
+
 private:
+  /**
+   * @brief Mutex protecting the threads vector.
+   */
+  std::mutex threads_mutex_;
+  /**
+   * @brief Tracked execution threads, joined on destruction.
+   */
+  std::vector<std::thread> threads_;
+
   /**
    * @brief The action server instance for Fibonacci calculations.
    */

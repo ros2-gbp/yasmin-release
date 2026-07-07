@@ -1,22 +1,21 @@
 # Copyright (C) 2026 Maik Knof
 #
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
 #
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
-# You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 from rclpy.duration import Duration
 from tf2_ros import Buffer, TransformListener
 from yasmin_ros.basic_outcomes import ABORT, SUCCEED
-from yasmin_ros.yasmin_node import YasminNode
+from yasmin_ros.ros_state_utils import resolve_node
 
 import yasmin
 from yasmin import Blackboard, State
@@ -33,8 +32,10 @@ class TfBufferState(State):
 
     def __init__(self) -> None:
         super().__init__([SUCCEED, ABORT])
-        self._node = YasminNode.get_instance()
+        self._node = None
         self._cache_time_sec = 10.0
+        self._prev_tf_buffer = None
+        self._prev_tf_listener = None
 
         self.set_description(
             "Creates a shared tf2 buffer and transform listener and writes "
@@ -65,10 +66,21 @@ class TfBufferState(State):
     def configure(self) -> None:
         self._cache_time_sec = float(self.get_parameter("cache_time_sec"))
 
+        if self._node is None:
+            self._node = resolve_node()
+
     def execute(self, blackboard: Blackboard) -> str:
         try:
+            # Clean up previous instances to avoid resource leaks
+            if self._prev_tf_listener is not None:
+                self._prev_tf_listener.__del__()
+            if self._prev_tf_buffer is not None:
+                self._prev_tf_buffer.__del__()
+
             tf_buffer = Buffer(cache_time=Duration(seconds=self._cache_time_sec))
             tf_listener = TransformListener(tf_buffer, self._node)
+            self._prev_tf_buffer = tf_buffer
+            self._prev_tf_listener = tf_listener
             blackboard["tf_buffer"] = tf_buffer
             blackboard["tf_listener"] = tf_listener
             return SUCCEED

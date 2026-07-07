@@ -1,17 +1,16 @@
 // Copyright (C) 2023 Miguel Ángel González Santamarta
 //
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
 //
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
+//     http://www.apache.org/licenses/LICENSE-2.0
 //
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 #ifndef YASMIN_ROS__SERVICE_STATE_HPP_
 #define YASMIN_ROS__SERVICE_STATE_HPP_
@@ -32,8 +31,6 @@
 #include "yasmin_ros/ros_clients_cache.hpp"
 #include "yasmin_ros/yasmin_node.hpp"
 
-using namespace std::placeholders;
-
 namespace yasmin_ros {
 
 /**
@@ -46,15 +43,15 @@ namespace yasmin_ros {
  * @tparam ServiceT The type of the ROS 2 service this state interacts with.
  */
 template <typename ServiceT> class ServiceState : public yasmin::State {
-  /// Alias for the service request type.
+  /// @brief Alias for the service request type.
   using Request = typename ServiceT::Request::SharedPtr;
-  /// Alias for the service response type.
+  /// @brief Alias for the service response type.
   using Response = typename ServiceT::Response::SharedPtr;
 
-  /// Function type for creating a request.
+  /// @brief Function type for creating a request.
   using CreateRequestHandler =
       std::function<Request(yasmin::Blackboard::SharedPtr)>;
-  /// Function type for handling a response.
+  /// @brief Function type for handling a response.
   using ResponseHandler =
       std::function<std::string(yasmin::Blackboard::SharedPtr, Response)>;
 
@@ -65,7 +62,7 @@ public:
   YASMIN_PTR_ALIASES(ServiceState)
 
   /**
-   * @brief Construct a ServiceState with a request handler and outcomes.
+   * @brief Construct a ServiceState with a request handler.
    *
    * @param srv_name The name of the service to call.
    * @param create_request_handler Function to create a service request.
@@ -259,8 +256,14 @@ public:
     // Wait for the service to become available
     YASMIN_LOG_INFO("Waiting for service '%s'", this->srv_name.c_str());
 
-    while (!this->service_client->wait_for_service(
-        std::chrono::duration<int64_t, std::ratio<1>>(this->wait_timeout))) {
+    const auto wait_duration =
+        std::chrono::duration<int64_t, std::ratio<1>>(this->wait_timeout);
+    while (!this->service_client->wait_for_service(wait_duration)) {
+
+      if (this->is_canceled()) {
+        return basic_outcomes::CANCEL;
+      }
+
       YASMIN_LOG_WARN("Timeout reached, service '%s' is not available",
                       this->srv_name.c_str());
       if (retry_count < this->maximum_retry) {
@@ -278,13 +281,16 @@ public:
     YASMIN_LOG_INFO("Sending request to service '%s'", this->srv_name.c_str());
 
     // Send request with callback
+    this->service_response = nullptr; // Reset previous response
     this->service_client->async_send_request(
-        request, std::bind(&ServiceState::response_callback, this, _1));
+        request, std::bind(&ServiceState::response_callback, this,
+                           std::placeholders::_1));
 
     // Wait for response with timeout
     if (this->response_timeout > 0) {
-      while (this->response_done_cond.wait_for(
-                 lock, std::chrono::seconds(this->response_timeout)) ==
+      const auto response_timeout_dur =
+          std::chrono::seconds(this->response_timeout);
+      while (this->response_done_cond.wait_for(lock, response_timeout_dur) ==
              std::cv_status::timeout) {
         YASMIN_LOG_WARN(
             "Timeout reached while waiting for response from service '%s'",
@@ -299,7 +305,9 @@ public:
         }
       }
     } else {
-      this->response_done_cond.wait(lock);
+      this->response_done_cond.wait(lock, [this]() {
+        return this->service_response != nullptr || this->is_canceled();
+      });
     }
 
     if (this->is_canceled()) {
@@ -320,30 +328,39 @@ public:
   }
 
 protected:
-  /// Shared pointer to the ROS 2 node
+  /// @brief Shared pointer to the ROS 2 node
   rclcpp::Node::SharedPtr node_;
 
+public:
+  /**
+   * @brief Cancel the current service state.
+   */
+  void cancel_state() override {
+    this->response_done_cond.notify_all();
+    yasmin::State::cancel_state();
+  }
+
 private:
-  /// Shared pointer to the service client.
+  /// @brief Shared pointer to the service client.
   std::shared_ptr<rclcpp::Client<ServiceT>> service_client;
-  /// Function to create service requests.
+  /// @brief Function to create service requests.
   CreateRequestHandler create_request_handler;
-  /// Function to handle service responses.
+  /// @brief Function to handle service responses.
   ResponseHandler response_handler;
-  /// Name of the service.
+  /// @brief Name of the service.
   std::string srv_name;
-  /// Maximum wait time for service availability.
+  /// @brief Maximum wait time for service availability.
   int wait_timeout;
-  /// Timeout for the service response.
+  /// @brief Timeout for the service response.
   int response_timeout;
-  /// Maximum number of retries.
+  /// @brief Maximum number of retries.
   int maximum_retry;
 
-  /// Condition variable for response completion.
+  /// @brief Condition variable for response completion.
   std::condition_variable response_done_cond;
-  /// Mutex for protecting response completion.
+  /// @brief Mutex for protecting response completion.
   std::mutex response_done_mutex;
-  /// Shared pointer to the service response.
+  /// @brief Shared pointer to the service response.
   Response service_response;
 
   /**

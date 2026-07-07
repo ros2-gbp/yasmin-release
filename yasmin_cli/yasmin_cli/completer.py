@@ -1,23 +1,21 @@
-#!/usr/bin/env python3
-
 # Copyright (C) 2026 Maik Knof
 #
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
 #
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
-# You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 
 import xml.etree.ElementTree as ET
 from pathlib import Path
+from typing import Dict, List, Set, Union
 
 from yasmin_plugins_manager import PluginInfo, PluginManager
 
@@ -74,7 +72,7 @@ def build_plugin_info(plugin_name: str):
             return None
 
 
-def filter_plugins(plugins, plugin_type: str = "all", search: str | None = None):
+def filter_plugins(plugins, plugin_type: str = "all", search: Union[str, None] = None):
     filtered = []
     lowered_search = search.lower() if search else None
 
@@ -106,7 +104,7 @@ def plugin_completer(prefix, parsed_args, **kwargs):
     plugin_type = getattr(parsed_args, "type", "all")
     search = getattr(parsed_args, "search", None)
 
-    matches: list[str] = []
+    matches: List[str] = []
     for plugin in filter_plugins(load_plugins(include_xml=True), plugin_type, search):
         current_plugin_id = plugin_id(plugin)
         if current_plugin_id.startswith(prefix):
@@ -116,7 +114,7 @@ def plugin_completer(prefix, parsed_args, **kwargs):
 
 
 def test_plugin_completer(prefix, parsed_args, **kwargs):
-    matches: list[str] = []
+    matches: List[str] = []
 
     for plugin in load_plugins(include_xml=False):
         current_plugin_id = plugin_id(plugin)
@@ -126,8 +124,8 @@ def test_plugin_completer(prefix, parsed_args, **kwargs):
     return matches
 
 
-def _get_used_assignment_names(values) -> set[str]:
-    used_names: set[str] = set()
+def _get_used_assignment_names(values) -> Set[str]:
+    used_names: Set[str] = set()
 
     for entry in values or []:
         if "=" not in entry:
@@ -138,8 +136,8 @@ def _get_used_assignment_names(values) -> set[str]:
     return used_names
 
 
-def _assignment_completer(prefix, entries, used_names: set[str]):
-    matches: list[str] = []
+def _assignment_completer(prefix, entries, used_names: Set[str]):
+    matches: List[str] = []
 
     for entry in entries:
         name = entry.get("name", "")
@@ -202,7 +200,7 @@ def _iter_root_children(root: ET.Element):
             yield child
 
 
-def get_state_machine_input_keys(state_machine_file: str) -> list[dict[str, str]]:
+def get_state_machine_input_keys(state_machine_file: str) -> List[Dict[str, str]]:
     try:
         root = ET.parse(state_machine_file).getroot()
     except (ET.ParseError, OSError):
@@ -211,12 +209,12 @@ def get_state_machine_input_keys(state_machine_file: str) -> list[dict[str, str]
     if strip_namespace(root.tag) != "StateMachine":
         return []
 
-    keys: list[dict[str, str]] = []
+    keys: List[Dict[str, str]] = []
     for child in _iter_root_children(root):
         if strip_namespace(child.tag) != "Key":
             continue
 
-        key_type = (child.attrib.get("type") or "").strip().upper()
+        key_type = (child.attrib.get("type") or "").strip().lower()
         if key_type not in INPUT_KEY_TYPES:
             continue
 
@@ -237,7 +235,7 @@ def get_state_machine_input_keys(state_machine_file: str) -> list[dict[str, str]
     return [key for key in keys if key.get("name", "")]
 
 
-def get_state_machine_parameters(state_machine_file: str) -> list[dict[str, str]]:
+def get_state_machine_parameters(state_machine_file: str) -> List[Dict[str, str]]:
     try:
         root = ET.parse(state_machine_file).getroot()
     except (ET.ParseError, OSError):
@@ -246,7 +244,7 @@ def get_state_machine_parameters(state_machine_file: str) -> list[dict[str, str]
     if strip_namespace(root.tag) != "StateMachine":
         return []
 
-    parameters: list[dict[str, str]] = []
+    parameters: List[Dict[str, str]] = []
     for child in _iter_root_children(root):
         if strip_namespace(child.tag) != "Param":
             continue
@@ -297,7 +295,7 @@ def run_param_completer(prefix, parsed_args, **kwargs):
 
 def xml_file_completer(prefix, parsed_args, **kwargs):
     current_dir = Path.cwd()
-    matches: list[str] = []
+    matches: List[str] = []
 
     for path in sorted(current_dir.rglob("*.xml")):
         if path.name in IGNORE_XML_FILES:

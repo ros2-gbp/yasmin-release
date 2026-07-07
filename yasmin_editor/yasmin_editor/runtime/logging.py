@@ -1,19 +1,16 @@
-#!/usr/bin/env python3
-
 # Copyright (C) 2026 Maik Knof
 #
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
 #
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
-# You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 """Logging utilities for the YASMIN editor runtime.
 
@@ -25,7 +22,7 @@ from __future__ import annotations
 
 import threading
 import time
-from typing import Any, Callable, Optional
+from typing import Any, Callable, List, Optional, Union
 
 import yasmin
 
@@ -62,7 +59,7 @@ class RuntimeLogger:
         self._clear_callback = clear_callback
         self._is_disposed = is_disposed
 
-        self._log_entries: list[str] = []
+        self._log_entries: List[str] = []
         self._log_buffer_lock = threading.Lock()
         self._last_log_message = ""
         self._last_log_timestamp = 0.0
@@ -73,7 +70,7 @@ class RuntimeLogger:
 
         self.configure()
 
-    def get_logs(self) -> list[str]:
+    def get_logs(self) -> List[str]:
         """Return a copy of the collected runtime log lines."""
         with self._log_buffer_lock:
             return list(self._log_entries)
@@ -84,7 +81,7 @@ class RuntimeLogger:
 
     def set_log_level(
         self,
-        level: yasmin.LogLevel | str,
+        level: Union[yasmin.LogLevel, str],
         emit_status: bool = True,
     ) -> None:
         """Update the active YASMIN log level.

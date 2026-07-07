@@ -1,17 +1,16 @@
 // Copyright (C) 2025 Miguel Ángel González Santamarta
 //
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
 //
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
+//     http://www.apache.org/licenses/LICENSE-2.0
 //
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 #ifndef YASMIN_FACTORY__YASMIN_FACTORY_HPP_
 #define YASMIN_FACTORY__YASMIN_FACTORY_HPP_
@@ -28,6 +27,8 @@
 
 #include "yasmin/blackboard.hpp"
 #include "yasmin/concurrence.hpp"
+#include "yasmin/join_state.hpp"
+#include "yasmin/orthogonal_state.hpp"
 #include "yasmin/state.hpp"
 #include "yasmin/state_machine.hpp"
 #include "yasmin/types.hpp"
@@ -61,7 +62,16 @@ public:
   void configure() override;
 
   /**
+   * @brief Unwraps to the actual C++ state, allowing JoinState detection.
+   * @return Pointer to the inner C++ state object.
+   */
+  yasmin::State *get_inner_state() override;
+
+  /**
    * @brief Delegates execution to the underlying Python state.
+   *
+   * @param blackboard Shared pointer to the blackboard for state communication.
+   * @return std::string The outcome returned by the underlying Python state.
    */
   std::string execute(yasmin::Blackboard::SharedPtr blackboard) override;
 
@@ -72,6 +82,9 @@ public:
 
   /**
    * @brief Delegates string conversion to the underlying Python state.
+   *
+   * @return std::string The string representation from the underlying Python
+   * state.
    */
   std::string to_string() const override;
 
@@ -121,6 +134,26 @@ public:
    */
   yasmin::Concurrence::SharedPtr
   create_concurrence(tinyxml2::XMLElement *conc_elem);
+
+  /**
+   * @brief Creates an orthogonal state from an XML element.
+   *
+   * @param orth_elem Pointer to the XML element defining the orthogonal state.
+   * @return A shared pointer to the created OrthogonalState.
+   * @throws std::runtime_error If the XML structure is invalid.
+   */
+  yasmin::OrthogonalState::SharedPtr
+  create_orthogonal_state(tinyxml2::XMLElement *orth_elem);
+
+  /**
+   * @brief Creates a join state from an XML element.
+   *
+   * @param join_elem Pointer to the XML element defining the join state.
+   * @return A shared pointer to the created JoinState.
+   * @throws std::runtime_error If the XML structure is invalid.
+   */
+  yasmin::JoinState::SharedPtr
+  create_join_state(tinyxml2::XMLElement *join_elem);
 
   /**
    * @brief Recursively creates a state machine from an XML element.
@@ -222,12 +255,30 @@ private:
                          const std::string &attr_name,
                          const std::string &default_value = "") const;
 
+  /**
+   * @brief Adds blackboard key mappings from an XML element to a state.
+   *
+   * @param owner Pointer to the state to which the keys will be added.
+   * @param parent XML element containing the blackboard key definitions.
+   */
   void add_blackboard_keys(yasmin::State::SharedPtr owner,
                            tinyxml2::XMLElement *parent) const;
 
+  /**
+   * @brief Adds parameter mappings from an XML element to a state.
+   *
+   * @param owner Pointer to the state to which the parameters will be added.
+   * @param parent XML element containing the parameter definitions.
+   */
   void add_parameters(yasmin::State::SharedPtr owner,
                       tinyxml2::XMLElement *parent) const;
 
+  /**
+   * @brief Extracts parameter name mappings from an XML element.
+   *
+   * @param parent XML element containing the parameter mapping definitions.
+   * @return yasmin::ParameterMappings A mapping of parameter names.
+   */
   yasmin::ParameterMappings
   get_parameter_mappings(tinyxml2::XMLElement *parent) const;
 };

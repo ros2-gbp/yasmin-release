@@ -1,19 +1,17 @@
 // Copyright (C) 2025 Miguel Ángel González Santamarta
 //
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
 //
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
+//     http://www.apache.org/licenses/LICENSE-2.0
 //
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
-#include <iostream>
 #include <memory>
 #include <string>
 
@@ -26,10 +24,10 @@
 #include "yasmin_ros/basic_outcomes.hpp"
 #include "yasmin_ros/publisher_state.hpp"
 #include "yasmin_ros/ros_logs.hpp"
+#include "yasmin_ros/yasmin_node.hpp"
 #include "yasmin_viewer/yasmin_viewer_pub.hpp"
 
 using std::placeholders::_1;
-using std::placeholders::_2;
 
 /**
  * @class PublishIntState
@@ -139,26 +137,30 @@ int main(int argc, char *argv[]) {
   sm->add_state("PUBLISHING_INT", std::make_shared<PublishIntState>(),
                 {
                     {yasmin_ros::basic_outcomes::SUCCEED,
-                     "CHECKINNG_COUNTS"}, // Transition back to itself
+                     "CHECKING_COUNTS"}, // Transition back to itself
                 });
-  sm->add_state("CHECKINNG_COUNTS", checking_counts_state,
+  sm->add_state("CHECKING_COUNTS", checking_counts_state,
                 {{"outcome1", yasmin_ros::basic_outcomes::SUCCEED},
                  {"outcome2", "PUBLISHING_INT"}});
 
-  // Publisher for visualizing the state machine's status
-  yasmin_viewer::YasminViewerPub yasmin_pub(sm, "YASMIN_PUBLISHER_DEMO");
-
-  // Execute the state machine
   yasmin::Blackboard::SharedPtr blackboard = yasmin::Blackboard::make_shared();
   blackboard->set<int>("counter", 0);
   blackboard->set<int>("max_count", 10);
-  try {
-    std::string outcome = (*sm.get())(blackboard);
-    YASMIN_LOG_INFO(outcome.c_str());
-  } catch (const std::exception &e) {
-    YASMIN_LOG_WARN(e.what());
+
+  {
+    // Publisher for visualizing the state machine's status
+    yasmin_viewer::YasminViewerPub yasmin_pub(sm, "YASMIN_PUBLISHER_DEMO");
+
+    // Execute the state machine
+    try {
+      std::string outcome = (*sm.get())(blackboard);
+      YASMIN_LOG_INFO(outcome.c_str());
+    } catch (const std::exception &e) {
+      YASMIN_LOG_WARN(e.what());
+    }
   }
 
+  yasmin_ros::YasminNode::destroy_instance();
   rclcpp::shutdown();
 
   return 0;

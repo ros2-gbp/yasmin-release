@@ -1,17 +1,16 @@
 // Copyright (C) 2026 Maik Knof
 //
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
 //
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
+//     http://www.apache.org/licenses/LICENSE-2.0
 //
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 #ifndef YASMIN_PCL__FILTERS__EXTRACT_INDICES_STATE_HPP_
 #define YASMIN_PCL__FILTERS__EXTRACT_INDICES_STATE_HPP_
@@ -31,16 +30,26 @@ namespace yasmin_pcl::filters {
  */
 class ExtractIndicesState : public yasmin::State {
 public:
+  /** @brief Construct an ExtractIndicesState. */
   ExtractIndicesState();
-  ~ExtractIndicesState() override;
+  /** @brief Default destructor. */
+  ~ExtractIndicesState() override = default;
 
+  /** @brief Configure from blackboard parameters. */
   void configure() override;
+  /** @brief Execute the extract indices filter.
+   *  @param blackboard The shared blackboard.
+   *  @return Outcome string. */
   std::string execute(yasmin::Blackboard::SharedPtr blackboard) override;
 
 private:
+  /// @brief If true, invert the selection.
   bool negative_;
+  /// @brief Keep the cloud organized after extraction.
   bool keep_organized_;
+  /// @brief Value to assign to filtered-out points.
   float user_filter_value_;
+  /// @brief Whether to extract and publish removed indices.
   bool extract_removed_indices_;
 };
 

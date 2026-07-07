@@ -1,17 +1,16 @@
 // Copyright (C) 2026 Maik Knof
 //
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
 //
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
+//     http://www.apache.org/licenses/LICENSE-2.0
 //
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 #include "yasmin_pcl/io/load_pcd_state.hpp"
 
@@ -28,7 +27,7 @@
 namespace yasmin_pcl::io {
 
 LoadPcdState::LoadPcdState() : yasmin::State({"succeeded", "aborted"}) {
-  file_path_.clear();
+  this->file_path_.clear();
 
   this->set_description(
       "Loads a PCD file into pcl::PCLPointCloud2 and stores the cloud and file "
@@ -51,14 +50,12 @@ LoadPcdState::LoadPcdState() : yasmin::State({"succeeded", "aborted"}) {
   this->add_output_key("pcd_version", "Detected PCD version stored as int.");
 }
 
-LoadPcdState::~LoadPcdState() {}
-
 void LoadPcdState::configure() {
-  file_path_ = this->get_parameter<std::string>("file_path");
+  this->file_path_ = this->get_parameter<std::string>("file_path");
 }
 
 std::string LoadPcdState::execute(yasmin::Blackboard::SharedPtr blackboard) {
-  if (file_path_.empty()) {
+  if (this->file_path_.empty()) {
     YASMIN_LOG_WARN("Parameter 'file_path' is empty");
     return "aborted";
   }
@@ -69,11 +66,11 @@ std::string LoadPcdState::execute(yasmin::Blackboard::SharedPtr blackboard) {
   int pcd_version = 0;
 
   pcl::PCDReader reader;
-  const int result =
-      reader.read(file_path_, *output_cloud, origin, orientation, pcd_version);
+  const int result = reader.read(this->file_path_, *output_cloud, origin,
+                                 orientation, pcd_version);
 
   if (result < 0) {
-    YASMIN_LOG_WARN("Failed to load PCD file '%s'", file_path_.c_str());
+    YASMIN_LOG_WARN("Failed to load PCD file '%s'", this->file_path_.c_str());
     return "aborted";
   }
 

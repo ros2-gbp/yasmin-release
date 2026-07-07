@@ -1,17 +1,16 @@
 // Copyright (C) 2026 Maik Knof
 //
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
 //
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
+//     http://www.apache.org/licenses/LICENSE-2.0
 //
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 #include "yasmin_pcl/io/load_ply_state.hpp"
 
@@ -130,10 +129,10 @@ static bool read_ply_camera_ascii(const std::string &file_path,
         }
       }
 
-      origin = Eigen::Vector4f(view_px, view_py, view_pz, 0.0f);
+      origin = Eigen::Vector4f(view_px, view_py, view_pz, 1.0f);
       Eigen::Matrix3f R;
-      R << x_axisx, x_axisy, x_axisz, y_axisx, y_axisy, y_axisz, z_axisx,
-          z_axisy, z_axisz;
+      R << x_axisx, y_axisx, z_axisx, x_axisy, y_axisy, z_axisy, x_axisz,
+          y_axisz, z_axisz;
       orientation = Eigen::Quaternionf(R);
       return true;
     }
@@ -150,7 +149,7 @@ static bool read_ply_camera_ascii(const std::string &file_path,
 }
 
 LoadPlyState::LoadPlyState() : yasmin::State({"succeeded", "aborted"}) {
-  file_path_.clear();
+  this->file_path_.clear();
 
   this->set_description(
       "Loads a PLY file into pcl::PCLPointCloud2 and stores the cloud and file "
@@ -172,14 +171,12 @@ LoadPlyState::LoadPlyState() : yasmin::State({"succeeded", "aborted"}) {
                        "std::array<float, 4>.");
 }
 
-LoadPlyState::~LoadPlyState() {}
-
 void LoadPlyState::configure() {
-  file_path_ = this->get_parameter<std::string>("file_path");
+  this->file_path_ = this->get_parameter<std::string>("file_path");
 }
 
 std::string LoadPlyState::execute(yasmin::Blackboard::SharedPtr blackboard) {
-  if (file_path_.empty()) {
+  if (this->file_path_.empty()) {
     YASMIN_LOG_WARN("Parameter 'file_path' is empty");
     return "aborted";
   }
@@ -188,18 +185,18 @@ std::string LoadPlyState::execute(yasmin::Blackboard::SharedPtr blackboard) {
   Eigen::Vector4f origin = Eigen::Vector4f::Zero();
   Eigen::Quaternionf orientation = Eigen::Quaternionf::Identity();
 
-  const int result =
-      pcl::io::loadPLYFile(file_path_, *output_cloud, origin, orientation);
+  const int result = pcl::io::loadPLYFile(this->file_path_, *output_cloud,
+                                          origin, orientation);
 
   if (result < 0) {
-    YASMIN_LOG_WARN("Failed to load PLY file '%s'", file_path_.c_str());
+    YASMIN_LOG_WARN("Failed to load PLY file '%s'", this->file_path_.c_str());
     return "aborted";
   }
 
   // PCL 1.12's loadPLYFile does not populate the origin/orientation output
   // parameters for PCLPointCloud2 due to a bug in PLYReader::read. Parse
   // the camera element directly from the file to work around this.
-  read_ply_camera_ascii(file_path_, origin, orientation);
+  read_ply_camera_ascii(this->file_path_, origin, orientation);
 
   blackboard->set<common::PclPointCloud2Ptr>("output_cloud", output_cloud);
   blackboard->set<common::Vector4fArray>("sensor_origin",

@@ -1,20 +1,19 @@
 // Copyright (C) 2023 Miguel Ángel González Santamarta
 //
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
 //
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
+//     http://www.apache.org/licenses/LICENSE-2.0
 //
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
-#ifndef YASMIN_ROS__BASIC_OUTCOME_HPP_
-#define YASMIN_ROS__BASIC_OUTCOME_HPP_
+#ifndef YASMIN_ROS__BASIC_OUTCOMES_HPP_
+#define YASMIN_ROS__BASIC_OUTCOMES_HPP_
 
 #include <string>
 
@@ -36,7 +35,7 @@ namespace basic_outcomes {
  * This string constant is used to indicate that an action has successfully
  * completed without any issues.
  */
-constexpr char SUCCEED[] = "succeeded";
+inline constexpr char SUCCEED[] = "succeeded";
 
 /**
  * @brief Constant representing an aborted action outcome.
@@ -44,7 +43,7 @@ constexpr char SUCCEED[] = "succeeded";
  * This string constant signifies that an action was aborted, likely due to an
  * error or unexpected condition that prevented its completion.
  */
-constexpr char ABORT[] = "aborted";
+inline constexpr char ABORT[] = "aborted";
 
 /**
  * @brief Constant representing a failed action outcome.
@@ -52,7 +51,7 @@ constexpr char ABORT[] = "aborted";
  * This string constant is used to indicate that an action has completed
  * but resulted in failure, meaning it did not achieve its intended result.
  */
-constexpr char FAIL[] = "failed";
+inline constexpr char FAIL[] = "failed";
 
 /**
  * @brief Constant representing a canceled action outcome.
@@ -60,7 +59,7 @@ constexpr char FAIL[] = "failed";
  * This string constant is used when an action is manually canceled by a user
  * or system before it could complete.
  */
-constexpr char CANCEL[] = "canceled";
+inline constexpr char CANCEL[] = "canceled";
 
 /**
  * @brief Constant representing a timed-out action outcome.
@@ -68,16 +67,15 @@ constexpr char CANCEL[] = "canceled";
  * This string constant is used to indicate that an action did not complete
  * within the allocated time, resulting in a timeout status.
  */
-constexpr char TIMEOUT[] = "timeout";
+inline constexpr char TIMEOUT[] = "timeout";
 
 /**
- * @brief Constant representing a timed-out action outcome.
+ * @brief Constant representing a retry action outcome.
  *
- * This string constant is used to indicate that an action did not complete
- * within the allocated time, resulting in a timeout status.
+ * This string constant is used to indicate that a retry should be performed.
  */
-constexpr char RETRY[] = "retry";
+inline constexpr char RETRY[] = "retry";
 } // namespace basic_outcomes
 } // namespace yasmin_ros
 
-#endif // YASMIN_ROS__BASIC_OUTCOME_HPP_
+#endif // YASMIN_ROS__BASIC_OUTCOMES_HPP_

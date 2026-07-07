@@ -39,6 +39,7 @@
           <li><a href="index.html">Introduction</a></li>
           <li><a href="docker.html">Docker Environment</a></li>
           <li><a href="main_concepts.html">Main Concepts</a></li>
+          <li><a href="callback_signal.html">Callback Signal</a></li>
           <li><a href="xml_factory.html">XML State Machines</a></li>
           <li><a href="packages.html">Packages Overview</a></li>
           <li><a href="yasmin_api.html">API Reference</a></li>
@@ -91,7 +92,27 @@
               <li>
                 <a href="tutorials/cpp/factory_demo.html">Factory (XML)</a>
               </li>
+              <li>
+                <a href="tutorials/cpp/multiple_states_demo.html"
+                  >Multiple States</a
+                >
+              </li>
               <li><a href="tutorials/cpp/nav2_demo.html">Nav2 Demo</a></li>
+              <li>
+                <a href="tutorials/cpp/orthogonal_demo.html"
+                  >Orthogonal Regions</a
+                >
+              </li>
+              <li>
+                <a href="tutorials/cpp/orthogonal_sync_demo.html"
+                  >Orthogonal Regions with Sync</a
+                >
+              </li>
+              <li>
+                <a href="tutorials/cpp/ros_serialization_demo.html"
+                  >ROS Serialization</a
+                >
+              </li>
             </ul>
           </li>
         </ul>
@@ -146,7 +167,27 @@
               <li>
                 <a href="tutorials/python/factory_demo.html">Factory (XML)</a>
               </li>
+              <li>
+                <a href="tutorials/python/multiple_states_demo.html"
+                  >Multiple States</a
+                >
+              </li>
               <li><a href="tutorials/python/nav2_demo.html">Nav2 Demo</a></li>
+              <li>
+                <a href="tutorials/python/orthogonal_demo.html"
+                  >Orthogonal Regions</a
+                >
+              </li>
+              <li>
+                <a href="tutorials/python/orthogonal_sync_demo.html"
+                  >Orthogonal Regions with Sync</a
+                >
+              </li>
+              <li>
+                <a href="tutorials/python/ros_serialization_demo.html"
+                  >ROS Serialization</a
+                >
+              </li>
             </ul>
           </li>
         </ul>
@@ -867,6 +908,42 @@ YASMIN_LOG_INFO(outcome.c_str());</code></pre>
     &lt;/OutcomeMap&gt;
 &lt;/Concurrence&gt;</code></pre>
 
+        <h3>OrthogonalState</h3>
+        <p>
+          <code>OrthogonalState</code> executes multiple independent state
+          machines (<strong>regions</strong>) concurrently. Each region is a
+          complete <code>StateMachine</code> with its own states, transitions,
+          and a private copy of the blackboard. An outcome map defines how
+          region outcomes combine into the container's overall outcome.
+        </p>
+        <p>
+          Within each region, you can use <code>JoinState</code> with a matching
+          <code>sync_id</code> to synchronize regions at specific points during
+          execution.
+        </p>
+        <pre><code class="language-xml">&lt;OrthogonalState name="parallel" outcomes="success timeout" default_outcome="timeout"&gt;
+    &lt;Region name="A" outcomes="done" start_state="work_a"&gt;
+        &lt;State id="work_a" type="py" module="pkg" class="WorkerState"&gt;
+            &lt;Param name="max_count" default_type="int" default_value="3"/&gt;
+            &lt;Transition from="working" to="work_a"/&gt;
+            &lt;Transition from="done" to="done"/&gt;
+        &lt;/State&gt;
+    &lt;/Region&gt;
+    &lt;Region name="B" outcomes="done" start_state="work_b"&gt;
+        &lt;State id="work_b" type="py" module="pkg" class="WorkerState"&gt;
+            &lt;Param name="max_count" default_type="int" default_value="5"/&gt;
+            &lt;Transition from="working" to="work_b"/&gt;
+            &lt;Transition from="done" to="done"/&gt;
+        &lt;/State&gt;
+    &lt;/Region&gt;
+    &lt;OutcomeMap outcome="success"&gt;
+        &lt;Item state="A" outcome="done"/&gt;
+        &lt;Item state="B" outcome="done"/&gt;
+    &lt;/OutcomeMap&gt;
+    &lt;Transition from="success" to="success"/&gt;
+    &lt;Transition from="timeout" to="timeout"/&gt;
+&lt;/OrthogonalState&gt;</code></pre>
+
         <h2>Example: Mixed Language State Machine</h2>
         <p>
           This example demonstrates a state machine using both Python and C++
@@ -905,7 +982,7 @@ YASMIN_LOG_INFO(outcome.c_str());</code></pre>
 
     <footer>
       <p>
-        &copy; 2025 YASMIN Project. Licensed under GPL v3.0. | Documentation
+        &copy; 2026 YASMIN Project. Licensed under Apache-2.0. | Documentation
         generated with <a href="doxygen.html" target="_blank">Doxygen</a>
       </p>
     </footer>

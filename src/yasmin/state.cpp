@@ -1,21 +1,18 @@
 // Copyright (C) 2023 Miguel Ángel González Santamarta
 //
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
 //
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
+//     http://www.apache.org/licenses/LICENSE-2.0
 //
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 #include "yasmin/state.hpp"
-
-#include <cxxabi.h> // For abi::__cxa_demangle
 
 #include <algorithm>
 #include <exception>
@@ -25,7 +22,9 @@
 #include <unordered_map>
 #include <vector>
 
+#include "yasmin/demangle.hpp"
 #include "yasmin/logs.hpp"
+#include "yasmin/state_utils.hpp"
 #include "yasmin/types.hpp"
 
 using namespace yasmin;
@@ -40,8 +39,8 @@ struct StateStorage {
   Blackboard::SharedPtr parameters = Blackboard::make_shared();
 };
 
-std::mutex &state_storage_mutex() {
-  static std::mutex mtx;
+std::recursive_mutex &state_storage_mutex() {
+  static std::recursive_mutex mtx;
   return mtx;
 }
 
@@ -52,23 +51,24 @@ std::unordered_map<const State *, StateStorage> &state_storage_map() {
 } // namespace
 
 StateMetadata &State::get_metadata_ref() const {
-  std::lock_guard<std::mutex> lock(state_storage_mutex());
+  std::lock_guard<std::recursive_mutex> lock(state_storage_mutex());
   return state_storage_map()[this].metadata;
 }
 
 Blackboard::SharedPtr State::get_parameters_blackboard() const {
-  std::lock_guard<std::mutex> lock(state_storage_mutex());
+  std::lock_guard<std::recursive_mutex> lock(state_storage_mutex());
   return state_storage_map()[this].parameters;
 }
 
-State::State(const Outcomes &outcomes) : outcomes(outcomes) {
+State::State(Outcomes outcomes) {
   if (outcomes.empty()) {
     throw std::logic_error("A state must have at least one possible outcome.");
   }
+  this->outcomes = std::move(outcomes);
 }
 
 State::~State() {
-  std::lock_guard<std::mutex> lock(state_storage_mutex());
+  std::lock_guard<std::recursive_mutex> lock(state_storage_mutex());
   state_storage_map().erase(this);
 }
 
@@ -114,26 +114,23 @@ std::string State::operator()(Blackboard::SharedPtr blackboard) {
   std::string outcome = this->execute(blackboard);
 
   // Check if the outcome is valid
-  if (this->outcomes.find(outcome) == this->outcomes.end()) {
-
-    // Construct a string representation of the possible outcomes
-    std::string outcomes_string = "[";
-    const auto &outcomes = this->get_outcomes();
-
-    for (auto it = outcomes.begin(); it != outcomes.end(); ++it) {
-      const auto &s = *it;
-      outcomes_string += s;
-
-      // Add a comma if this is not the last element
-      if (std::next(it) != outcomes.end()) {
-        outcomes_string += ", ";
-      }
-    }
-
-    outcomes_string += "]";
+  const auto &outcomes = this->get_outcomes();
+  if (outcomes.find(outcome) == outcomes.end()) {
 
     // Mark as idle before throwing exception
     this->set_status(StateStatus::IDLE);
+
+    if (outcome.empty()) {
+      throw std::logic_error("State '" + this->to_string() +
+                             "' returned an empty outcome. "
+                             "Did you forget to override execute()?");
+    }
+
+    // Construct a string representation of the possible outcomes
+    std::string outcomes_string =
+        "[" +
+        yasmin::join(outcomes, ", ", [](const std::string &o) { return o; }) +
+        "]";
 
     // Throw an exception if the outcome is not valid
     throw std::logic_error("Outcome '" + outcome +
@@ -296,18 +293,5 @@ const StateMetadata &State::get_metadata() const {
 }
 
 std::string State::to_string() const {
-  std::string name = typeid(*this).name();
-
-#ifdef __GNUG__ // If using GCC/G++
-  int status;
-  // Demangle the name using GCC's demangling function
-  char *demangled =
-      abi::__cxa_demangle(name.c_str(), nullptr, nullptr, &status);
-  if (status == 0) {
-    name = demangled;
-  }
-  free(demangled);
-#endif
-
-  return name; // Return the demangled class name
+  return demangle_type(typeid(*this).name());
 }

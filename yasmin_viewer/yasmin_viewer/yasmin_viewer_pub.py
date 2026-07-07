@@ -1,22 +1,22 @@
 # Copyright (C) 2023 Miguel Ángel González Santamarta
 #
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
 #
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-# GNU General Public License for more details.
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
-# You should have received a copy of the GNU General Public License
-# along with this program. If not, see <https://www.gnu.org/licenses/>.
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Set
 from rclpy.node import Node
+import rclpy
 import yasmin
-from yasmin import StateMachine, State, Concurrence
+from yasmin import StateMachine, State, Concurrence, OrthogonalState
 from yasmin_ros.yasmin_node import YasminNode
 from yasmin_msgs.msg import (
     State as StateMsg,
@@ -73,7 +73,15 @@ class YasminViewerPub(object):
         ## A timer to periodically publish the FSM state.
         self._timer = self._node.create_timer(1 / rate, self._publish_data)
 
-        ## Register shutdown callback to clean up the viewer.
+    def shutdown(self) -> None:
+        if self._timer is not None:
+            self._timer.cancel()
+            self._node.destroy_timer(self._timer)
+            self._timer = None
+
+        if self._pub is not None:
+            self._node.destroy_publisher(self._pub)
+            self._pub = None
 
     def parse_transitions(self, transitions: Dict[str, str]) -> List[TransitionMsg]:
         """
@@ -125,10 +133,8 @@ class YasminViewerPub(object):
         state_msg.transitions = self.parse_transitions(state_info["transitions"])
         state_msg.outcomes = state.get_outcomes()
 
-        # Check if the state is a FSM or Concurrence
-        state_msg.is_fsm = isinstance(state, StateMachine) or isinstance(
-            state, Concurrence
-        )
+        # Check if the state is a FSM, Concurrence, or OrthogonalState
+        state_msg.is_fsm = isinstance(state, (StateMachine, Concurrence, OrthogonalState))
 
         # Add state to the list
         states_list.append(state_msg)
@@ -173,17 +179,57 @@ class YasminViewerPub(object):
                 states_list[-1].transitions = transitions[child_state_name]
 
                 # Check if the child_state outcomes are in the transitions
+                existing_outcomes: Set[str] = {
+                    t.outcome for t in states_list[-1].transitions
+                }
                 for outcome in child_state.get_outcomes():
-                    if outcome not in [t.outcome for t in states_list[-1].transitions]:
+                    if outcome not in existing_outcomes:
                         # If not, add a transition to the default outcome of the concurrence
                         msg = TransitionMsg()
                         msg.outcome = outcome
                         msg.state = concurrence.get_default_outcome()
                         states_list[-1].transitions.append(msg)
 
+        # Parse child states if this state is an OrthogonalState
+        elif isinstance(state, OrthogonalState):
+            ort: OrthogonalState = state
+            regions = ort.get_regions()
+            state_msg.current_state = -2
+
+            for region in regions:
+                region_msg = StateMsg()
+                region_msg.id = len(states_list)
+                region_msg.parent = state_msg.id
+                region_msg.name = region.name
+                region_msg.is_fsm = True
+                region_msg.current_state = -1
+                region_msg.outcomes = list(region.sm.get_outcomes())
+                states_list.append(region_msg)
+
+                region_states = region.sm.get_states()
+
+                for child_state_name in region_states:
+                    child_state_info = region_states[child_state_name]
+                    self.parse_state(
+                        child_state_name,
+                        child_state_info,
+                        states_list,
+                        region_msg.id,
+                    )
+
+                region_current = region.sm.get_current_state()
+                if region_current:
+                    for child_state in states_list:
+                        if (
+                            child_state.name == region_current
+                            and child_state.parent == region_msg.id
+                        ):
+                            region_msg.current_state = child_state.id
+                            break
+
     def parse_concurrence_transitions(
         self, concurrence: Concurrence
-    ) -> Dict[str, Dict[str, str]]:
+    ) -> Dict[str, List[TransitionMsg]]:
         """
         Converts a concurrence outcome map into transition-like information for visualization.
 
@@ -194,7 +240,7 @@ class YasminViewerPub(object):
             concurrence (Concurrence): The concurrence state to parse transitions from.
 
         Returns:
-            List[TransitionMsg]: A list of TransitionMsg representing the concurrence outcome mappings.
+            Dict[str, List[TransitionMsg]]: Transition mappings per state name for visualization.
         """
         transitions = {}
         outcome_map = concurrence.get_outcome_map()
@@ -225,6 +271,9 @@ class YasminViewerPub(object):
         Raises:
             Exception: If the FSM validation fails, an error is logged and the function exits without publishing.
         """
+        if not rclpy.ok():
+            return
+
         try:
             self._fsm.validate()
 
@@ -243,7 +292,7 @@ class YasminViewerPub(object):
             )
             self._pub.publish(state_machine_msg)
 
-        except Exception as e:
+        except ValueError as e:
             yasmin.YASMIN_LOG_ERROR(
                 f"Not publishing state machine '{self._fsm_name}' due to validation failure: {e}"
             )

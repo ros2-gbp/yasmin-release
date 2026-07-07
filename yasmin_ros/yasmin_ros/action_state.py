@@ -1,17 +1,16 @@
 # Copyright (C) 2023 Miguel Ángel González Santamarta
 #
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
 #
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
-# You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 from threading import RLock, Event
 from typing import Set, Callable, Type, Any
@@ -25,9 +24,9 @@ from action_msgs.msg import GoalStatus
 
 import yasmin
 from yasmin import State, Blackboard
-from yasmin_ros.yasmin_node import YasminNode
-from yasmin_ros.basic_outcomes import SUCCEED, ABORT, CANCEL, TIMEOUT
+from yasmin_ros.basic_outcomes import SUCCEED, ABORT, CANCEL
 from yasmin_ros.ros_clients_cache import ROSClientsCache
+from yasmin_ros.ros_state_utils import resolve_node, wait_with_retry, setup_outcomes
 
 
 class ActionState(State):
@@ -103,17 +102,13 @@ class ActionState(State):
         self._maximum_retry: int = maximum_retry
 
         # Set outcomes
-        outcomes = set(outcomes)
-        outcomes.update({SUCCEED, ABORT, CANCEL})
+        outcomes = setup_outcomes(
+            outcomes,
+            {SUCCEED, ABORT, CANCEL},
+            add_timeout=bool(self._wait_timeout or self._response_timeout),
+        )
 
-        if self._wait_timeout or self._response_timeout:
-            outcomes.add(TIMEOUT)
-
-        ## Shared pointer to the ROS 2 node.
-        self._node: Node = node
-
-        if self._node is None:
-            self._node: Node = YasminNode.get_instance()
+        self._node: Node = resolve_node(node)
 
         ## Name of the action to communicate with.
         self._action_name: str = action_name
@@ -164,22 +159,14 @@ class ActionState(State):
 
         yasmin.YASMIN_LOG_INFO(f"Waiting for action '{self._action_name}'")
 
-        while not self._action_client.wait_for_server(self._wait_timeout):
-            if self.is_canceled():
-                return CANCEL
-
-            yasmin.YASMIN_LOG_WARN(
-                f"Timeout reached, action '{self._action_name}' is not available"
-            )
-
-            if self._maximum_retry > 0:
-                if retry_count < self._maximum_retry:
-                    retry_count += 1
-                    yasmin.YASMIN_LOG_WARN(
-                        f"Retrying to connect to action '{self._action_name}' ({retry_count}/{self._maximum_retry})"
-                    )
-                else:
-                    return TIMEOUT
+        outcome = wait_with_retry(
+            lambda: self._action_client.wait_for_server(self._wait_timeout),
+            self._maximum_retry,
+            f"Timeout reached, action '{self._action_name}' is not available",
+            cancel_check=self.is_canceled,
+        )
+        if outcome is not None:
+            return outcome
 
         if self.is_canceled():
             return CANCEL
@@ -197,22 +184,15 @@ class ActionState(State):
         )
         send_goal_future.add_done_callback(self._goal_response_callback)
 
-        # Wait for action to be done
-        while not self._action_done_event.wait(self._response_timeout):
-            if self.is_canceled():
-                return CANCEL
-
-            yasmin.YASMIN_LOG_WARN(
-                f"Timeout reached while waiting for response from action '{self._action_name}'"
-            )
-
-            if retry_count < self._maximum_retry:
-                retry_count += 1
-                yasmin.YASMIN_LOG_WARN(
-                    f"Retrying to wait for action '{self._action_name}' response ({retry_count}/{self._maximum_retry})"
-                )
-            else:
-                return TIMEOUT
+        outcome = wait_with_retry(
+            lambda: self._action_done_event.wait(self._response_timeout),
+            self._maximum_retry,
+            f"Timeout reached while waiting for response from "
+            f"action '{self._action_name}'",
+            cancel_check=self.is_canceled,
+        )
+        if outcome is not None:
+            return outcome
 
         if self.is_canceled():
             return CANCEL

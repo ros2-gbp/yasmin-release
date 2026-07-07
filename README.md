@@ -1,3 +1,36 @@
+## yasmin (lyrical) - 6.0.0-1
+
+The packages in the `yasmin` repository were released into the `lyrical` distro by running `/usr/bin/bloom-release --rosdistro lyrical yasmin` on `Tue, 07 Jul 2026 15:47:53 -0000`
+
+These packages were released:
+- `yasmin`
+- `yasmin_cli`
+- `yasmin_demos`
+- `yasmin_editor`
+- `yasmin_factory`
+- `yasmin_msgs`
+- `yasmin_pcl`
+- `yasmin_plugins_manager`
+- `yasmin_ros`
+- `yasmin_viewer`
+
+Version of package(s) in repository `yasmin`:
+
+- upstream repository: https://github.com/uleroboticsgroup/yasmin.git
+- release repository: https://github.com/ros2-gbp/yasmin-release.git
+- rosdistro version: `5.0.0-3`
+- old version: `5.0.0-3`
+- new version: `6.0.0-1`
+
+Versions of tools used:
+
+- bloom version: `0.14.3`
+- catkin_pkg version: `1.1.0`
+- rosdep version: `0.26.0`
+- rosdistro version: `1.0.1`
+- vcstools version: `0.1.42`
+
+
 ## yasmin (rolling) - 6.0.0-1
 
 The packages in the `yasmin` repository were released into the `rolling` distro by running `/usr/bin/bloom-release --rosdistro rolling yasmin` on `Tue, 07 Jul 2026 15:40:33 -0000`

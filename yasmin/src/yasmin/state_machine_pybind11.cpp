@@ -70,8 +70,6 @@ PYBIND11_MODULE(state_machine, m) {
              const yasmin::Transitions &transitions,
              const yasmin::Remappings &remappings,
              const yasmin::ParameterMappings &parameter_mappings) {
-            // Ensure the Python object is kept alive
-            py::object py_state = py::cast(state);
             self.add_state(name, state, transitions, remappings,
                            parameter_mappings);
           },

@@ -39,6 +39,7 @@
           <li><a href="../../index.html">Introduction</a></li>
           <li><a href="../../docker.html">Docker Environment</a></li>
           <li><a href="../../main_concepts.html">Main Concepts</a></li>
+          <li><a href="../../shared_states.html">Shared States</a></li>
           <li><a href="../../callback_signal.html">Callback Signal</a></li>
           <li><a href="../../xml_factory.html">XML State Machines</a></li>
           <li><a href="../../packages.html">Packages Overview</a></li>
@@ -74,7 +75,7 @@
             Advanced
             <ul>
               <li><a href="factory_demo.html">Factory (XML)</a></li>
-              <li><a href="multiple_states_demo.html">Multiple States</a></li>
+
               <li><a href="nav2_demo.html">Nav2 Demo</a></li>
               <li><a href="orthogonal_demo.html">Orthogonal Regions</a></li>
               <li>
@@ -123,11 +124,7 @@
             Advanced
             <ul>
               <li><a href="../python/factory_demo.html">Factory (XML)</a></li>
-              <li>
-                <a href="../python/multiple_states_demo.html"
-                  >Multiple States</a
-                >
-              </li>
+
               <li><a href="../python/nav2_demo.html">Nav2 Demo</a></li>
               <li>
                 <a href="../python/orthogonal_demo.html">Orthogonal Regions</a>
@@ -234,10 +231,12 @@
 #include &lt;string&gt;
 
 #include &lt;rclcpp/rclcpp.hpp&gt;
+
 #include "yasmin/state_machine.hpp"
 #include "yasmin_demos/share_directory.hpp"
 #include "yasmin_factory/yasmin_factory.hpp"
 #include "yasmin_ros/ros_logs.hpp"
+#include "yasmin_ros/yasmin_node.hpp"
 #include "yasmin_viewer/yasmin_viewer_pub.hpp"
 
 int main(int argc, char *argv[]) {
@@ -251,24 +250,30 @@ int main(int argc, char *argv[]) {
   // Create the factory and state machine in a scope to ensure proper cleanup
   yasmin_factory::YasminFactory factory;
 
-  // Load state machine from XML file
-  std::string xml_file = yasmin_demos::get_share_file_path(
-      "state_machines/demo_2.xml");
+  // Load state machine from XML file.
+  // Other XML demos: demo_1.xml, demo_3.xml, demo_orthogonal.xml,
+  //                  demo_orthogonal_sync.xml, demo_fsm_metadata.xml
+  std::string xml_file =
+      yasmin_demos::get_share_file_path("state_machines/demo_2.xml");
 
   // Create the state machine from the XML file
   auto sm = factory.create_sm_from_file(xml_file);
   sm-&gt;set_sigint_handler(true);
 
-  // Publisher for visualizing the state machine
-  yasmin_viewer::YasminViewerPub yasmin_pub(sm, "YASMIN_FACTORY_DEMO");
+  {
+    // Publisher for visualizing the state machine
+    yasmin_viewer::YasminViewerPub yasmin_pub(sm, "YASMIN_FACTORY_DEMO");
 
-  // Execute the state machine
-  try {
-    std::string outcome = (*sm.get())();
-    YASMIN_LOG_INFO(outcome.c_str());
-  } catch (const std::exception &amp;e) {
-    YASMIN_LOG_WARN(e.what());
+    // Execute the state machine
+    try {
+      std::string outcome = (*sm.get())();
+      YASMIN_LOG_INFO(outcome.c_str());
+    } catch (const std::exception &amp;e) {
+      YASMIN_LOG_WARN(e.what());
+    }
   }
+
+  yasmin_ros::YasminNode::destroy_instance();
 
   // Shutdown ROS 2
   rclcpp::shutdown();

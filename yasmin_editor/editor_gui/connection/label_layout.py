@@ -1,23 +1,20 @@
 # Copyright (C) 2026 Maik Knof
 #
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
 #
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
-# You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <https://www.gnu.org/licenses/>.
-
-"""Helpers for laying out grouped connection labels."""
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 from typing import TYPE_CHECKING, List
 
-from PyQt5.QtCore import QPointF, QRectF
+from yasmin_editor.qt_compat import QtCore
 
 if TYPE_CHECKING:
     from yasmin_editor.editor_gui.connection_line import ConnectionLine
@@ -29,7 +26,7 @@ LABEL_SPACING: float = 2.0
 
 def layout_stacked_labels(
     group: List["ConnectionLine"],
-    anchor_point: QPointF,
+    anchor_point: QtCore.QPointF,
     stack_direction: str = "center",
 ) -> None:
     """Lay out the labels of a grouped connection as a vertical stack."""
@@ -57,7 +54,9 @@ def layout_stacked_labels(
         label_rect = connection.label.boundingRect()
         box_width = label_rect.width() + LABEL_PADDING * 2
         box_left = anchor_point.x() - box_width / 2.0
-        connection.label_bg.setRect(QRectF(box_left, current_top, box_width, box_height))
+        connection.label_bg.setRect(
+            QtCore.QRectF(box_left, current_top, box_width, box_height)
+        )
         connection.label.setPos(
             box_left + LABEL_PADDING,
             current_top + LABEL_PADDING,

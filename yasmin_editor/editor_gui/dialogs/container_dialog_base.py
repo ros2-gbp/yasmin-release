@@ -1,44 +1,22 @@
 # Copyright (C) 2026 Maik Knof
 #
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
 #
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
-# You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <https://www.gnu.org/licenses/>.
-
-"""Shared dialog primitives for container-style editor dialogs."""
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 from typing import Dict, List, Optional
-
-from PyQt5.QtCore import Qt
-from PyQt5.QtWidgets import (
-    QComboBox,
-    QDialog,
-    QDialogButtonBox,
-    QFormLayout,
-    QHBoxLayout,
-    QHeaderView,
-    QLabel,
-    QLineEdit,
-    QMessageBox,
-    QPushButton,
-    QSizePolicy,
-    QTableWidget,
-    QTableWidgetItem,
-    QTextEdit,
-    QVBoxLayout,
-    QWidget,
-)
+from yasmin_editor.qt_compat import Qt, QtWidgets
 
 
-class ContainerDialogBase(QDialog):
+class ContainerDialogBase(QtWidgets.QDialog):
     """Base dialog for state machine and concurrence container editors.
 
     The derived classes only need to add their container-specific selector row
@@ -58,7 +36,7 @@ class ContainerDialogBase(QDialog):
         remappings: Optional[Dict[str, str]],
         description: str,
         edit_mode: bool,
-        parent: Optional[QDialog] = None,
+        parent: Optional[QtWidgets.QDialog] = None,
     ) -> None:
         super().__init__(parent)
         self.edit_mode = edit_mode
@@ -66,7 +44,7 @@ class ContainerDialogBase(QDialog):
         self.setWindowTitle(window_title)
         self.resize(500, 500)
 
-        self.layout = QFormLayout(self)
+        self.layout = QtWidgets.QFormLayout(self)
 
         self._create_name_row(name, name_placeholder)
         self._create_selector_row()
@@ -77,7 +55,7 @@ class ContainerDialogBase(QDialog):
 
     def _create_name_row(self, name: str, placeholder: str) -> None:
         """Create the required name input row."""
-        self.name_edit = QLineEdit(name)
+        self.name_edit = QtWidgets.QLineEdit(name)
         self.name_edit.setPlaceholderText(placeholder)
         self.layout.addRow("Name:*", self.name_edit)
 
@@ -90,14 +68,18 @@ class ContainerDialogBase(QDialog):
 
     def _create_outcomes_row(self, outcomes: List[str]) -> None:
         """Create the read-only outcomes display row."""
-        self.outcomes_label = QLabel("Outcomes:")
+        self.outcomes_label = QtWidgets.QLabel("Outcomes:")
         outcomes_text = ", ".join(outcomes)
 
-        self.outcomes_display = QLabel(outcomes_text)
+        self.outcomes_display = QtWidgets.QLabel(outcomes_text)
         self.outcomes_display.setWordWrap(True)
         self.outcomes_display.setProperty("infoBox", True)
-        self.outcomes_display.setTextInteractionFlags(Qt.TextSelectableByMouse)
-        self.outcomes_display.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Minimum)
+        self.outcomes_display.setTextInteractionFlags(
+            Qt.TextInteractionFlag.TextSelectableByMouse
+        )
+        self.outcomes_display.setSizePolicy(
+            QtWidgets.QSizePolicy.Policy.Preferred, QtWidgets.QSizePolicy.Policy.Minimum
+        )
 
         outcome_count = len(outcomes)
         base_height = 24
@@ -109,8 +91,8 @@ class ContainerDialogBase(QDialog):
 
     def _create_description_row(self, description: str) -> None:
         """Create the optional description editor."""
-        description_label = QLabel("<b>Description:</b>")
-        self.description_edit = QTextEdit()
+        description_label = QtWidgets.QLabel("<b>Description:</b>")
+        self.description_edit = QtWidgets.QTextEdit()
         self.description_edit.setMaximumHeight(60)
 
         if description:
@@ -120,25 +102,27 @@ class ContainerDialogBase(QDialog):
 
     def _create_remappings_row(self, remappings: Dict[str, str]) -> None:
         """Create the remappings editor table and controls."""
-        remappings_label = QLabel("<b>Remappings:</b>")
-        remappings_widget = QWidget()
-        remappings_layout = QVBoxLayout(remappings_widget)
+        remappings_label = QtWidgets.QLabel("<b>Remappings:</b>")
+        remappings_widget = QtWidgets.QWidget()
+        remappings_layout = QtWidgets.QVBoxLayout(remappings_widget)
         remappings_layout.setContentsMargins(0, 0, 0, 0)
 
-        self.remappings_table = QTableWidget(0, 2)
+        self.remappings_table = QtWidgets.QTableWidget(0, 2)
         self.remappings_table.setHorizontalHeaderLabels(["Old Key", "New Key"])
-        self.remappings_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        self.remappings_table.horizontalHeader().setSectionResizeMode(
+            QtWidgets.QHeaderView.ResizeMode.Stretch
+        )
         self.remappings_table.setMinimumHeight(80)
         self.remappings_table.setMaximumHeight(150)
         remappings_layout.addWidget(self.remappings_table)
 
-        buttons_layout = QHBoxLayout()
+        buttons_layout = QtWidgets.QHBoxLayout()
 
-        add_remap_button = QPushButton("Add Row")
+        add_remap_button = QtWidgets.QPushButton("Add Row")
         add_remap_button.clicked.connect(self.add_remapping_row)
         buttons_layout.addWidget(add_remap_button)
 
-        remove_remap_button = QPushButton("Remove Row")
+        remove_remap_button = QtWidgets.QPushButton("Remove Row")
         remove_remap_button.clicked.connect(self.remove_remapping_row)
         buttons_layout.addWidget(remove_remap_button)
 
@@ -152,7 +136,10 @@ class ContainerDialogBase(QDialog):
 
     def _create_button_row(self) -> None:
         """Create the standard OK/Cancel button row."""
-        buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        buttons = QtWidgets.QDialogButtonBox(
+            QtWidgets.QDialogButtonBox.StandardButton.Ok
+            | QtWidgets.QDialogButtonBox.StandardButton.Cancel
+        )
         buttons.accepted.connect(self.accept)
         buttons.rejected.connect(self.reject)
         self.layout.addWidget(buttons)
@@ -163,7 +150,7 @@ class ContainerDialogBase(QDialog):
         if name:
             return name
 
-        QMessageBox.warning(
+        QtWidgets.QMessageBox.warning(
             self,
             "Validation Error",
             f"{object_name} name is required!",
@@ -199,9 +186,9 @@ class ContainerDialogBase(QDialog):
         values: Optional[List[str]],
         current_value: Optional[str],
         enabled_in_add_mode: bool,
-    ) -> QComboBox:
+    ) -> QtWidgets.QComboBox:
         """Create a combo box with a ``(None)`` sentinel and optional values."""
-        combo_box = QComboBox()
+        combo_box = QtWidgets.QComboBox()
         combo_box.addItem(self.NONE_TEXT)
 
         if not self.edit_mode and not enabled_in_add_mode:
@@ -218,7 +205,7 @@ class ContainerDialogBase(QDialog):
         return combo_box
 
     @classmethod
-    def combo_value_or_none(cls, combo_box: QComboBox) -> Optional[str]:
+    def combo_value_or_none(cls, combo_box: QtWidgets.QComboBox) -> Optional[str]:
         """Return the selected combo value or ``None`` for the sentinel item."""
         value = combo_box.currentText()
         return None if value == cls.NONE_TEXT else value
@@ -238,5 +225,5 @@ class ContainerDialogBase(QDialog):
         """Add a remapping row pre-filled with values."""
         row = self.remappings_table.rowCount()
         self.remappings_table.insertRow(row)
-        self.remappings_table.setItem(row, 0, QTableWidgetItem(old_key))
-        self.remappings_table.setItem(row, 1, QTableWidgetItem(new_key))
+        self.remappings_table.setItem(row, 0, QtWidgets.QTableWidgetItem(old_key))
+        self.remappings_table.setItem(row, 1, QtWidgets.QTableWidgetItem(new_key))

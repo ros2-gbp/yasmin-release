@@ -1,19 +1,16 @@
-#!/usr/bin/env python3
-
 # Copyright (C) 2026 Maik Knof
 #
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
 #
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
-# You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 import hashlib
 import json
@@ -22,7 +19,9 @@ import platform
 import re
 import sys
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, List
+
+import yasmin
 
 from ament_index_python import get_packages_with_prefixes
 
@@ -56,7 +55,7 @@ def get_cache_file(cache_dir: Optional[Path] = None) -> Path:
     return ensure_cache_dir(cache_dir) / "plugins_cache.json"
 
 
-def get_ignored_packages_from_env() -> list[str]:
+def get_ignored_packages_from_env() -> List[str]:
     """Return the sorted package ignore list configured through the environment."""
     raw_value = os.environ.get(IGNORE_PACKAGES_ENV_VAR, "")
     if not raw_value.strip():
@@ -102,6 +101,7 @@ def load_cache(cache_dir: Optional[Path] = None) -> Optional[Dict[str, Any]]:
         with cache_file.open("r", encoding="utf-8") as handle:
             return json.load(handle)
     except Exception:
+        yasmin.YASMIN_LOG_DEBUG("Failed to load cache file")
         return None
 
 
@@ -130,8 +130,43 @@ def stat_signature(path: str) -> Optional[Dict[str, Any]]:
     }
 
 
+def recursive_dir_signature(dir_path: str) -> Optional[Dict[str, Any]]:
+    """Return a combined signature for a directory by hashing all files recursively."""
+    try:
+        os.stat(dir_path)
+    except OSError:
+        return None
+
+    hasher = hashlib.sha256()
+
+    for root, dirs, files in os.walk(dir_path):
+        dirs[:] = [d for d in dirs if d != "__pycache__"]
+        for f in sorted(files):
+            if not f.endswith(".py"):
+                continue
+            fp = os.path.join(root, f)
+            try:
+                s = os.stat(fp)
+                rel = os.path.relpath(fp, dir_path)
+                hasher.update(f"{rel}:{s.st_mtime_ns}:{s.st_size}".encode())
+            except OSError:
+                pass
+
+    return {
+        "path": dir_path,
+        "mtime_ns": hasher.hexdigest(),
+        "recursive": True,
+    }
+
+
 def is_stat_signature_valid(signature: Dict[str, Any]) -> bool:
     """Check whether a cached file signature is still valid."""
+    if signature.get("recursive"):
+        current = recursive_dir_signature(signature["path"])
+        if current is None:
+            return False
+        return current["mtime_ns"] == signature["mtime_ns"]
+
     current = stat_signature(signature["path"])
     if current is None:
         return False

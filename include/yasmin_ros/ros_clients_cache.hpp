@@ -1,17 +1,16 @@
 // Copyright (C) 2025 Miguel Ángel González Santamarta
 //
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
 //
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
+//     http://www.apache.org/licenses/LICENSE-2.0
 //
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 #ifndef YASMIN_ROS__ROS_CLIENTS_CACHE_HPP_
 #define YASMIN_ROS__ROS_CLIENTS_CACHE_HPP_
@@ -75,7 +74,7 @@ public:
         std::make_tuple(node_name, action_type_name, action_name,
                         callback_group_name, std::type_index(typeid(ActionT)));
 
-    std::lock_guard<std::recursive_mutex> lock(get_lock());
+    std::lock_guard<std::recursive_mutex> lock(get_action_lock());
 
     // Check if action client already exists in cache
     auto &action_clients = get_action_clients();
@@ -124,7 +123,7 @@ public:
         std::make_tuple(node_name, service_type_name, service_name,
                         callback_group_name, std::type_index(typeid(ServiceT)));
 
-    std::lock_guard<std::recursive_mutex> lock(get_lock());
+    std::lock_guard<std::recursive_mutex> lock(get_service_lock());
 
     // Check if service client already exists in cache
     auto &service_clients = get_service_clients();
@@ -184,7 +183,7 @@ public:
     auto cache_key = std::make_tuple(node_name, msg_type_name, topic_name,
                                      qos_hash, std::type_index(typeid(MsgT)));
 
-    std::lock_guard<std::recursive_mutex> lock(get_lock());
+    std::lock_guard<std::recursive_mutex> lock(get_publisher_lock());
 
     // Check if publisher already exists in cache
     auto &publishers = get_publishers();
@@ -269,14 +268,38 @@ private:
   using PublisherKey = std::tuple<std::string, std::string, std::string,
                                   std::string, std::type_index>;
 
-  // Static cache maps
+  /**
+   * @brief Get the action clients cache map.
+   * @return Reference to the action clients map
+   */
   static std::map<ActionClientKey, std::shared_ptr<void>> &get_action_clients();
+  /**
+   * @brief Get the service clients cache map.
+   * @return Reference to the service clients map
+   */
   static std::map<ServiceClientKey, std::shared_ptr<void>> &
   get_service_clients();
+  /**
+   * @brief Get the publishers cache map.
+   * @return Reference to the publishers map
+   */
   static std::map<PublisherKey, std::shared_ptr<void>> &get_publishers();
 
-  // Static lock for thread-safe access
-  static std::recursive_mutex &get_lock();
+  /**
+   * @brief Get the mutex for the action clients cache.
+   * @return Reference to the action clients mutex
+   */
+  static std::recursive_mutex &get_action_lock();
+  /**
+   * @brief Get the mutex for the service clients cache.
+   * @return Reference to the service clients mutex
+   */
+  static std::recursive_mutex &get_service_lock();
+  /**
+   * @brief Get the mutex for the publishers cache.
+   * @return Reference to the publishers mutex
+   */
+  static std::recursive_mutex &get_publisher_lock();
 
   /**
    * @brief Get a string representation of a type.
@@ -296,22 +319,6 @@ private:
    */
   static std::string
   get_callback_group_name(rclcpp::CallbackGroup::SharedPtr callback_group);
-
-  /**
-   * @brief Get a string representation of a callback function.
-   *
-   * @tparam CallbackT The type of the callback function.
-   * @param callback The callback function to get the name from.
-   * @return A string representation of the callback.
-   */
-  template <typename CallbackT>
-  static std::string get_callback_name(const CallbackT &callback) {
-    // Use the address of the callback for uniqueness
-    std::ostringstream oss;
-    oss << typeid(CallbackT).name() << "_"
-        << reinterpret_cast<const void *>(&callback);
-    return oss.str();
-  }
 
   /**
    * @brief Create a hash for a QoS profile.

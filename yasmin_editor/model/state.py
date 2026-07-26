@@ -1,23 +1,21 @@
-#!/usr/bin/env python3
 # Copyright (C) 2026 Maik Knof
 #
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
 #
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
-# You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <https://www.gnu.org/licenses/>.
-"""Base state model."""
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from typing import List, Dict, Union
+from yasmin_editor.dataclass_compat import dataclass, field
 
 from .key import Key
 from .outcome import Outcome
@@ -30,16 +28,16 @@ class State:
 
     name: str
     description: str = ""
-    keys: list[Key] = field(default_factory=list)
-    outcomes: list[Outcome] = field(default_factory=list)
-    parameters: list[Parameter] = field(default_factory=list)
-    remappings: dict[str, str] = field(default_factory=dict)
-    parameter_mappings: dict[str, str] = field(default_factory=dict)
-    state_type: str | None = None
-    module: str | None = None
-    class_name: str | None = None
-    package_name: str | None = None
-    file_name: str | None = None
+    keys: List[Key] = field(default_factory=list)
+    outcomes: List[Outcome] = field(default_factory=list)
+    parameters: List[Parameter] = field(default_factory=list)
+    remappings: Dict[str, str] = field(default_factory=dict)
+    parameter_mappings: Dict[str, str] = field(default_factory=dict)
+    state_type: Union[str, None] = None
+    module: Union[str, None] = None
+    class_name: Union[str, None] = None
+    package_name: Union[str, None] = None
+    file_name: Union[str, None] = None
 
     def add_key(self, key: Key) -> None:
         """Add a blackboard key to the state."""
@@ -53,7 +51,7 @@ class State:
         """Add a declared parameter to the state."""
         self.parameters.append(parameter)
 
-    def get_outcome(self, name: str) -> Outcome | None:
+    def get_outcome(self, name: str) -> Union[Outcome, None]:
         """Return an outcome by name."""
         for outcome in self.outcomes:
             if outcome.name == name:
@@ -83,8 +81,8 @@ class State:
 
     def _format_header(self) -> str:
         """Return a compact one-line header for this state."""
-        parts: list[str] = [self.name]
-        meta: list[str] = []
+        parts: List[str] = [self.name]
+        meta: List[str] = []
         if self.state_type:
             meta.append(f"type={self.state_type}")
         if self.class_name:

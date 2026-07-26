@@ -1,26 +1,23 @@
-#!/usr/bin/env python3
-
 # Copyright (C) 2026 Maik Knof
 #
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
 #
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
-# You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <https://www.gnu.org/licenses/>.
-"""Validation helpers for the YASMIN editor model."""
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from yasmin_editor.dataclass_compat import dataclass, field
+from typing import Iterable, List, Set, Union
 
-from .concurrence import Concurrence
+from .container_state import ContainerState, iter_outcome_rule_values
 from .state import State
 from .state_machine import StateMachine
 
@@ -37,8 +34,8 @@ class ValidationMessage:
 class ValidationResult:
     """Collects validation errors and warnings."""
 
-    errors: list[ValidationMessage] = field(default_factory=list)
-    warnings: list[ValidationMessage] = field(default_factory=list)
+    errors: List[ValidationMessage] = field(default_factory=list)
+    warnings: List[ValidationMessage] = field(default_factory=list)
 
     @property
     def is_valid(self) -> bool:
@@ -65,7 +62,7 @@ class ValidationResult:
     def __str__(self) -> str:
         """Return a readable validation summary."""
 
-        lines: list[str] = []
+        lines: List[str] = []
 
         if self.errors:
             lines.append("Errors:")
@@ -99,7 +96,7 @@ def _validate_state(
     state: State,
     result: ValidationResult,
     path: str,
-    parent_targets: set[str] | None,
+    parent_targets: Union[Set[str], None],
 ) -> None:
     """Validate one state recursively."""
 
@@ -107,10 +104,32 @@ def _validate_state(
 
     if isinstance(state, StateMachine):
         _validate_state_machine(state, result, path, parent_targets)
-    elif isinstance(state, Concurrence):
-        _validate_concurrence(state, result, path, parent_targets)
+    elif isinstance(state, ContainerState):
+        _validate_container_state(state, result, path, parent_targets)
     else:
         _validate_leaf_state(state, result, path)
+
+
+def _validate_unique_named_items(
+    items: Iterable[object],
+    *,
+    path: str,
+    result: ValidationResult,
+    field_name: str,
+) -> None:
+    """Validate that a sequence of named model items is non-empty and unique."""
+
+    seen_names: Set[str] = set()
+
+    for item in items:
+        name = getattr(item, "name", "")
+        if not name:
+            result.add_error(path, f"{field_name} name must not be empty")
+            continue
+
+        if name in seen_names:
+            result.add_error(path, f"Duplicate {field_name.lower()} '{name}'")
+        seen_names.add(name)
 
 
 def _validate_common_state_fields(
@@ -123,25 +142,18 @@ def _validate_common_state_fields(
     if not state.name:
         result.add_error(path, "State name must not be empty")
 
-    outcome_names: set[str] = set()
-    for outcome in state.outcomes:
-        if not outcome.name:
-            result.add_error(path, "Outcome name must not be empty")
-            continue
-
-        if outcome.name in outcome_names:
-            result.add_error(path, f"Duplicate outcome '{outcome.name}'")
-        outcome_names.add(outcome.name)
-
-    key_names: set[str] = set()
-    for key in state.keys:
-        if not key.name:
-            result.add_error(path, "Key name must not be empty")
-            continue
-
-        if key.name in key_names:
-            result.add_error(path, f"Duplicate key '{key.name}'")
-        key_names.add(key.name)
+    _validate_unique_named_items(
+        state.outcomes,
+        path=path,
+        result=result,
+        field_name="Outcome",
+    )
+    _validate_unique_named_items(
+        state.keys,
+        path=path,
+        result=result,
+        field_name="Key",
+    )
 
 
 def _validate_leaf_state(state: State, result: ValidationResult, path: str) -> None:
@@ -167,25 +179,64 @@ def _validate_leaf_state(state: State, result: ValidationResult, path: str) -> N
         result.add_warning(path, "Leaf state has no 'state_type'")
 
 
-def _validate_state_machine(
-    state_machine: StateMachine,
-    result: ValidationResult,
+def _validate_conflicting_container_names(
+    *,
     path: str,
-    parent_targets: set[str] | None,
+    result: ValidationResult,
+    state_names: Set[str],
+    outcome_names: Set[str],
 ) -> None:
-    """Validate a state machine recursively."""
+    """Validate that container child states and final outcomes do not collide."""
 
-    if not state_machine.states:
-        result.add_warning(path, "State machine has no child states")
-
-    state_names = set(state_machine.states.keys())
-    outcome_names = {outcome.name for outcome in state_machine.outcomes}
     conflicting_names = sorted(state_names & outcome_names)
     for name in conflicting_names:
         result.add_error(
             path,
             f"Name '{name}' is used by both a child state and a final outcome",
         )
+
+
+def _validate_child_state_binding(
+    *,
+    container_path: str,
+    result: ValidationResult,
+    state_name: str,
+    child_state: State,
+) -> str:
+    """Validate one child-state dictionary binding and return its child path."""
+
+    child_path = f"{container_path}/{state_name}"
+
+    if not child_state.name:
+        result.add_error(child_path, "Child state name must not be empty")
+    elif child_state.name != state_name:
+        result.add_error(
+            child_path,
+            f"Dictionary key '{state_name}' does not match state name '{child_state.name}'",
+        )
+
+    return child_path
+
+
+def _validate_state_machine(
+    state_machine: StateMachine,
+    result: ValidationResult,
+    path: str,
+    parent_targets: Union[Set[str], None],
+) -> None:
+    """Validate a state machine recursively."""
+
+    if not state_machine.states:
+        result.add_warning(path, "State machine has no child states")
+
+    state_names = set(state_machine.states)
+    outcome_names = {outcome.name for outcome in state_machine.outcomes}
+    _validate_conflicting_container_names(
+        path=path,
+        result=result,
+        state_names=state_names,
+        outcome_names=outcome_names,
+    )
     local_targets = state_names | outcome_names
     nested_parent_targets = local_targets | (parent_targets or set())
 
@@ -202,15 +253,12 @@ def _validate_state_machine(
         )
 
     for state_name, child_state in state_machine.states.items():
-        child_path = f"{path}/{state_name}"
-
-        if not child_state.name:
-            result.add_error(child_path, "Child state name must not be empty")
-        elif child_state.name != state_name:
-            result.add_error(
-                child_path,
-                f"Dictionary key '{state_name}' does not match state name '{child_state.name}'",
-            )
+        child_path = _validate_child_state_binding(
+            container_path=path,
+            result=result,
+            state_name=state_name,
+            child_state=child_state,
+        )
 
         _validate_state(child_state, result, child_path, nested_parent_targets)
 
@@ -261,57 +309,59 @@ def _validate_state_machine(
         )
 
 
-def _validate_concurrence(
-    concurrence: Concurrence,
+def _validate_container_state(
+    container: ContainerState,
     result: ValidationResult,
     path: str,
-    parent_targets: set[str] | None,
+    parent_targets: Union[Set[str], None],
 ) -> None:
-    """Validate a concurrence recursively."""
+    """Validate a container state (Concurrence or OrthogonalState) recursively."""
 
-    if not concurrence.states:
-        result.add_warning(path, "Concurrence has no child states")
+    kind = (
+        "Orthogonal state"
+        if container._container_name == "OrthogonalState"
+        else "Concurrence"
+    )
+    if not container.states:
+        result.add_warning(path, f"{kind} has no child states")
 
-    state_names = set(concurrence.states.keys())
-    outcome_names = {outcome.name for outcome in concurrence.outcomes}
-    conflicting_names = sorted(state_names & outcome_names)
-    for name in conflicting_names:
-        result.add_error(
-            path,
-            f"Name '{name}' is used by both a child state and a final outcome",
-        )
+    state_names = set(container.states)
+    outcome_names = {outcome.name for outcome in container.outcomes}
+    _validate_conflicting_container_names(
+        path=path,
+        result=result,
+        state_names=state_names,
+        outcome_names=outcome_names,
+    )
     nested_parent_targets = state_names | outcome_names | (parent_targets or set())
 
     if not outcome_names:
-        result.add_error(path, "Concurrence requires at least one outcome")
+        result.add_error(path, f"{kind} requires at least one outcome")
 
-    if concurrence.default_outcome and concurrence.default_outcome not in outcome_names:
+    if container.default_outcome and container.default_outcome not in outcome_names:
         result.add_error(
             path,
-            f"Default outcome '{concurrence.default_outcome}' does not exist",
+            f"Default outcome '{container.default_outcome}' does not exist",
         )
 
-    for state_name, child_state in concurrence.states.items():
-        child_path = f"{path}/{state_name}"
-
-        if not child_state.name:
-            result.add_error(child_path, "Child state name must not be empty")
-        elif child_state.name != state_name:
-            result.add_error(
-                child_path,
-                f"Dictionary key '{state_name}' does not match state name '{child_state.name}'",
-            )
+    for state_name, child_state in container.states.items():
+        child_path = _validate_child_state_binding(
+            container_path=path,
+            result=result,
+            state_name=state_name,
+            child_state=child_state,
+        )
 
         _validate_state(child_state, result, child_path, nested_parent_targets)
 
-    for outcome_name, mapping in concurrence.outcome_map.items():
+    for outcome_name, mapping in container.outcome_map.items():
         if outcome_name not in outcome_names:
             result.add_error(
                 path,
                 f"Outcome map references unknown outcome '{outcome_name}'",
             )
 
-        for state_name, state_outcome in mapping.items():
+        for state_name, state_outcomes in mapping.items():
             if state_name not in state_names:
                 result.add_error(
                     path,
@@ -319,10 +369,11 @@ def _validate_concurrence(
                 )
                 continue
 
-            child_state = concurrence.states[state_name]
+            child_state = container.states[state_name]
             child_outcomes = {outcome.name for outcome in child_state.outcomes}
-            if child_outcomes and state_outcome not in child_outcomes:
-                result.add_warning(
-                    f"{path}/{state_name}",
-                    f"Outcome map references unknown outcome '{state_outcome}'",
-                )
+            for state_outcome in iter_outcome_rule_values(state_outcomes):
+                if child_outcomes and state_outcome not in child_outcomes:
+                    result.add_warning(
+                        f"{path}/{state_name}",
+                        f"Outcome map references unknown outcome '{state_outcome}'",
+                    )

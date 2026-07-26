@@ -39,6 +39,7 @@
           <li><a href="../../index.html">Introduction</a></li>
           <li><a href="../../docker.html">Docker Environment</a></li>
           <li><a href="../../main_concepts.html">Main Concepts</a></li>
+          <li><a href="../../shared_states.html">Shared States</a></li>
           <li><a href="../../callback_signal.html">Callback Signal</a></li>
           <li><a href="../../xml_factory.html">XML State Machines</a></li>
           <li><a href="../../packages.html">Packages Overview</a></li>
@@ -78,9 +79,7 @@
             Advanced
             <ul>
               <li><a href="../cpp/factory_demo.html">Factory (XML)</a></li>
-              <li>
-                <a href="../cpp/multiple_states_demo.html">Multiple States</a>
-              </li>
+
               <li><a href="../cpp/nav2_demo.html">Nav2 Demo</a></li>
               <li>
                 <a href="../cpp/orthogonal_demo.html">Orthogonal Regions</a>
@@ -123,7 +122,7 @@
             Advanced
             <ul>
               <li><a href="factory_demo.html">Factory (XML)</a></li>
-              <li><a href="multiple_states_demo.html">Multiple States</a></li>
+
               <li><a href="nav2_demo.html">Nav2 Demo</a></li>
               <li><a href="orthogonal_demo.html">Orthogonal Regions</a></li>
               <li>
@@ -203,18 +202,16 @@ from yasmin import Blackboard, State
 
 class PoseReaderState(State):
     """
-    Represents a state that reads and deserializes a Pose message
-    from the blackboard.
+    Represents a state that reads and deserializes a Pose message from the blackboard.
     """
 
     def __init__(self) -> None:
         """
         Initializes the PoseReaderState instance, setting up the outcome.
         """
-        super().__init__(outcomes=["outcome2"])
+        super().__init__(outcomes=["SUCCEED"])
         self.set_description(
-            "Reads a serialized Pose message from the blackboard, "
-            "deserializes it, and logs the position and orientation."
+            "Reads a serialized Pose message from the blackboard, deserializes it, and logs the position and orientation."
         )
         self.add_input_key(
             "pose_bytes",
@@ -238,16 +235,13 @@ class PoseReaderState(State):
 
         yasmin.YASMIN_LOG_INFO(f"Stored type: {pose_type}")
         yasmin.YASMIN_LOG_INFO(
-            f"Position: x={pose.position.x}, "
-            f"y={pose.position.y}, z={pose.position.z}"
+            f"Position: x={pose.position.x}, y={pose.position.y}, z={pose.position.z}"
         )
         yasmin.YASMIN_LOG_INFO(
-            f"Orientation: x={pose.orientation.x}, "
-            f"y={pose.orientation.y}, z={pose.orientation.z}, "
-            f"w={pose.orientation.w}"
+            f"Orientation: x={pose.orientation.x}, y={pose.orientation.y}, z={pose.orientation.z}, w={pose.orientation.w}"
         )
 
-        return "outcome2"</code></pre>
+        return "SUCCEED"</code></pre>
 
         <h2>XML State Machine</h2>
         <p>

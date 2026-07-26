@@ -40,6 +40,7 @@
           <li><a href="../../index.html">Introduction</a></li>
           <li><a href="../../docker.html">Docker Environment</a></li>
           <li><a href="../../main_concepts.html">Main Concepts</a></li>
+          <li><a href="../../shared_states.html">Shared States</a></li>
           <li><a href="../../callback_signal.html">Callback Signal</a></li>
           <li><a href="../../xml_factory.html">XML State Machines</a></li>
           <li><a href="../../packages.html">Packages Overview</a></li>
@@ -79,9 +80,7 @@
             Advanced
             <ul>
               <li><a href="../cpp/factory_demo.html">Factory (XML)</a></li>
-              <li>
-                <a href="../cpp/multiple_states_demo.html">Multiple States</a>
-              </li>
+
               <li><a href="../cpp/nav2_demo.html">Nav2 Demo</a></li>
               <li>
                 <a href="../cpp/orthogonal_demo.html">Orthogonal Regions</a>
@@ -124,7 +123,7 @@
             Advanced
             <ul>
               <li><a href="factory_demo.html">Factory (XML)</a></li>
-              <li><a href="multiple_states_demo.html">Multiple States</a></li>
+
               <li><a href="nav2_demo.html">Nav2 Demo</a></li>
               <li><a href="orthogonal_demo.html">Orthogonal Regions</a></li>
               <li>
@@ -235,6 +234,7 @@ from yasmin_ros import set_ros_loggers
 from yasmin_viewer import YasminViewerPub
 from yasmin_factory import YasminFactory
 from ament_index_python import get_package_share_directory
+from yasmin_ros.yasmin_node import YasminNode
 
 
 def main() -&gt; None:
@@ -249,7 +249,7 @@ def main() -&gt; None:
     factory = YasminFactory()
     sm = factory.create_sm_from_file(
         os.path.join(
-            get_package_share_directory("yasmin_demos"), "state_machines", "demo_1.xml"
+            get_package_share_directory("yasmin_demos"), "state_machines", "demo_2.xml"
         )
     )
     sm.set_sigint_handler(True)
@@ -272,7 +272,7 @@ def main() -&gt; None:
           handling capabilities.
         </p>
         <pre><code class="language-python">    # Publish FSM information for visualization
-    YasminViewerPub(sm, "plugin_demo")
+    pub = YasminViewerPub(sm, "YASMIN_FACTORY_DEMO")
 
     # Execute the FSM
     try:
@@ -280,8 +280,11 @@ def main() -&gt; None:
         yasmin.YASMIN_LOG_INFO(outcome)
     except Exception as e:
         yasmin.YASMIN_LOG_WARN(e)
+    finally:
+        pub.shutdown()
 
     # Shutdown ROS 2 if it's running
+    YasminNode.destroy_instance()
     if rclpy.ok():
         rclpy.shutdown()
 

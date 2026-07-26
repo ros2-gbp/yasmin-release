@@ -113,6 +113,12 @@ class YasminFactory:
                     child
                 )
 
+            elif child.tag == "OrthogonalState":
+                states[child.attrib["name"]] = self._create_orthogonal_state(child)
+                parameter_mappings[child.attrib["name"]] = self._get_parameter_mappings(
+                    child
+                )
+
             elif child.tag == "OutcomeMap":
                 outcome_name = child.attrib["outcome"]
                 outcome_map[outcome_name] = {}

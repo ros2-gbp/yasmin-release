@@ -39,6 +39,7 @@
           <li><a href="../../index.html">Introduction</a></li>
           <li><a href="../../docker.html">Docker Environment</a></li>
           <li><a href="../../main_concepts.html">Main Concepts</a></li>
+          <li><a href="../../shared_states.html">Shared States</a></li>
           <li><a href="../../callback_signal.html">Callback Signal</a></li>
           <li><a href="../../xml_factory.html">XML State Machines</a></li>
           <li><a href="../../packages.html">Packages Overview</a></li>
@@ -74,7 +75,7 @@
             Advanced
             <ul>
               <li><a href="factory_demo.html">Factory (XML)</a></li>
-              <li><a href="multiple_states_demo.html">Multiple States</a></li>
+
               <li><a href="nav2_demo.html">Nav2 Demo</a></li>
               <li><a href="orthogonal_demo.html">Orthogonal Regions</a></li>
               <li>
@@ -123,11 +124,7 @@
             Advanced
             <ul>
               <li><a href="../python/factory_demo.html">Factory (XML)</a></li>
-              <li>
-                <a href="../python/multiple_states_demo.html"
-                  >Multiple States</a
-                >
-              </li>
+
               <li><a href="../python/nav2_demo.html">Nav2 Demo</a></li>
               <li>
                 <a href="../python/orthogonal_demo.html">Orthogonal Regions</a>
@@ -235,7 +232,22 @@
           how parameter-driven data flows through the state machine naturally.
         </p>
 
-        <pre><code class="language-cpp">class FooState : public yasmin::State {
+        <pre><code class="language-cpp">#include &lt;chrono&gt;
+#include &lt;memory&gt;
+#include &lt;string&gt;
+
+#include &lt;rclcpp/rclcpp.hpp&gt;
+
+#include "yasmin/logs.hpp"
+#include "yasmin/state.hpp"
+#include "yasmin/state_machine.hpp"
+#include "yasmin_ros/basic_outcomes.hpp"
+#include "yasmin_ros/get_parameters_state.hpp"
+#include "yasmin_ros/ros_logs.hpp"
+#include "yasmin_ros/yasmin_node.hpp"
+#include "yasmin_viewer/yasmin_viewer_pub.hpp"
+
+class FooState : public yasmin::State {
 public:
   int counter;
 
@@ -359,17 +371,20 @@ public:
                     {"outcome3", "FOO"},
                 });
 
-  // Publish state machine updates
-  yasmin_viewer::YasminViewerPub yasmin_pub(sm, "YASMIN_PARAMETERS_DEMO");
+  {
+    // Publish state machine updates
+    yasmin_viewer::YasminViewerPub yasmin_pub(sm, "YASMIN_PARAMETERS_DEMO");
 
-  // Execute the state machine
-  try {
-    std::string outcome = (*sm.get())();
-    YASMIN_LOG_INFO(outcome.c_str());
-  } catch (const std::exception &amp;e) {
-    YASMIN_LOG_WARN(e.what());
+    // Execute the state machine
+    try {
+      std::string outcome = (*sm.get())();
+      YASMIN_LOG_INFO(outcome.c_str());
+    } catch (const std::exception &amp;e) {
+      YASMIN_LOG_WARN(e.what());
+    }
   }
 
+  yasmin_ros::YasminNode::destroy_instance();
   rclcpp::shutdown();
 
   return 0;

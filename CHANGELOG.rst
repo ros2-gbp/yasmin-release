@@ -2,6 +2,157 @@
 Changelog for package yasmin_factory
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+6.1.0 (2026-07-26)
+------------------
+* fix(tests): update action server executable path in test setup
+* fix(action_server): improve error handling and logging for action server startup
+* YASMIN Factory Action Server (`#124 <https://github.com/uleroboticsgroup/yasmin/issues/124>`_)
+  * add yasmin_factory_action_server
+  * formatter cpp
+  * formatter py
+  * use ros2 run in tests
+  * add reliable wrapper cleanup
+  * use unique action name to prevent a newly started client from discovering the previous stale server endpoint.
+  * use isolated ROS contexts, DDS domains, and context-bound executors for each test.
+  * foxy support
+  Foxy does not support domain_id keyword in rclpy.init
+  * trigger ci
+  * trigger ci
+  * Split and document the factory action server
+  * add action server to README
+  * formatter
+  * added an action server section to yasmin_factory.html
+  ---------
+  Co-authored-by: Maik Knof <knofm@hs-weingarten.de>
+* refactor(yasmin_factory): simplify state creation and improve GIL management
+  Refactor the `YasminFactory` to remove redundant `base_dir` parameters in
+  state creation methods, instead utilizing an internal `xml_path\_` to
+  manage file resolution.
+  Key changes include:
+  - Removed `base_dir` from `create_concurrence`, `create_orthogonal_state`,
+  `create_join_state`, and `create_sm` signatures.
+  - Switched `state_loader\_` from `std::shared_ptr` to `std::unique_ptr`.
+  - Improved Python/C++ interoperability by adding `py::gil_scoped_acquire`
+  in `load_json_value`.
+  - Simplified `PythonStateHolder` by removing redundant existence checks
+  when adding input/output keys and parameters.
+  - Updated `pybind_bridge` to use the registered `State` class from the
+  `yasmin.state` module.
+  - Refactored `gil_before_fork` to ensure the GIL is held before saving
+  thread state.
+  - Renamed `validate_type` to `normalize_type` in `type_utils.py` for
+  consistency.
+* fix(factory): enhance path traversal protection for user-supplied file paths
+* build(yasmin_factory): install test targets and XML resources
+  Add installation rules for the test plugin library, plugin descriptions,
+  and various XML test files to ensure they are available in the install
+  prefix. This enables testing against installed packages rather than
+  relying solely on the build tree.
+* feat(factory): enhance XML parsing robustness and support relative paths
+  Improve the factory's ability to handle complex XML structures and
+  ensure safer type conversion and resource management.
+  - **Core Logic**:
+  - Add `base_dir` support to `create_sm`, `create_concurrence`, and
+  `create_orthogonal_state` to allow resolving relative file paths.
+  - Implement stricter integer and float parsing with trailing character
+  detection in `with_typed_xml_value`.
+  - Add support for `integer` type normalization.
+  - Prevent duplicate blackboard keys, outputs, and parameters during
+  `PythonStateHolder` initialization.
+  - **Python/C++ Bridge**:
+  - Use `std::once_flag` for thread-safe, one-time Python interpreter
+  initialization.
+  - Update `CppStateFactory::create` to use a custom deleter for
+  unmanaged instances, ensuring proper lifetime management via the
+  loader.
+  - Improve error messaging in the Python node execution loop.
+  - **Build & Dependencies**:
+  - Add `yasmin_ros` as a dependency in `package.xml` and `CMakeLists.txt`.
+  - Clean up test installation logic in `CMakeLists.txt`.
+  - **Python API**:
+  - Expand `YasminFactory` to support `Outcome` tags and improved
+  orthogonal state creation.
+  - Refactor `format_default_value` to use `validate_type`.
+* Contributors: Maik, Miguel Ángel González Santamarta
+
+6.0.0 (2026-07-07)
+------------------
+* fix: remove deprecated RCLCPP version checks for package share path retrieval
+* relicense to Apache 2.0 (`#122 <https://github.com/uleroboticsgroup/yasmin/issues/122>`_)
+* fix: update RCLCPP version check to support compatibility with earlier versions
+* feat: update package share path retrieval for compatibility with rclcpp versioning
+* fix: update import path for YasminFactory in test_yasmin_factory
+* feat: add JoinState support with dialog and factory integration
+* refactor: add get_inner_state method to State and its overrides for JoinState detection
+* refactor: renaming yasmin_factory.py to factory.py
+* refactor: update minimum CMake version to 3.10 across multiple CMakeLists.txt files
+* Enhance documentation and improve code clarity across multiple modules
+  - Added detailed comments and descriptions for constructors, methods, and parameters in various classes, including `Concurrence`, `StateMachine`, and filter states in `yasmin_pcl`.
+  - Improved logging initialization comments in `logs.cpp` for better understanding of log level settings.
+  - Updated `blackboard_pybind11.cpp` to clarify the registration of `BlackboardPyWrapper`.
+  - Enhanced the `yasmin_demos` states with additional private member documentation for clarity on their purpose.
+  - Improved the `yasmin_factory` class documentation, particularly around blackboard key and parameter mappings.
+  - Added utility functions in `test_utils.hpp` for creating point clouds and temporary file paths with clear descriptions.
+  - Enhanced the `ros_clients_cache` and `supported_interface_serialization` classes with detailed comments on cache management and serialization callbacks.
+  - Improved the `YasminNode` and `YasminViewerNode` classes with comments on copy prevention and connection handling.
+  - General code cleanup and formatting improvements for better readability and maintainability.
+* Refactor and enhance yasmin packages
+  - Removed unnecessary destructors from PclToRosPointCloud2State and RosToPclPointCloud2State classes.
+  - Added cancellation checks in SavePcdState and SavePlyState execute methods.
+  - Improved ActionState to notify when action is done and handle cancellation more effectively.
+  - Updated basic_outcomes to use inline constexpr for string constants.
+  - Enhanced MonitorState and ServiceState to include cancellation checks and improved locking mechanisms.
+  - Refactored ROSClientsCache to use per-map locks for thread safety.
+  - Updated get_parameters_state to handle int64_t instead of int for parameter declaration.
+  - Improved YasminViewerNode to manage active HTTP connections and handle server shutdown more gracefully.
+  - Refactored yasmin_viewer_pub to use unordered_map for better performance and added checks for rclpy state before publishing.
+* refactor: refactor and optimize yasmin code
+  - Removed unnecessary code and improved the formatting of plugin headers in discovery_node.py.
+  - Simplified metadata loading in plugin_info.py by introducing a safe_get method to handle exceptions.
+  - Enhanced plugin manager to streamline package retrieval and signature validation.
+  - Cleaned up ROS interface serialization by removing unused includes.
+  - Updated action client state to utilize a retry mechanism for server connections.
+  - Improved service state handling with a retry mechanism for service calls.
+  - Consolidated node resolution logic into a utility function for better code reuse.
+  - Refactored viewer node to enhance readability and maintainability.
+  - Updated tests to reflect changes in expected warning log counts.
+  - Added new utility functions for retry logic and node resolution in ros_state_utils.py.
+* Feature/orthogonal regions (`#121 <https://github.com/uleroboticsgroup/yasmin/issues/121>`_)
+  * feat: Add JoinState and OrthogonalState for concurrent state management
+  - Introduced JoinState for synchronization between states.
+  - Added OrthogonalState to allow parallel execution of multiple regions.
+  - Implemented WorkerState for counting iterations with configurable parameters.
+  - Created orthogonal_demo and orthogonal_sync_demo to demonstrate new features.
+  - Updated CMakeLists.txt to include new demos and worker_state library.
+  - Added XML state machine definitions for orthogonal and synchronized execution.
+  - Enhanced yasmin_demos package to include new worker_state functionality.
+  * refactor: Encapsulate state machine publisher and execution in a block across multiple demo files
+  * feat: Implement OrthogonalState support with XML parsing and testing
+  * feat: Introduce OrthogonalState model and integrate into editor
+  - Added OrthogonalState model to represent orthogonal state regions in the editor.
+  - Updated selection bundle operations to support OrthogonalState in paste and remove functionalities.
+  - Enhanced XML conversion to include OrthogonalState serialization and deserialization.
+  - Modified validation logic to accommodate OrthogonalState alongside Concurrence.
+  - Updated UI action specifications and toolbar configurations to include actions for OrthogonalState.
+  - Refactored various components to ensure compatibility with the new OrthogonalState model.
+  * feat: Add OrthogonalState support with demo and documentation
+  * Add orthogonal regions tutorials and update navigation links
+  - Introduced new tutorials for Orthogonal Regions and Orthogonal Regions with Sync in Python.
+  - Updated navigation links in various demo pages to include links to the new orthogonal regions tutorials.
+  - Enhanced the documentation structure to facilitate easier access to the new content.
+  * refactor: Improve readability of add_container and default_outcome methods
+  * refactor: Update documentation for clarity and consistency across multiple headers
+  * refactor: Update parameter descriptions in MonitorState and PublisherState for clarity
+  * refactor: Improve documentation and parameter naming for clarity across multiple files
+  * refactor: Remove redundant execution time explanations from orthogonal region tutorials
+* Contributors: Miguel Ángel González Santamarta
+
+5.1.0 (2026-05-01)
+------------------
+* fix segfault in factory node (`#111 <https://github.com/uleroboticsgroup/yasmin/issues/111>`_)
+  Co-authored-by: Maik Knof <knofm@hs-weingarten.de>
+* Contributors: Maik
+
 5.0.0 (2026-01-14)
 ------------------
 * Creating viewer pub variable for C++ factory node

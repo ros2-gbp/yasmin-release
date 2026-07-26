@@ -1,20 +1,17 @@
 // Copyright (C) 2025 Miguel Ángel González Santamarta
 //
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
 //
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
+//     http://www.apache.org/licenses/LICENSE-2.0
 //
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
-#include <chrono>
-#include <iostream>
 #include <memory>
 #include <string>
 
@@ -23,10 +20,16 @@
 #include "yasmin/logs.hpp"
 #include "yasmin/state.hpp"
 #include "yasmin/state_machine.hpp"
+#include "yasmin_demos/bar_state.hpp"
 #include "yasmin_ros/basic_outcomes.hpp"
 #include "yasmin_ros/ros_logs.hpp"
+#include "yasmin_ros/yasmin_node.hpp"
 #include "yasmin_viewer/yasmin_viewer_pub.hpp"
 
+// Note: A local FooState is defined here instead of using the shared
+// yasmin_demos::FooState because this demo illustrates blackboard key
+// remapping with custom pass-through keys (foo_data / foo_out_data) that
+// differ fundamentally from the shared counter-based FooState interface.
 /**
  * @brief Represents the "Foo" state in the state machine.
  */
@@ -57,35 +60,6 @@ public:
     blackboard->set<std::string>("foo_out_data", data);
     return yasmin_ros::basic_outcomes::SUCCEED;
   };
-};
-
-/**
- * @brief Represents the "Bar" state in the state machine.
- */
-class BarState : public yasmin::State {
-public:
-  /**
-   * @brief Constructs a BarState object.
-   */
-  BarState() : yasmin::State({yasmin_ros::basic_outcomes::SUCCEED}) {
-    this->set_description(
-        "Reads remapped input data from the blackboard and logs it.");
-    this->add_input_key("bar_data", "Input data read by the Bar state.");
-  }
-
-  /**
-   * @brief Executes the Bar state logic.
-   *
-   * Executes the logic for the Bar state.
-   *
-   * @param blackboard Shared pointer to the blackboard for state communication.
-   * @return std::string The outcome of the execution: "outcome3".
-   */
-  std::string execute(yasmin::Blackboard::SharedPtr blackboard) override {
-    std::string datga = blackboard->get<std::string>("bar_data");
-    YASMIN_LOG_INFO("%s", datga.c_str());
-    return yasmin_ros::basic_outcomes::SUCCEED;
-  }
 };
 
 int main(int argc, char *argv[]) {
@@ -132,24 +106,26 @@ int main(int argc, char *argv[]) {
                 });
   sm->add_state("STATE3", std::make_shared<BarState>(),
                 {
-                    {yasmin_ros::basic_outcomes::SUCCEED,
-                     yasmin_ros::basic_outcomes::SUCCEED},
+                    {"outcome3", yasmin_ros::basic_outcomes::SUCCEED},
                 },
                 {
-                    {"bar_data", "foo_out_data"},
+                    {"foo_str", "foo_out_data"},
                 });
 
-  // Publish state machine updates
-  yasmin_viewer::YasminViewerPub yasmin_pub(sm, "YASMIN_REMAPPING_DEMO");
+  {
+    // Publish state machine updates
+    yasmin_viewer::YasminViewerPub yasmin_pub(sm, "YASMIN_REMAPPING_DEMO");
 
-  // Execute the state machine
-  try {
-    std::string outcome = (*sm.get())(blackboard);
-    YASMIN_LOG_INFO(outcome.c_str());
-  } catch (const std::exception &e) {
-    YASMIN_LOG_WARN(e.what());
+    // Execute the state machine
+    try {
+      std::string outcome = (*sm.get())(blackboard);
+      YASMIN_LOG_INFO(outcome.c_str());
+    } catch (const std::exception &e) {
+      YASMIN_LOG_WARN(e.what());
+    }
   }
 
+  yasmin_ros::YasminNode::destroy_instance();
   rclcpp::shutdown();
 
   return 0;

@@ -2,28 +2,27 @@
 
 # Copyright (C) 2025 Miguel Ángel González Santamarta
 #
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
 #
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
-# You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <https://www.gnu.org/licenses/>.
-
-import time
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 import rclpy
+from rclpy.duration import Duration
 from std_msgs.msg import Int32
 from yasmin_ros.basic_outcomes import SUCCEED
 
 import yasmin
 from yasmin import Blackboard, CbState, StateMachine
 from yasmin_ros import PublisherState, set_ros_loggers
+from yasmin_ros.yasmin_node import YasminNode
 from yasmin_viewer import YasminViewerPub
 
 
@@ -87,8 +86,8 @@ def check_count(blackboard: Blackboard) -> str:
     Returns:
         str: The outcome string ('outcome1' or 'outcome2').
     """
-    # Simulate processing time
-    time.sleep(1)
+    # Simulate processing time using the ROS 2 clock (respects sim time)
+    YasminNode.get_instance().get_clock().sleep_for(Duration(seconds=1))
 
     # Retrieve the counter and max value from blackboard
     count = blackboard.get("counter")
@@ -164,7 +163,7 @@ def main() -> None:
     )
 
     # Publish FSM information for visualization
-    YasminViewerPub(sm, "YASMIN_PUBLISHER_DEMO")
+    pub = YasminViewerPub(sm, "YASMIN_PUBLISHER_DEMO")
 
     # Initialize blackboard with counter values
     blackboard = Blackboard()
@@ -177,8 +176,11 @@ def main() -> None:
         yasmin.YASMIN_LOG_INFO(outcome)
     except Exception as e:
         yasmin.YASMIN_LOG_WARN(e)
+    finally:
+        pub.shutdown()
 
     # Shutdown ROS 2 if it's running
+    YasminNode.destroy_instance()
     if rclpy.ok():
         rclpy.shutdown()
 

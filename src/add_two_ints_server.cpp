@@ -1,17 +1,16 @@
 // Copyright (C) 2024 Miguel Ángel González Santamarta
 //
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
 //
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
+//     http://www.apache.org/licenses/LICENSE-2.0
 //
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 #include <chrono>
 #include <cinttypes>
@@ -22,21 +21,20 @@
 
 /**
  * @class ServerNode
- * @brief A ROS 2 service server node for adding two integers.
+ * @brief A ROS 2 service server node for adding two integers (C++ only, no
+ * Python equivalent).
  *
  * This node provides a service named "add_two_ints" that accepts two integers
- * as input and returns their sum. It also supports an optional one-shot mode
- * that shuts down the server after handling the first request.
+ * as input and returns their sum.
  */
 class ServerNode final : public rclcpp::Node {
 public:
   /**
    * @brief Constructor for the ServerNode class.
    *
-   * Initializes the service server and an optional one-shot timer.
-   * @param options Node options for initialization.
+   * Initializes the service server.
    */
-  explicit ServerNode() : Node("add_two_ints_server") {
+  ServerNode() : Node("add_two_ints_server") {
 
     // Callback to handle "add_two_ints" service requests.
     auto handle_add_two_ints =
@@ -54,7 +52,7 @@ public:
     };
 
     // Create a service that will use the callback function to handle requests.
-    this->srv_ = create_service<example_interfaces::srv::AddTwoInts>(
+    this->srv_ = this->create_service<example_interfaces::srv::AddTwoInts>(
         "add_two_ints", handle_add_two_ints);
 
     RCLCPP_INFO(this->get_logger(), "Add Two Ints Service started");

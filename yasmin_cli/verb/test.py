@@ -1,19 +1,16 @@
-#!/usr/bin/env python3
-
 # Copyright (C) 2026 Maik Knof
 #
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
 #
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
-# You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 from __future__ import annotations
 
@@ -21,6 +18,7 @@ import json
 import tempfile
 import xml.etree.ElementTree as ET
 from pathlib import Path
+from typing import Dict, List, Union
 
 from yasmin_cli.completer import (
     build_plugin_info,
@@ -29,37 +27,17 @@ from yasmin_cli.completer import (
     plugin_id,
     test_plugin_completer,
 )
-from yasmin_cli.verb.run import (
-    _convert_value,
-    _format_default_value,
-    _normalize_type,
-    run_factory_node,
+from yasmin_factory.type_utils import (
+    format_default_value,
+    normalize_type,
+    parse_key_value,
 )
 
-
-def _parse_assignments(values: list[str], assignment_kind: str) -> dict[str, str]:
-    result: dict[str, str] = {}
-
-    for value in values:
-        if "=" not in value:
-            raise ValueError(
-                f"Invalid {assignment_kind} assignment '{value}'. Expected NAME=VALUE."
-            )
-
-        key, raw_value = value.split("=", 1)
-        key = key.strip()
-
-        if not key:
-            raise ValueError(
-                f"Invalid {assignment_kind} assignment '{value}'. Empty name is not allowed."
-            )
-
-        result[key] = raw_value
-
-    return result
+from yasmin_cli.verb._xml_utils import indent_xml, parse_assignments
+from yasmin_cli.verb.run import run_factory_node
 
 
-def _infer_python_value_type(value) -> str | None:
+def _infer_python_value_type(value) -> Union[str, None]:
     """Infer the canonical XML type string from an already parsed Python value."""
     if isinstance(value, bool):
         return "bool"
@@ -85,7 +63,7 @@ def _infer_python_value_type(value) -> str | None:
             return "list[float]"
         return None
     if isinstance(value, dict):
-        if not value or not all(isinstance(key, str) for key in value.keys()):
+        if not value or not all(isinstance(key, str) for key in value):
             return None
         values = list(value.values())
         if all(isinstance(item, str) for item in values):
@@ -106,7 +84,7 @@ def _infer_python_value_type(value) -> str | None:
 def _infer_value_type(raw_value: str) -> str:
     value = raw_value.strip()
 
-    if value.lower() in ("true", "false", "1", "0"):
+    if value.lower() in ("true", "false"):
         return "bool"
 
     try:
@@ -132,17 +110,17 @@ def _infer_value_type(raw_value: str) -> str:
 
 def _serialize_default_value(value, type_name: str) -> str:
     """Serialize plugin metadata defaults back into the XML default format."""
-    return _format_default_value(value, type_name)
+    return format_default_value(value, type_name)
 
 
-def _get_input_meta(plugin, key_name: str) -> dict | None:
+def _get_input_meta(plugin, key_name: str) -> Union[dict, None]:
     for key in plugin.input_keys:
         if key.get("name", "") == key_name:
             return key
     return None
 
 
-def _get_parameter_meta(plugin, parameter_name: str) -> dict | None:
+def _get_parameter_meta(plugin, parameter_name: str) -> Union[dict, None]:
     for parameter in getattr(plugin, "parameters", []):
         if parameter.get("name", "") == parameter_name:
             return parameter
@@ -156,7 +134,7 @@ def _resolve_input_type(plugin, key_name: str, raw_value: str) -> str:
 
     default_type = key_meta.get("default_value_type", "")
     if default_type:
-        return _normalize_type(default_type)
+        return normalize_type(default_type)
 
     if key_meta.get("has_default", False):
         inferred_type = _infer_python_value_type(key_meta.get("default_value"))
@@ -173,24 +151,7 @@ def _resolve_parameter_type(plugin, parameter_name: str, raw_value: str) -> str:
 
     default_type = parameter_meta.get("default_value_type", "")
     if default_type:
-        return _normalize_type(default_type)
-
-    if parameter_meta.get("has_default", False):
-        inferred_type = _infer_python_value_type(parameter_meta.get("default_value"))
-        if inferred_type:
-            return inferred_type
-
-    return _infer_value_type(raw_value)
-
-
-def _resolve_parameter_type(plugin, parameter_name: str, raw_value: str) -> str:
-    parameter_meta = _get_parameter_meta(plugin, parameter_name)
-    if parameter_meta is None:
-        return _infer_value_type(raw_value)
-
-    default_type = parameter_meta.get("default_value_type", "")
-    if default_type:
-        return _normalize_type(default_type)
+        return normalize_type(default_type)
 
     if parameter_meta.get("has_default", False):
         default_value = parameter_meta.get("default_value")
@@ -202,30 +163,16 @@ def _resolve_parameter_type(plugin, parameter_name: str, raw_value: str) -> str:
             return "float"
         if isinstance(default_value, str):
             return "str"
+        if isinstance(default_value, (list, dict)):
+            inferred = _infer_python_value_type(default_value)
+            if inferred:
+                return inferred
 
     return _infer_value_type(raw_value)
 
 
-def _indent_xml(element: ET.Element, level: int = 0) -> None:
-    indent = "\n" + level * "    "
-    child_indent = "\n" + (level + 1) * "    "
-
-    if len(element):
-        if not element.text or not element.text.strip():
-            element.text = child_indent
-
-        for child in element:
-            _indent_xml(child, level + 1)
-
-        if not element[-1].tail or not element[-1].tail.strip():
-            element[-1].tail = indent
-
-    if level and (not element.tail or not element.tail.strip()):
-        element.tail = indent
-
-
-def _merge_plugin_keys(plugin) -> list[dict]:
-    merged_keys: dict[str, dict] = {}
+def _merge_plugin_keys(plugin) -> List[Dict]:
+    merged_keys: Dict[str, Dict] = {}
 
     for key in plugin.input_keys:
         name = key.get("name", "")
@@ -251,8 +198,8 @@ def _merge_plugin_keys(plugin) -> list[dict]:
 
 def _build_test_xml(
     plugin,
-    provided_inputs: dict[str, str],
-    provided_parameters: dict[str, str],
+    provided_inputs: Dict[str, str],
+    provided_parameters: Dict[str, str],
 ) -> str:
     outcomes = [outcome for outcome in plugin.outcomes if outcome]
     if not outcomes:
@@ -285,25 +232,25 @@ def _build_test_xml(
             resolved_type = _resolve_input_type(
                 plugin, key_name, provided_inputs[key_name]
             )
-            converted_value = _convert_value(provided_inputs[key_name], resolved_type)
+            converted_value = parse_key_value(provided_inputs[key_name], resolved_type)
             key_attributes["default_value"] = _serialize_default_value(
                 converted_value, resolved_type
             )
             key_attributes["default_type"] = resolved_type
         elif key.get("has_default", False):
-            resolved_type = _normalize_type(key.get("default_value_type", "str"))
+            resolved_type = normalize_type(key.get("default_value_type", "str"))
             key_attributes["default_value"] = _serialize_default_value(
                 key.get("default_value", ""), resolved_type
             )
             key_attributes["default_type"] = resolved_type
         elif key.get("default_value_type"):
-            key_attributes["default_type"] = _normalize_type(
+            key_attributes["default_type"] = normalize_type(
                 key.get("default_value_type", "str")
             )
 
         ET.SubElement(root, "Key", key_attributes)
 
-    declared_parameter_names: list[str] = []
+    declared_parameter_names: List[str] = []
     for parameter in getattr(plugin, "parameters", []):
         parameter_name = parameter.get("name", "")
         if not parameter_name:
@@ -316,7 +263,7 @@ def _build_test_xml(
 
         parameter_attributes = {
             "name": parameter_name,
-            "default_type": _normalize_type(parameter.get("default_value_type", "str")),
+            "default_type": normalize_type(parameter.get("default_value_type", "str")),
         }
 
         description = parameter.get("description", "")
@@ -329,7 +276,7 @@ def _build_test_xml(
                 parameter_name,
                 provided_parameters[parameter_name],
             )
-            converted_value = _convert_value(
+            converted_value = parse_key_value(
                 provided_parameters[parameter_name], resolved_type
             )
             parameter_attributes["default_value"] = _serialize_default_value(
@@ -337,7 +284,7 @@ def _build_test_xml(
             )
             parameter_attributes["default_type"] = resolved_type
         elif parameter.get("has_default", False):
-            resolved_type = _normalize_type(parameter.get("default_value_type", "str"))
+            resolved_type = normalize_type(parameter.get("default_value_type", "str"))
             parameter_attributes["default_value"] = _serialize_default_value(
                 parameter.get("default_value", ""), resolved_type
             )
@@ -394,11 +341,11 @@ def _build_test_xml(
             },
         )
 
-    _indent_xml(root)
+    indent_xml(root)
     return ET.tostring(root, encoding="unicode")
 
 
-def _print_plugin_input_summary(plugin, provided_inputs: dict[str, str]) -> None:
+def _print_plugin_input_summary(plugin, provided_inputs: Dict[str, str]) -> None:
     if not plugin.input_keys:
         return
 
@@ -423,7 +370,7 @@ def _print_plugin_input_summary(plugin, provided_inputs: dict[str, str]) -> None
             print(f"      {description}")
 
 
-def _print_plugin_parameter_summary(plugin, provided_parameters: dict[str, str]) -> None:
+def _print_plugin_parameter_summary(plugin, provided_parameters: Dict[str, str]) -> None:
     parameters = getattr(plugin, "parameters", [])
     if not parameters:
         return
@@ -518,8 +465,8 @@ def _main_test(args):
         return 1
 
     try:
-        provided_inputs = _parse_assignments(args.input, "input")
-        provided_parameters = _parse_assignments(args.param, "parameter")
+        provided_inputs = parse_assignments(args.input, "input")
+        provided_parameters = parse_assignments(args.param, "parameter")
     except ValueError as exc:
         print(str(exc))
         return 1
@@ -560,7 +507,14 @@ def _main_test(args):
 
     if args.keep_temp_file:
         safe_name = plugin_id(plugin).replace("/", "_").replace(".", "_")
-        temp_path = Path.cwd() / f"yasmin_test_{safe_name}.xml"
+        base_path = Path.cwd() / f"yasmin_test_{safe_name}"
+        temp_path = base_path.with_suffix(".xml")
+        counter = 1
+        while temp_path.exists():
+            temp_path = base_path.with_name(f"{base_path.name}_{counter}").with_suffix(
+                ".xml"
+            )
+            counter += 1
         temp_path.write_text(xml_content, encoding="utf-8")
         return run_factory_node(
             state_machine_file=temp_path.as_posix(),

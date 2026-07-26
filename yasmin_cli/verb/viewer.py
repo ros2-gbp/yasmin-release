@@ -1,19 +1,16 @@
-#!/usr/bin/env python3
-
 # Copyright (C) 2026 Maik Knof
 #
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
 #
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
-# You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 from __future__ import annotations
 
@@ -23,7 +20,6 @@ import subprocess
 def run_viewer(
     host: str = "127.0.0.1",
     port: int = 5000,
-    msg_per_second: int = 30,
 ) -> int:
     command = [
         "ros2",
@@ -35,8 +31,6 @@ def run_viewer(
         f"host:={host}",
         "-p",
         f"port:={port}",
-        "-p",
-        f"msg_per_second:={msg_per_second}",
     ]
 
     try:
@@ -67,12 +61,6 @@ def add_viewer_verb(subparsers):
         default=5000,
         help="Viewer port",
     )
-    parser.add_argument(
-        "--msg-per-second",
-        type=int,
-        default=30,
-        help="Viewer update rate",
-    )
 
     parser.set_defaults(main=_main_viewer)
 
@@ -81,5 +69,4 @@ def _main_viewer(args):
     return run_viewer(
         host=args.host,
         port=args.port,
-        msg_per_second=args.msg_per_second,
     )

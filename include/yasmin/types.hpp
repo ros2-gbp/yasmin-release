@@ -1,17 +1,16 @@
 // Copyright (C) 2025 Miguel Ángel González Santamarta
 //
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
 //
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
+//     http://www.apache.org/licenses/LICENSE-2.0
 //
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 #ifndef YASMIN__TYPES_HPP_
 #define YASMIN__TYPES_HPP_
@@ -20,6 +19,7 @@
 #include <memory>
 #include <set>
 #include <string>
+#include <type_traits>
 #include <unordered_map>
 #include <vector>
 
@@ -29,18 +29,19 @@ namespace yasmin {
 #define YASMIN_SHARED_PTR_ALIAS(...)                                           \
   using SharedPtr = std::shared_ptr<__VA_ARGS__>;                              \
   using ConstSharedPtr = std::shared_ptr<const __VA_ARGS__>;                   \
-  template <typename... Args>                                                  \
-  static std::shared_ptr<__VA_ARGS__> make_shared(Args &&...args) {            \
-    return std::make_shared<__VA_ARGS__>(std::forward<Args>(args)...);         \
+  template <typename T = __VA_ARGS__,                                          \
+            typename = std::enable_if_t<std::is_class_v<T>>, typename... Args> \
+  static std::shared_ptr<T> make_shared(Args &&...args) {                      \
+    return std::make_shared<T>(std::forward<Args>(args)...);                   \
   }
 
 /** @brief Macro to define a UniquePtr alias for a class */
 #define YASMIN_UNIQUE_PTR_ALIAS(...)                                           \
   using UniquePtr = std::unique_ptr<__VA_ARGS__>;                              \
-  template <typename... Args>                                                  \
-  static std::unique_ptr<__VA_ARGS__> make_unique(Args &&...args) {            \
-    return std::unique_ptr<__VA_ARGS__>(                                       \
-        new __VA_ARGS__(std::forward<Args>(args)...));                         \
+  template <typename T = __VA_ARGS__,                                          \
+            typename = std::enable_if_t<std::is_class_v<T>>, typename... Args> \
+  static std::unique_ptr<T> make_unique(Args &&...args) {                      \
+    return std::unique_ptr<T>(new T(std::forward<Args>(args)...));             \
   }
 
 /** @brief Macro to define a WeakPtr alias for a class */
@@ -73,6 +74,12 @@ class Blackboard;
 class StateMachine;
 /** @brief Forward declaration for Concurrence class */
 class Concurrence;
+/** @brief Forward declaration for RegionBarrier class */
+class RegionBarrier;
+/** @brief Forward declaration for JoinState class */
+class JoinState;
+/** @brief Forward declaration for OrthogonalState class */
+class OrthogonalState;
 
 /** @brief Set of strings */
 using StringSet = std::set<std::string>;
@@ -109,6 +116,12 @@ using StatePtr = std::shared_ptr<State>;
 using StateMachinePtr = std::shared_ptr<StateMachine>;
 /** @brief Shared pointer to Concurrence */
 using ConcurrencePtr = std::shared_ptr<Concurrence>;
+/** @brief Shared pointer to RegionBarrier */
+using RegionBarrierPtr = std::shared_ptr<RegionBarrier>;
+/** @brief Shared pointer to JoinState */
+using JoinStatePtr = std::shared_ptr<JoinState>;
+/** @brief Shared pointer to OrthogonalState */
+using OrthogonalStatePtr = std::shared_ptr<OrthogonalState>;
 
 /** @brief Map of state names to state pointers */
 using StateMap = std::unordered_map<std::string, std::shared_ptr<State>>;

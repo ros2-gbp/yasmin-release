@@ -1,21 +1,21 @@
 // Copyright (C) 2024 Miguel Ángel González Santamarta
 //
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
 //
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
+//     http://www.apache.org/licenses/LICENSE-2.0
 //
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 #ifndef YASMIN__LOGS_HPP_
 #define YASMIN__LOGS_HPP_
 
+#include <atomic>
 #include <cstdarg>
 #include <cstring>
 #include <string>
@@ -30,7 +30,7 @@ namespace yasmin {
  * severe to least severe. Only logs at or above the current log level will be
  * shown.
  */
-enum LogLevel {
+enum class LogLevel {
   /// Log level for error messages. Only critical errors should be logged.
   ERROR = 0,
   /// Log level for warning messages. Indicate potential issues that are not
@@ -51,7 +51,7 @@ enum LogLevel {
  * verbosity of the logs. Logs at or above this level will be displayed. The
  * default level is set to INFO.
  */
-extern LogLevel log_level;
+extern std::atomic<LogLevel> log_level;
 
 /**
  * @brief Default logging function.
@@ -82,6 +82,7 @@ void set_log_level(LogLevel new_log_level);
  * This function returns the name of a given log level.
  *
  * @param level Log level.
+ * @return The name of the log level as a string.
  */
 const char *log_level_to_name(LogLevel level);
 
@@ -100,10 +101,11 @@ const char *log_level_to_name(LogLevel level);
  * @param text The format string for the log message, similar to printf.
  * @param ... Additional arguments for the format string.
  */
-typedef void (*LogFunction)(LogLevel level, const char *file,
-                            const char *function, int line, const char *text);
+using LogFunction = void (*)(LogLevel level, const char *file,
+                             const char *function, int line, const char *text);
 
-extern LogFunction log_message; ///< Pointer to the logging function
+/// @brief Pointer to the logging function
+extern std::atomic<LogFunction> log_message;
 
 /**
  * @brief Variadic template function to log messages at different levels.
@@ -127,16 +129,22 @@ void log_helper(const char *file, const char *function, int line,
   va_start(args, text);
 
   // Calculate the required buffer size
-  int size = vsnprintf(nullptr, 0, text, args) + 1;
+  int size = vsnprintf(nullptr, 0, text, args);
   va_end(args);
 
-  std::string buffer(size, '\0');
+  if (size < 0) {
+    yasmin::log_message.load()(LEVEL, file, function, line,
+                               "[log_helper error: vsnprintf failed]");
+    return;
+  }
+
+  std::string buffer(size + 1, '\0');
   va_start(args, text);
   vsnprintf(&buffer[0], buffer.size(), text, args);
 
   va_end(args);
 
-  yasmin::log_message(LEVEL, file, function, line, buffer.c_str());
+  yasmin::log_message.load()(LEVEL, file, function, line, buffer.c_str());
 }
 
 /**
@@ -156,38 +164,43 @@ inline const char *extract_filename(const char *path) {
 }
 
 // Macros for logging with automatic file and function information
+/** @brief Log a message at ERROR level. Automatically captures file, function,
+ * and line information. */
 #define YASMIN_LOG_ERROR(text, ...)                                            \
-  if (yasmin::log_level >= yasmin::ERROR)                                      \
-  yasmin::log_helper<yasmin::ERROR>(::yasmin::extract_filename(__FILE__),      \
-                                    __FUNCTION__, __LINE__, text,              \
-                                    ##__VA_ARGS__)
+  if (yasmin::log_level.load() >= yasmin::LogLevel::ERROR)                     \
+  yasmin::log_helper<yasmin::LogLevel::ERROR>(                                 \
+      ::yasmin::extract_filename(__FILE__), __FUNCTION__, __LINE__, text,      \
+      ##__VA_ARGS__)
+/** @brief Log a message at WARN level. Automatically captures file, function,
+ * and line information. */
 #define YASMIN_LOG_WARN(text, ...)                                             \
-  if (yasmin::log_level >= yasmin::WARN)                                       \
-  yasmin::log_helper<yasmin::WARN>(::yasmin::extract_filename(__FILE__),       \
-                                   __FUNCTION__, __LINE__, text,               \
-                                   ##__VA_ARGS__)
+  if (yasmin::log_level.load() >= yasmin::LogLevel::WARN)                      \
+  yasmin::log_helper<yasmin::LogLevel::WARN>(                                  \
+      ::yasmin::extract_filename(__FILE__), __FUNCTION__, __LINE__, text,      \
+      ##__VA_ARGS__)
+/** @brief Log a message at INFO level. Automatically captures file, function,
+ * and line information. */
 #define YASMIN_LOG_INFO(text, ...)                                             \
-  if (yasmin::log_level >= yasmin::INFO)                                       \
-  yasmin::log_helper<yasmin::INFO>(::yasmin::extract_filename(__FILE__),       \
-                                   __FUNCTION__, __LINE__, text,               \
-                                   ##__VA_ARGS__)
+  if (yasmin::log_level.load() >= yasmin::LogLevel::INFO)                      \
+  yasmin::log_helper<yasmin::LogLevel::INFO>(                                  \
+      ::yasmin::extract_filename(__FILE__), __FUNCTION__, __LINE__, text,      \
+      ##__VA_ARGS__)
+/** @brief Log a message at DEBUG level. Automatically captures file, function,
+ * and line information. */
 #define YASMIN_LOG_DEBUG(text, ...)                                            \
-  if (yasmin::log_level >= yasmin::DEBUG)                                      \
-  yasmin::log_helper<yasmin::DEBUG>(::yasmin::extract_filename(__FILE__),      \
-                                    __FUNCTION__, __LINE__, text,              \
-                                    ##__VA_ARGS__)
+  if (yasmin::log_level.load() >= yasmin::LogLevel::DEBUG)                     \
+  yasmin::log_helper<yasmin::LogLevel::DEBUG>(                                 \
+      ::yasmin::extract_filename(__FILE__), __FUNCTION__, __LINE__, text,      \
+      ##__VA_ARGS__)
 
 /**
- * @brief Sets custom logging functions for different log levels.
+ * @brief Sets the logging function.
  *
- * This function allows the user to specify custom logging functions for
- * error, warning, info, and debug logs. If a null function is provided
- * for any log level, the default logging function will be used instead.
+ * This function allows the user to specify a custom logging function
+ * for all log levels. Messages are routed through the provided function
+ * for error, warning, info, and debug levels.
  *
- * @param error Pointer to the custom error logging function.
- * @param warn Pointer to the custom warning logging function.
- * @param info Pointer to the custom info logging function.
- * @param debug Pointer to the custom debug logging function.
+ * @param log_message Pointer to the logging function.
  */
 void set_loggers(LogFunction log_message);
 

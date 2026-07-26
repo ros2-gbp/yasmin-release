@@ -1,47 +1,76 @@
 // Copyright (C) 2023 Miguel Ángel González Santamarta
 //
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
 //
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
+//     http://www.apache.org/licenses/LICENSE-2.0
 //
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 #include "yasmin/state_machine.hpp"
 
 #include <algorithm>
 #include <csignal>
 #include <exception>
-#include <map>
 #include <memory>
 #include <mutex>
+#include <queue>
 #include <set>
 #include <sstream>
 #include <stdexcept>
 #include <string>
+#include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 #include "yasmin/blackboard.hpp"
+#include "yasmin/concurrence.hpp"
 #include "yasmin/logs.hpp"
+#include "yasmin/orthogonal_state.hpp"
 #include "yasmin/state.hpp"
 #include "yasmin/state_machine_cancel_exception.hpp"
+#include "yasmin/state_utils.hpp"
 #include "yasmin/types.hpp"
 
 using namespace yasmin;
 
 namespace {
-StateMachine *sigint_handler_instance = nullptr;
+std::mutex sigint_registry_mutex;
+std::unordered_map<int, std::function<void()>> sigint_callbacks;
+int next_sigint_id = 0;
+bool sigint_handler_installed = false;
 
-void sigint_handler(int signum) {
-  if (sigint_handler_instance) {
-    sigint_handler_instance->cancel_state_machine();
+extern "C" void sigint_handler(int) {
+  std::lock_guard<std::mutex> lock(sigint_registry_mutex);
+  for (const auto &[id, cb] : sigint_callbacks) {
+    (void)id;
+    cb();
   }
+}
+
+int register_sigint_callback(std::function<void()> cb) {
+  std::lock_guard<std::mutex> lock(sigint_registry_mutex);
+  if (!sigint_handler_installed) {
+    struct sigaction sigint_action {};
+    sigint_action.sa_handler = sigint_handler;
+    sigemptyset(&sigint_action.sa_mask);
+    sigint_action.sa_flags = 0;
+    sigaction(SIGINT, &sigint_action, nullptr);
+    sigint_handler_installed = true;
+  }
+  int id = next_sigint_id++;
+  sigint_callbacks[id] = std::move(cb);
+  return id;
+}
+
+void unregister_sigint_callback(int id) {
+  std::lock_guard<std::mutex> lock(sigint_registry_mutex);
+  sigint_callbacks.erase(id);
 }
 } // namespace
 
@@ -50,8 +79,7 @@ StateMachine::StateMachine(const Outcomes &outcomes, bool handle_sigint)
 
 StateMachine::StateMachine(const std::string &name, const Outcomes &outcomes,
                            bool handle_sigint)
-    : State(outcomes), current_state_mutex(std::make_unique<std::mutex>()),
-      name(name) {
+    : State(outcomes), name(name) {
   this->set_sigint_handler(handle_sigint);
 }
 
@@ -95,14 +123,10 @@ void StateMachine::add_state(const std::string &name, State::SharedPtr state,
     if (state_outcomes.find(key) == state_outcomes.end()) {
       std::ostringstream oss;
       oss << "State '" << name << "' references unregistered outcomes '" << key
-          << "', available outcomes are [";
-      for (const auto &outcome : state_outcomes) {
-        oss << "'" << outcome << "'";
-        if (outcome != *state_outcomes.rbegin()) {
-          oss << ", ";
-        }
-      }
-      oss << "]";
+          << "', available outcomes are ["
+          << yasmin::join(state_outcomes, ", ",
+                          [](const std::string &o) { return "'" + o + "'"; })
+          << "]";
       throw std::invalid_argument(oss.str());
     }
   }
@@ -117,7 +141,7 @@ void StateMachine::add_state(const std::string &name, State::SharedPtr state,
                    name.c_str(), state->to_string().c_str(),
                    transitions_oss.str().c_str());
 
-  this->states.insert({name, state});
+  this->states.insert({name, std::move(state)});
   this->transitions.insert({name, transitions});
   this->remappings.insert({name, remappings});
   this->parameter_mappings.insert({name, parameter_mappings});
@@ -170,43 +194,14 @@ StateMachine::get_parameter_mappings() const noexcept {
 
 void StateMachine::apply_parameter_mappings(const std::string &state_name,
                                             const State::SharedPtr &state) {
-  const auto mappings_it = this->parameter_mappings.find(state_name);
-  if (mappings_it == this->parameter_mappings.end()) {
-    return;
-  }
-
-  for (const auto &[child_parameter, parent_parameter] : mappings_it->second) {
-    if (!this->is_parameter_declared(parent_parameter)) {
-      throw std::runtime_error(
-          "State machine parameter '" + parent_parameter +
-          "' is not declared while configuring child state '" + state_name +
-          "'");
-    }
-
-    if (!this->has_parameter(parent_parameter)) {
-      throw std::runtime_error(
-          "State machine parameter '" + parent_parameter +
-          "' has no value while configuring child state '" + state_name + "'");
-    }
-
-    if (!state->is_parameter_declared(child_parameter)) {
-      throw std::runtime_error("Child state '" + state_name +
-                               "' does not declare parameter '" +
-                               child_parameter + "'");
-    }
-
-    state->copy_parameter_from(*this, parent_parameter, child_parameter);
-  }
+  yasmin::apply_parameter_mappings("State machine", this->parameter_mappings,
+                                   state_name, *this, state);
 }
 
 void StateMachine::configure() {
-  if (this->configured.load()) {
-    YASMIN_LOG_DEBUG("State machine '%s' has already been configured",
-                     this->to_string().c_str());
+  if (yasmin::check_already_configured(this->configured, "State machine",
+                                       this->to_string().c_str()))
     return;
-  }
-
-  YASMIN_LOG_DEBUG("Configuring state machine '%s'", this->to_string().c_str());
 
   for (const auto &[state_name, state] : this->states) {
     this->apply_parameter_mappings(state_name, state);
@@ -217,10 +212,13 @@ void StateMachine::configure() {
 }
 
 std::string StateMachine::wait_for_current_state() {
-  std::unique_lock<std::mutex> lock(*this->current_state_mutex.get());
+  std::unique_lock<std::mutex> lock(this->current_state_mutex);
+
   this->current_state_cond.wait(lock, [this]() {
-    return !this->current_state.empty() || !this->execution_active.load();
+    return !this->current_state.empty() || !this->execution_active.load() ||
+           this->cancel_state_machine_requested.load();
   });
+
   return this->current_state;
 }
 
@@ -247,33 +245,38 @@ TransitionsMap const &StateMachine::get_transitions() const noexcept {
   return this->transitions;
 }
 
-std::string const &StateMachine::get_current_state() const {
-  const std::lock_guard<std::mutex> lock(*this->current_state_mutex.get());
+std::string StateMachine::get_current_state() const {
+  const std::lock_guard<std::mutex> lock(this->current_state_mutex);
   return this->current_state;
 }
 
 void StateMachine::set_current_state(const std::string &state_name) {
-  const std::lock_guard<std::mutex> lock(*this->current_state_mutex.get());
+  const std::lock_guard<std::mutex> lock(this->current_state_mutex);
   this->current_state = state_name;
   this->current_state_cond.notify_all();
 }
 
 void StateMachine::add_start_cb(StartCallbackType cb) {
-  this->start_cbs.emplace_back(cb);
+  const std::lock_guard<std::mutex> lock(this->cbs_mutex_);
+  this->start_cbs.emplace_back(std::move(cb));
 }
 
 void StateMachine::add_transition_cb(TransitionCallbackType cb) {
-  this->transition_cbs.emplace_back(cb);
+  const std::lock_guard<std::mutex> lock(this->cbs_mutex_);
+  this->transition_cbs.emplace_back(std::move(cb));
 }
 
 void StateMachine::add_end_cb(EndCallbackType cb) {
-  this->end_cbs.emplace_back(cb);
+  const std::lock_guard<std::mutex> lock(this->cbs_mutex_);
+  this->end_cbs.emplace_back(std::move(cb));
 }
 
 void StateMachine::call_start_cbs(Blackboard::SharedPtr blackboard,
                                   const std::string &start_state) {
 
   try {
+    const std::lock_guard<std::mutex> lock(this->cbs_mutex_);
+
     for (const auto &callback : this->start_cbs) {
       callback(blackboard, start_state);
     }
@@ -290,6 +293,8 @@ void StateMachine::call_transition_cbs(Blackboard::SharedPtr blackboard,
                                        const std::string &outcome) {
 
   try {
+    const std::lock_guard<std::mutex> lock(this->cbs_mutex_);
+
     for (const auto &callback : this->transition_cbs) {
       callback(blackboard, from_state, to_state, outcome);
     }
@@ -304,6 +309,8 @@ void StateMachine::call_end_cbs(Blackboard::SharedPtr blackboard,
                                 const std::string &outcome) {
 
   try {
+    const std::lock_guard<std::mutex> lock(this->cbs_mutex_);
+
     for (const auto &callback : this->end_cbs) {
       callback(blackboard, outcome);
     }
@@ -338,6 +345,7 @@ void StateMachine::validate(bool strict_mode) {
   if (this->validated.load() && !strict_mode) {
     YASMIN_LOG_DEBUG("State machine '%s' has already been validated",
                      this->to_string().c_str());
+    return;
   }
 
   // Check initial state
@@ -353,9 +361,9 @@ void StateMachine::validate(bool strict_mode) {
 
     const std::string &state_name = it->first;
     const State::SharedPtr &state = it->second;
-    Transitions transitions = this->transitions.at(state_name);
+    const Transitions &transitions = this->transitions.at(state_name);
 
-    Outcomes outcomes = state->get_outcomes();
+    const Outcomes &outcomes = state->get_outcomes();
 
     if (strict_mode) {
       // Check if all outcomes of the state are in transitions
@@ -376,25 +384,32 @@ void StateMachine::validate(bool strict_mode) {
       }
     }
 
-    // If state is a state machine, validate it
-    if (std::dynamic_pointer_cast<StateMachine>(state)) {
-      std::dynamic_pointer_cast<StateMachine>(state)->validate(strict_mode);
+    // If state is a state machine, concurrence, or orthogonal state, validate
+    // it. Use get_inner_state() to unwrap proxy wrappers (e.g.
+    // PythonStateHolder) so that Python-loaded states are correctly identified.
+    auto *inner = state->get_inner_state();
+    if (auto *sm = dynamic_cast<StateMachine *>(inner)) {
+      sm->validate(strict_mode);
+    } else if (auto *c = dynamic_cast<Concurrence *>(inner)) {
+      c->validate(strict_mode);
+    } else if (auto *o = dynamic_cast<OrthogonalState *>(inner)) {
+      o->validate(strict_mode);
     }
 
     // Add terminal outcomes
-    for (auto it = transitions.begin(); it != transitions.end(); ++it) {
-      const std::string &value = it->second;
+    for (auto trans_it = transitions.begin(); trans_it != transitions.end();
+         ++trans_it) {
+      const std::string &value = trans_it->second;
       terminal_outcomes.insert(value);
     }
   }
 
   // Check terminal outcomes for the state machine
-  std::set<std::string> sm_outcomes(this->get_outcomes().begin(),
-                                    this->get_outcomes().end());
+  const auto &sm_outcomes = this->get_outcomes();
 
   if (strict_mode) {
     // Check if all outcomes from the state machine are in the terminal outcomes
-    for (const std::string &o : this->get_outcomes()) {
+    for (const std::string &o : sm_outcomes) {
       if (terminal_outcomes.find(o) == terminal_outcomes.end()) {
         throw std::runtime_error("Target outcome '" + o +
                                  "' not registered in transitions");
@@ -411,113 +426,95 @@ void StateMachine::validate(bool strict_mode) {
     }
   }
 
+  // Check for unreachable states from start_state via BFS
+  {
+    std::unordered_set<std::string> reachable;
+    std::queue<std::string> to_visit;
+    to_visit.push(this->start_state);
+    reachable.insert(this->start_state);
+
+    while (!to_visit.empty()) {
+      std::string current = to_visit.front();
+      to_visit.pop();
+
+      auto trans_map_it = this->transitions.find(current);
+      if (trans_map_it != this->transitions.end()) {
+        for (const auto &[outcome, target] : trans_map_it->second) {
+          if (this->outcomes.find(target) != this->outcomes.end()) {
+            continue;
+          }
+          if (reachable.find(target) == reachable.end()) {
+            reachable.insert(target);
+            to_visit.push(target);
+          }
+        }
+      }
+    }
+
+    for (const auto &[state_name, _] : this->states) {
+      if (reachable.find(state_name) == reachable.end()) {
+        throw std::runtime_error("State '" + state_name +
+                                 "' is unreachable from start state '" +
+                                 this->start_state + "'");
+      }
+    }
+  }
+
   // State machine has been validated
   this->validated.store(true);
 }
 
 std::string StateMachine::execute(Blackboard::SharedPtr blackboard) {
 
-  this->validate();
-  this->configure();
+  if (!this->validated.load()) {
+    this->validate();
+  }
+  if (!this->configured.load()) {
+    this->configure();
+  }
 
   YASMIN_LOG_INFO("Executing state machine with initial state '%s'",
                   this->start_state.c_str());
-  this->call_start_cbs(blackboard, this->start_state);
 
   this->cancel_state_machine_requested.store(false);
   this->execution_active.store(true);
   this->set_current_state(this->start_state);
 
-  Transitions transitions;
-  Transitions remappings;
-  std::string outcome;
-  std::string old_outcome;
+  // Start callbacks run after flags are set so cancel_state_machine() during a
+  // callback is properly tracked rather than silently cleared.
+  this->call_start_cbs(blackboard, this->start_state);
+
+  int sigint_reg_id = -1;
+  if (this->handle_sigint_) {
+    sigint_reg_id =
+        register_sigint_callback([this]() { this->cancel_state_machine(); });
+  }
+
   bool state_machine_ends = false;
+  std::string outcome;
 
   try {
     while (!state_machine_ends) {
       this->throw_if_cancel_state_machine_requested();
 
       std::string current_state = this->get_current_state();
-      if (current_state.empty()) {
-        current_state = this->wait_for_current_state();
-        if (current_state.empty()) {
-          this->throw_if_cancel_state_machine_requested();
-          throw std::logic_error(
-              "State machine lost its active state during execution");
-        }
-      }
-
-      auto state = this->states.at(current_state);
-      transitions = this->transitions.at(current_state);
-      remappings = this->remappings.at(current_state);
-
-      // compose remappings
-      auto parent_remappings = blackboard->get_remappings();
-      auto composed_remappings =
-          StateMachine::compose_remappings(parent_remappings, remappings);
-      // apply remappings
-      blackboard->set_remappings(composed_remappings);
-
-      try {
-        outcome = (*state.get())(blackboard);
-      } catch (...) {
-        blackboard->set_remappings(parent_remappings);
-        throw;
-      }
-      old_outcome = std::string(outcome);
-
-      // restore parent remappings
-      blackboard->set_remappings(parent_remappings);
-
-      this->throw_if_cancel_state_machine_requested();
-
-      // Check outcome belongs to state
-      const auto &state_outcomes = state->get_outcomes();
-      if (state_outcomes.find(outcome) == state_outcomes.end()) {
-        throw std::logic_error("Outcome '" + outcome +
-                               "' is not registered in state " +
-                               this->current_state);
-      }
-
-      // Translate outcome using transitions
-      if (transitions.find(outcome) != transitions.end()) {
-        outcome = transitions.at(outcome);
-      }
-
-      YASMIN_LOG_INFO("State machine transitioning '%s' : '%s' --> '%s'",
-                      this->current_state.c_str(), old_outcome.c_str(),
-                      outcome.c_str());
-
-      // Outcome is an outcome of the sm
-      if (this->outcomes.find(outcome) != this->outcomes.end()) {
-
-        this->set_current_state("");
-        YASMIN_LOG_INFO("State machine ends with outcome '%s'",
-                        outcome.c_str());
-        this->call_end_cbs(blackboard, outcome);
-        state_machine_ends = true;
-
-        // Outcome is a state
-      } else if (this->states.find(outcome) != this->states.end()) {
-        this->call_transition_cbs(blackboard, this->current_state, outcome,
-                                  old_outcome);
-
-        this->set_current_state(outcome);
-
-        // Outcome is not in the sm
-      } else {
-        throw std::logic_error("Outcome '" + outcome +
-                               "' is not a state nor a state machine outcome");
-      }
+      outcome =
+          this->execute_step(blackboard, current_state, state_machine_ends);
     }
   } catch (...) {
+    if (sigint_reg_id >= 0) {
+      unregister_sigint_callback(sigint_reg_id);
+    }
+    this->call_end_cbs(blackboard, "");
     this->execution_active.store(false);
     this->set_current_state("");
     this->current_state_cond.notify_all();
     throw;
   }
 
+  if (sigint_reg_id >= 0) {
+    unregister_sigint_callback(sigint_reg_id);
+  }
   this->execution_active.store(false);
   this->current_state_cond.notify_all();
   return outcome;
@@ -571,42 +568,73 @@ void StateMachine::cancel_state_machine() {
 }
 
 void StateMachine::set_sigint_handler(bool handle) {
-  if (handle) {
-    sigint_handler_instance = this;
-    // Set up signal handler for SIGINT
-    struct sigaction sigint_action;
-    sigint_action.sa_handler = sigint_handler;
-    sigemptyset(&sigint_action.sa_mask);
-    sigint_action.sa_flags = 0;
-    sigaction(SIGINT, &sigint_action, nullptr);
-  } else {
-    sigint_handler_instance = nullptr;
-    // Reset to default handler
-    struct sigaction sigint_action;
-    sigint_action.sa_handler = SIG_DFL;
-    sigemptyset(&sigint_action.sa_mask);
-    sigint_action.sa_flags = 0;
-    sigaction(SIGINT, &sigint_action, nullptr);
+  this->handle_sigint_ = handle;
+}
+
+std::string StateMachine::execute_step(Blackboard::SharedPtr blackboard,
+                                       const std::string &current_state,
+                                       bool &state_machine_ends) {
+
+  const auto &states = this->states;
+  const auto &local_outcomes = this->outcomes;
+
+  auto state_it = states.find(current_state);
+  if (state_it == states.end()) {
+    throw std::logic_error("Active state '" + current_state +
+                           "' not found in state machine");
   }
+  const auto &state = state_it->second;
+  const auto &local_transitions = this->transitions.at(current_state);
+  const auto &local_remappings = this->remappings.at(current_state);
+
+  auto parent_remappings = blackboard->get_remappings();
+  auto composed_remappings =
+      StateMachine::compose_remappings(parent_remappings, local_remappings);
+  blackboard->set_remappings(composed_remappings);
+
+  std::string outcome;
+  std::string old_outcome;
+
+  try {
+    outcome = (*state.get())(blackboard);
+  } catch (...) {
+    blackboard->set_remappings(parent_remappings);
+    throw;
+  }
+  old_outcome = outcome;
+
+  blackboard->set_remappings(parent_remappings);
+
+  this->throw_if_cancel_state_machine_requested();
+
+  if (local_transitions.find(outcome) != local_transitions.end()) {
+    outcome = local_transitions.at(outcome);
+  }
+
+  YASMIN_LOG_INFO("State machine transitioning '%s' : '%s' --> '%s'",
+                  current_state.c_str(), old_outcome.c_str(), outcome.c_str());
+
+  if (local_outcomes.find(outcome) != local_outcomes.end()) {
+    this->set_current_state("");
+    YASMIN_LOG_INFO("State machine ends with outcome '%s'", outcome.c_str());
+    this->call_end_cbs(blackboard, outcome);
+    state_machine_ends = true;
+  } else if (states.find(outcome) != states.end()) {
+    this->call_transition_cbs(blackboard, current_state, outcome, old_outcome);
+    this->set_current_state(outcome);
+  } else {
+    throw std::logic_error("Outcome '" + outcome +
+                           "' is not a state nor a state machine outcome");
+  }
+
+  return outcome;
 }
 
 std::string StateMachine::to_string() const {
-
-  std::ostringstream oss;
-  oss << "State Machine [";
-
-  const auto &states = this->get_states();
-
-  for (auto it = states.begin(); it != states.end(); ++it) {
-    const auto &s = *it;
-    oss << s.first << " (" << s.second->to_string() << ")";
-
-    if (std::next(it) != states.end()) {
-      oss << ", ";
-    }
-  }
-
-  oss << "]";
-
-  return oss.str();
+  return "State Machine [" +
+         yasmin::join(this->get_states(), ", ",
+                      [](const auto &p) {
+                        return p.first + " (" + p.second->to_string() + ")";
+                      }) +
+         "]";
 }

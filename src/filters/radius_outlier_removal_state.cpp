@@ -1,28 +1,25 @@
 // Copyright (C) 2026 Maik Knof
 //
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
 //
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
+//     http://www.apache.org/licenses/LICENSE-2.0
 //
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 #include "yasmin_pcl/filters/radius_outlier_removal_state.hpp"
 
 #include <pcl/filters/radius_outlier_removal.h>
 
-#include <exception>
 #include <limits>
 
 #include <pluginlib/class_list_macros.hpp>
 
-#include "yasmin/logs.hpp"
 #include "yasmin_pcl/common/cloud_types.hpp"
 #include "yasmin_pcl/common/filter_state_utils.hpp"
 
@@ -30,12 +27,12 @@ namespace yasmin_pcl::filters {
 
 RadiusOutlierRemovalState::RadiusOutlierRemovalState()
     : yasmin::State({"succeeded", "aborted"}) {
-  radius_search_ = 0.1;
-  min_neighbors_in_radius_ = 1;
-  negative_ = false;
-  keep_organized_ = false;
-  user_filter_value_ = std::numeric_limits<float>::quiet_NaN();
-  extract_removed_indices_ = false;
+  this->radius_search_ = 0.1;
+  this->min_neighbors_in_radius_ = 1;
+  this->negative_ = false;
+  this->keep_organized_ = false;
+  this->user_filter_value_ = std::numeric_limits<float>::quiet_NaN();
+  this->extract_removed_indices_ = false;
 
   this->set_description(
       "Applies pcl::RadiusOutlierRemoval to a pcl::PCLPointCloud2 stored in "
@@ -77,53 +74,28 @@ RadiusOutlierRemovalState::RadiusOutlierRemovalState()
                        "Removed point indices stored as pcl::Indices.");
 }
 
-RadiusOutlierRemovalState::~RadiusOutlierRemovalState() {}
-
 void RadiusOutlierRemovalState::configure() {
-  radius_search_ = this->get_parameter<double>("radius_search");
-  min_neighbors_in_radius_ =
+  this->radius_search_ = this->get_parameter<double>("radius_search");
+  this->min_neighbors_in_radius_ =
       this->get_parameter<int>("min_neighbors_in_radius");
-  negative_ = this->get_parameter<bool>("negative");
-  keep_organized_ = this->get_parameter<bool>("keep_organized");
-  user_filter_value_ = this->get_parameter<float>("user_filter_value");
-  extract_removed_indices_ =
+  this->negative_ = this->get_parameter<bool>("negative");
+  this->keep_organized_ = this->get_parameter<bool>("keep_organized");
+  this->user_filter_value_ = this->get_parameter<float>("user_filter_value");
+  this->extract_removed_indices_ =
       this->get_parameter<bool>("extract_removed_indices");
 }
 
 std::string
 RadiusOutlierRemovalState::execute(yasmin::Blackboard::SharedPtr blackboard) {
-  try {
-    const auto input_cloud =
-        blackboard->get<common::PclPointCloud2Ptr>("input_cloud");
-
-    if (!input_cloud) {
-      YASMIN_LOG_WARN("Input PCL point cloud pointer is null");
-      return "aborted";
-    }
-
-    pcl::RadiusOutlierRemoval<pcl::PCLPointCloud2> filter(
-        extract_removed_indices_);
-    filter.setInputCloud(input_cloud);
-    filter.setRadiusSearch(radius_search_);
-    filter.setMinNeighborsInRadius(min_neighbors_in_radius_);
-    filter.setNegative(negative_);
-    filter.setKeepOrganized(keep_organized_);
-    filter.setUserFilterValue(user_filter_value_);
-    common::set_optional_input_indices(filter, blackboard);
-
-    auto output_cloud = common::make_pcl_point_cloud2();
-    filter.filter(*output_cloud);
-    blackboard->set<common::PclPointCloud2Ptr>("output_cloud", output_cloud);
-
-    if (extract_removed_indices_) {
-      common::store_removed_indices(filter, blackboard);
-    }
-
-    return "succeeded";
-  } catch (const std::exception &e) {
-    YASMIN_LOG_ERROR("RadiusOutlierRemoval filtering failed: %s", e.what());
-    return "aborted";
-  }
+  return common::execute_filter<pcl::RadiusOutlierRemoval<pcl::PCLPointCloud2>>(
+      blackboard, "RadiusOutlierRemoval", this->extract_removed_indices_,
+      [this](auto &filter) {
+        filter.setRadiusSearch(this->radius_search_);
+        filter.setMinNeighborsInRadius(this->min_neighbors_in_radius_);
+        filter.setNegative(this->negative_);
+        filter.setKeepOrganized(this->keep_organized_);
+        filter.setUserFilterValue(this->user_filter_value_);
+      });
 }
 
 } // namespace yasmin_pcl::filters

@@ -1,17 +1,16 @@
 // Copyright (C) 2025 Miguel Ángel González Santamarta
 //
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
 //
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
+//     http://www.apache.org/licenses/LICENSE-2.0
 //
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 #ifndef YASMIN__BLACKBOARD_PYWRAPPER_HPP_
 #define YASMIN__BLACKBOARD_PYWRAPPER_HPP_
@@ -28,6 +27,9 @@
 #include <vector>
 
 #include "yasmin/blackboard.hpp"
+#include "yasmin/blackboard_key_info_py.hpp"
+#include "yasmin/callback_signal.hpp"
+#include "yasmin/callback_signal_pyutils.hpp"
 #include "yasmin/types.hpp"
 
 namespace py = pybind11;
@@ -48,6 +50,7 @@ namespace yasmin {
  * - float                <-> double
  * - str                  <-> std::string
  * - bytes / bytearray    <-> std::vector<uint8_t>
+ * - CallbackSignal       <-> std::shared_ptr<yasmin::CallbackSignal>
  *
  * Supported homogeneous container mappings:
  * - list[str] / tuple[str, ...]     <-> std::vector<std::string>
@@ -259,19 +262,6 @@ private:
     return result;
   }
 
-  /**
-   * @brief Compare a stored type string against an exact C++ type.
-   * @tparam T Type to compare against.
-   * @param type Demangled type name stored in the blackboard.
-   * @return True if the stored type exactly matches T.
-   *
-   * Exact matching avoids ambiguous substring checks such as "int" matching
-   * both "int" and "std::vector<int>".
-   */
-  template <typename T> static bool is_exact_cpp_type(const std::string &type) {
-    return type == demangle_type(typeid(T).name());
-  }
-
 public:
   /**
    * @brief Construct a wrapper with a newly created native Blackboard.
@@ -293,6 +283,29 @@ public:
       : blackboard(std::move(bb_ptr)) {}
 
   /**
+   * @brief Copy constructor following native Blackboard copy semantics.
+   * @param other Wrapper to copy from.
+   *
+   * The copied wrapper receives its own Blackboard handle created through the
+   * native Blackboard copy constructor. This preserves shared value storage
+   * while isolating remappings between the two Python objects.
+   */
+  BlackboardPyWrapper(const BlackboardPyWrapper &other)
+      : blackboard(Blackboard::make_shared(*other.blackboard)) {}
+
+  /**
+   * @brief Copy assignment following native Blackboard copy semantics.
+   * @param other Wrapper to copy from.
+   * @return Reference to this wrapper.
+   */
+  BlackboardPyWrapper &operator=(const BlackboardPyWrapper &other) {
+    if (this != &other) {
+      this->blackboard = Blackboard::make_shared(*other.blackboard);
+    }
+    return *this;
+  }
+
+  /**
    * @brief Store a Python object in the blackboard.
    * @param key Blackboard key.
    * @param value Python object to store.
@@ -301,6 +314,7 @@ public:
    * native mapping exists, the value is stored as py::object.
    */
   void set(const std::string &key, py::object value) {
+    py::gil_scoped_acquire gil;
     if (py::isinstance<py::bool_>(value)) {
       this->blackboard->set<bool>(key, value.cast<bool>());
       return;
@@ -324,6 +338,14 @@ public:
 
     if (py::isinstance<py::str>(value)) {
       this->blackboard->set<std::string>(key, value.cast<std::string>());
+      return;
+    }
+
+    if (yasmin::callback_signal_pyutils::is_python_callback_signal_like(
+            value)) {
+      this->blackboard->set<yasmin::CallbackSignal::SharedPtr>(
+          key,
+          yasmin::callback_signal_pyutils::cast_python_callback_signal(value));
       return;
     }
 
@@ -434,123 +456,45 @@ public:
   py::object get(const std::string &key) const {
     const std::string type = this->blackboard->get_type(key);
 
-    if (is_exact_cpp_type<std::vector<uint8_t>>(type)) {
-      return byte_vector_to_py_bytes(
-          this->blackboard->get<std::vector<uint8_t>>(key));
-    }
-
-    if (is_exact_cpp_type<std::vector<unsigned char>>(type)) {
-      return byte_vector_to_py_bytes(
-          this->blackboard->get<std::vector<unsigned char>>(key));
-    }
-
-    if (is_exact_cpp_type<std::vector<char>>(type)) {
-      return byte_vector_to_py_bytes(
-          this->blackboard->get<std::vector<char>>(key));
-    }
-
-    if (is_exact_cpp_type<StringVector>(type)) {
-      return py::cast(this->blackboard->get<StringVector>(key));
-    }
-
-    if (is_exact_cpp_type<IntVector>(type)) {
-      return py::cast(this->blackboard->get<IntVector>(key));
-    }
-
-    if (is_exact_cpp_type<std::vector<int>>(type)) {
-      return py::cast(this->blackboard->get<std::vector<int>>(key));
-    }
-
-    if (is_exact_cpp_type<std::vector<long>>(type)) {
-      return py::cast(this->blackboard->get<std::vector<long>>(key));
-    }
-
-    if (is_exact_cpp_type<std::vector<long long>>(type)) {
-      return py::cast(this->blackboard->get<std::vector<long long>>(key));
-    }
-
-    if (is_exact_cpp_type<FloatVector>(type)) {
-      return py::cast(this->blackboard->get<FloatVector>(key));
-    }
-
-    if (is_exact_cpp_type<std::vector<float>>(type)) {
-      return py::cast(this->blackboard->get<std::vector<float>>(key));
-    }
-
-    if (is_exact_cpp_type<BoolVector>(type)) {
-      return py::cast(this->blackboard->get<BoolVector>(key));
-    }
-
-    if (is_exact_cpp_type<StringDict>(type)) {
-      return py::cast(this->blackboard->get<StringDict>(key));
-    }
-
-    if (is_exact_cpp_type<IntDict>(type)) {
-      return py::cast(this->blackboard->get<IntDict>(key));
-    }
-
-    if (is_exact_cpp_type<std::unordered_map<std::string, int>>(type)) {
-      return py::cast(
-          this->blackboard->get<std::unordered_map<std::string, int>>(key));
-    }
-
-    if (is_exact_cpp_type<std::unordered_map<std::string, long>>(type)) {
-      return py::cast(
-          this->blackboard->get<std::unordered_map<std::string, long>>(key));
-    }
-
-    if (is_exact_cpp_type<std::unordered_map<std::string, long long>>(type)) {
-      return py::cast(
-          this->blackboard->get<std::unordered_map<std::string, long long>>(
-              key));
-    }
-
-    if (is_exact_cpp_type<FloatDict>(type)) {
-      return py::cast(this->blackboard->get<FloatDict>(key));
-    }
-
-    if (is_exact_cpp_type<std::unordered_map<std::string, float>>(type)) {
-      return py::cast(
-          this->blackboard->get<std::unordered_map<std::string, float>>(key));
-    }
-
-    if (is_exact_cpp_type<BoolDict>(type)) {
-      return py::cast(this->blackboard->get<BoolDict>(key));
-    }
-
-    if (is_exact_cpp_type<std::string>(type)) {
-      return py::cast(this->blackboard->get<std::string>(key));
-    }
-
-    if (is_exact_cpp_type<std::int64_t>(type)) {
-      return py::cast(this->blackboard->get<std::int64_t>(key));
-    }
-
-    if (is_exact_cpp_type<int>(type)) {
-      return py::cast(this->blackboard->get<int>(key));
-    }
-
-    if (is_exact_cpp_type<long>(type)) {
-      return py::cast(this->blackboard->get<long>(key));
-    }
-
-    if (is_exact_cpp_type<float>(type)) {
-      return py::cast(this->blackboard->get<float>(key));
-    }
-
-    if (is_exact_cpp_type<double>(type)) {
-      return py::cast(this->blackboard->get<double>(key));
-    }
-
-    if (is_exact_cpp_type<bool>(type)) {
-      return py::cast(this->blackboard->get<bool>(key));
-    }
-
-    if (is_exact_cpp_type<py::object>(type)) {
+    // py::object is stored directly without extra wrapping
+    if (type == demangle_type(typeid(py::object).name())) {
       return this->blackboard->get<py::object>(key);
     }
 
-    return py::none();
+    using Getter =
+        std::function<py::object(const Blackboard &, const std::string &)>;
+
+    static const auto *const GETTERS = []() {
+      using Map = std::unordered_map<std::string, Getter>;
+      auto *m = new Map();
+
+      auto add = [&](auto dummy) {
+        using T = decltype(dummy);
+        (*m)[demangle_type(typeid(T).name())] = [](const Blackboard &bb,
+                                                   const std::string &k) {
+          return py::cast(bb.get<T>(k));
+        };
+      };
+
+      auto add_bytes = [&](auto dummy) {
+        using T = decltype(dummy);
+        (*m)[demangle_type(typeid(T).name())] = [](const Blackboard &bb,
+                                                   const std::string &k) {
+          return detail::byte_vector_to_py_bytes(bb.get<T>(k));
+        };
+      };
+
+      detail::register_standard_py_types(add, add_bytes);
+
+      return m;
+    }();
+
+    auto it = GETTERS->find(type);
+    if (it != GETTERS->end()) {
+      return it->second(*this->blackboard, key);
+    }
+
+    throw std::runtime_error("Unsupported type for Python conversion: " + type);
   }
 
   /**
@@ -581,14 +525,63 @@ public:
   std::vector<std::string> keys() const { return this->blackboard->keys(); }
 
   /**
+   * @brief Convert a raw type-erased entry to a Python object.
+   *
+   * The type dispatch mirrors the mapping in BlackboardPyWrapper::set() so
+   * that values written through Python and read back round-trip correctly.
+   */
+  static py::object raw_entry_to_pyobject(const Blackboard::RawEntry &entry) {
+    using Getter = std::function<py::object(const std::shared_ptr<void> &)>;
+
+    static const auto *const RAW_GETTERS = []() {
+      using Map = std::unordered_map<std::string, Getter>;
+      auto *m = new Map();
+
+      auto add = [&](auto dummy) {
+        using T = decltype(dummy);
+        (*m)[demangle_type(typeid(T).name())] =
+            [](const std::shared_ptr<void> &ptr) {
+              return py::cast(*std::static_pointer_cast<T>(ptr));
+            };
+      };
+
+      auto add_bytes = [&](auto dummy) {
+        using T = decltype(dummy);
+        (*m)[demangle_type(typeid(T).name())] =
+            [](const std::shared_ptr<void> &ptr) {
+              return detail::byte_vector_to_py_bytes(
+                  *std::static_pointer_cast<T>(ptr));
+            };
+      };
+
+      detail::register_standard_py_types(add, add_bytes);
+
+      return m;
+    }();
+
+    auto it = RAW_GETTERS->find(entry.type_name);
+    if (it != RAW_GETTERS->end()) {
+      return it->second(entry.value);
+    }
+
+    throw std::runtime_error("Unsupported type for Python conversion: " +
+                             entry.type_name);
+  }
+
+  /**
    * @brief Get the values visible in the current remapping scope.
    * @return Python list with the values in key order.
+   *
+   * Uses a single-lock batched snapshot to avoid N individual lock
+   * acquisitions.
    */
   py::list values() const {
+    auto keys = this->blackboard->keys();
+    auto entries = this->blackboard->get_raw_batch(keys);
     py::list result;
 
-    for (const auto &key : this->blackboard->keys()) {
-      result.append(this->get(key));
+    for (const auto &entry : entries) {
+      result.append(raw_entry_to_pyobject(entry));
     }
 
     return result;
@@ -597,12 +590,17 @@ public:
   /**
    * @brief Get the key-value pairs visible in the current remapping scope.
    * @return Python list of ``(key, value)`` tuples.
+   *
+   * Uses a single-lock batched snapshot to avoid N individual lock
+   * acquisitions.
    */
   py::list items() const {
+    auto keys = this->blackboard->keys();
+    auto entries = this->blackboard->get_raw_batch(keys);
     py::list result;
 
-    for (const auto &key : this->blackboard->keys()) {
-      result.append(py::make_tuple(key, this->get(key)));
+    for (size_t i = 0; i < keys.size(); i++) {
+      result.append(py::make_tuple(keys[i], raw_entry_to_pyobject(entries[i])));
     }
 
     return result;
@@ -624,9 +622,9 @@ public:
 
   /**
    * @brief Get the current key remappings.
-   * @return Reference to the underlying remapping table.
+   * @return A copy of the remapping table.
    */
-  const Remappings &get_remappings() const {
+  Remappings get_remappings() const {
     return this->blackboard->get_remappings();
   }
 

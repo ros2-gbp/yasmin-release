@@ -1,25 +1,22 @@
 // Copyright (C) 2023 Miguel Ángel González Santamarta
 //
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
 //
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
+//     http://www.apache.org/licenses/LICENSE-2.0
 //
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 #include "yasmin/blackboard.hpp"
 
 #include <algorithm>
-#include <map>
 #include <string>
 #include <unordered_map>
-#include <unordered_set>
 #include <vector>
 
 #include "yasmin/logs.hpp"
@@ -29,8 +26,10 @@ using namespace yasmin;
 
 Blackboard::Blackboard() : storage(std::make_shared<SharedStorage>()) {}
 
-Blackboard::Blackboard(const Blackboard &other)
-    : storage(other.storage), remappings(other.remappings) {}
+Blackboard::Blackboard(const Blackboard &other) : storage(other.storage) {
+  std::lock_guard<std::recursive_mutex> lk(other.storage->mutex);
+  this->remappings = other.remappings;
+}
 
 void Blackboard::remove(const std::string &key) {
   YASMIN_LOG_DEBUG("Removing '%s' from the blackboard", key.c_str());
@@ -56,9 +55,7 @@ void Blackboard::copy_value_from(const Blackboard &other,
   YASMIN_LOG_DEBUG("Copying '%s' from blackboard into '%s'", source_key.c_str(),
                    target_key.c_str());
 
-  if (this->storage == other.storage) {
-    std::lock_guard<std::recursive_mutex> lk(this->storage->mutex);
-
+  auto copy_impl = [&]() {
     const std::string &remapped_source_key = other.remap(source_key);
     if (other.storage->values.find(remapped_source_key) ==
         other.storage->values.end()) {
@@ -71,24 +68,16 @@ void Blackboard::copy_value_from(const Blackboard &other,
         other.storage->values.at(remapped_source_key);
     this->storage->type_registry[remapped_target_key] =
         other.storage->type_registry.at(remapped_source_key);
-    return;
+  };
+
+  if (this->storage == other.storage) {
+    std::lock_guard<std::recursive_mutex> lk(this->storage->mutex);
+    copy_impl();
+  } else {
+    std::scoped_lock<std::recursive_mutex, std::recursive_mutex> lk(
+        this->storage->mutex, other.storage->mutex);
+    copy_impl();
   }
-
-  std::scoped_lock<std::recursive_mutex, std::recursive_mutex> lk(
-      this->storage->mutex, other.storage->mutex);
-
-  const std::string &remapped_source_key = other.remap(source_key);
-  if (other.storage->values.find(remapped_source_key) ==
-      other.storage->values.end()) {
-    throw std::runtime_error("Element '" + source_key +
-                             "' does not exist in the blackboard");
-  }
-
-  const std::string &remapped_target_key = this->remap(target_key);
-  this->storage->values[remapped_target_key] =
-      other.storage->values.at(remapped_source_key);
-  this->storage->type_registry[remapped_target_key] =
-      other.storage->type_registry.at(remapped_source_key);
 }
 
 int Blackboard::size() const {
@@ -112,23 +101,16 @@ std::vector<std::string> Blackboard::keys() const {
   std::vector<std::string> result;
   result.reserve(this->storage->values.size() + this->remappings.size());
 
-  std::unordered_set<std::string> inserted_keys;
-  inserted_keys.reserve(this->storage->values.size() + this->remappings.size());
-
   for (const auto &[stored_key, _] : this->storage->values) {
     const auto visible_it = visible_keys_by_target.find(stored_key);
 
     if (visible_it == visible_keys_by_target.end()) {
-      if (inserted_keys.insert(stored_key).second) {
-        result.push_back(stored_key);
-      }
+      result.push_back(stored_key);
       continue;
     }
 
     for (const auto &visible_key : visible_it->second) {
-      if (inserted_keys.insert(visible_key).second) {
-        result.push_back(visible_key);
-      }
+      result.push_back(visible_key);
     }
   }
 
@@ -142,13 +124,13 @@ std::string Blackboard::get_type(const std::string &key) const {
   std::lock_guard<std::recursive_mutex> lk(this->storage->mutex);
   auto remapped_key = this->remap(key);
 
-  // Check if the key exists
-  if (!this->contains(key)) {
+  auto it = this->storage->type_registry.find(remapped_key);
+  if (it == this->storage->type_registry.end()) {
     throw std::runtime_error("Element '" + key +
                              "' does not exist in the blackboard");
   }
 
-  return this->storage->type_registry.at(remapped_key);
+  return it->second;
 }
 
 std::string Blackboard::to_string() const {
@@ -158,8 +140,11 @@ std::string Blackboard::to_string() const {
 
   // Iterate through all key-value pairs and append to the result string
   for (const auto &ele : this->storage->values) {
-    result += "\t" + ele.first + " (" +
-              this->storage->type_registry.at(ele.first) + ")\n";
+    auto type_it = this->storage->type_registry.find(ele.first);
+    std::string type_name = (type_it != this->storage->type_registry.end())
+                                ? type_it->second
+                                : "unknown";
+    result += "\t" + ele.first + " (" + type_name + ")\n";
   }
 
   return result;
@@ -168,17 +153,54 @@ std::string Blackboard::to_string() const {
 const std::string &Blackboard::remap(const std::string &key) const {
 
   // Check if the key has a remapping
-  if (this->remappings.find(key) != this->remappings.end()) {
-    return this->remappings.at(key);
+  auto it = this->remappings.find(key);
+  if (it != this->remappings.end()) {
+    return it->second;
   }
 
   return key;
 }
 
+Blackboard::RawEntry Blackboard::get_raw(const std::string &key) const {
+  std::lock_guard<std::recursive_mutex> lk(this->storage->mutex);
+  const std::string &remapped_key = this->remap(key);
+  auto vit = this->storage->values.find(remapped_key);
+  if (vit == this->storage->values.end()) {
+    throw std::runtime_error("Element '" + key +
+                             "' does not exist in the blackboard");
+  }
+  auto tit = this->storage->type_registry.find(remapped_key);
+  std::string type_name =
+      (tit != this->storage->type_registry.end()) ? tit->second : "";
+  return {vit->second, type_name};
+}
+
+std::vector<Blackboard::RawEntry>
+Blackboard::get_raw_batch(const std::vector<std::string> &keys) const {
+  std::lock_guard<std::recursive_mutex> lk(this->storage->mutex);
+  std::vector<RawEntry> result;
+  result.reserve(keys.size());
+  for (const auto &key : keys) {
+    const std::string &remapped_key = this->remap(key);
+    auto vit = this->storage->values.find(remapped_key);
+    if (vit == this->storage->values.end()) {
+      throw std::runtime_error("Element '" + key +
+                               "' does not exist in the blackboard");
+    }
+    auto tit = this->storage->type_registry.find(remapped_key);
+    std::string type_name =
+        (tit != this->storage->type_registry.end()) ? tit->second : "";
+    result.push_back({vit->second, type_name});
+  }
+  return result;
+}
+
 void Blackboard::set_remappings(const Remappings &remappings) {
+  std::lock_guard<std::recursive_mutex> lk(this->storage->mutex);
   this->remappings = remappings;
 }
 
-const Remappings &Blackboard::get_remappings() const noexcept {
+Remappings Blackboard::get_remappings() const {
+  std::lock_guard<std::recursive_mutex> lk(this->storage->mutex);
   return this->remappings;
 }

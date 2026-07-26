@@ -1,17 +1,16 @@
 # Copyright (C) 2025 Miguel Ángel González Santamarta
 #
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
 #
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
-# You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 from typing import Dict, Any
 
@@ -20,8 +19,8 @@ from rclpy.node import Node
 
 import yasmin
 from yasmin import State, Blackboard
-from yasmin_ros.yasmin_node import YasminNode
-from yasmin_ros.basic_outcomes import SUCCEED, ABORT
+from yasmin_ros.basic_outcomes import SUCCEED, ABORT, CANCEL
+from yasmin_ros.ros_state_utils import resolve_node
 
 
 class GetParametersState(State):
@@ -45,7 +44,7 @@ class GetParametersState(State):
             node (Node, optional): A shared pointer to the ROS 2 node.
         """
         self._parameters = parameters
-        self._node = node if node else YasminNode.get_instance()
+        self._node = resolve_node(node)
 
         super().__init__([SUCCEED, ABORT])
 
@@ -61,34 +60,38 @@ class GetParametersState(State):
         """
 
         for param_name, param_value in self._parameters.items():
+            if self.is_canceled():
+                return CANCEL
+
             if not self._node.has_parameter(param_name):
                 self._node.declare_parameter(param_name, param_value)
 
             yasmin.YASMIN_LOG_INFO(f"Retrieving parameter '{param_name}'")
 
-            parameter = self._node.get_parameter(param_name).get_parameter_value()
+            parameter = self._node.get_parameter(param_name)
             parameter_type = rclpy.Parameter.Type(
                 self._node.get_parameter_type(param_name)
             )
+            parameter_value = parameter.get_parameter_value()
 
             if parameter_type == rclpy.Parameter.Type.BOOL:
-                value = parameter.bool_value
+                value = parameter_value.bool_value
             elif parameter_type == rclpy.Parameter.Type.INTEGER:
-                value = parameter.integer_value
+                value = parameter_value.integer_value
             elif parameter_type == rclpy.Parameter.Type.DOUBLE:
-                value = parameter.double_value
+                value = parameter_value.double_value
             elif parameter_type == rclpy.Parameter.Type.STRING:
-                value = parameter.string_value
+                value = parameter_value.string_value
             elif parameter_type == rclpy.Parameter.Type.BOOL_ARRAY:
-                value = parameter.bool_array_value
+                value = parameter_value.bool_array_value
             elif parameter_type == rclpy.Parameter.Type.INTEGER_ARRAY:
-                value = parameter.integer_array_value
+                value = parameter_value.integer_array_value
             elif parameter_type == rclpy.Parameter.Type.DOUBLE_ARRAY:
-                value = parameter.double_array_value
+                value = parameter_value.double_array_value
             elif parameter_type == rclpy.Parameter.Type.STRING_ARRAY:
-                value = parameter.string_array_value
+                value = parameter_value.string_array_value
             elif parameter_type == rclpy.Parameter.Type.BYTE_ARRAY:
-                value = parameter.byte_array_value
+                value = parameter_value.byte_array_value
             else:
                 yasmin.YASMIN_LOG_ERROR(
                     f"Unsupported parameter type for '{param_name}': {self._node.get_parameter_type(param_name)}"

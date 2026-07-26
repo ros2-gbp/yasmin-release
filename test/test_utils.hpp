@@ -1,17 +1,16 @@
 // Copyright (C) 2026 Maik Knof
 //
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
 //
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
+//     http://www.apache.org/licenses/LICENSE-2.0
 //
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 #ifndef YASMIN_PCL__TEST__TEST_UTILS_HPP_
 #define YASMIN_PCL__TEST__TEST_UTILS_HPP_
@@ -22,12 +21,15 @@
 #include <pcl/point_types.h>
 #include <pcl_conversions/pcl_conversions.h>
 
-#include <chrono>
 #include <cstdint>
+#include <cstdio>
 #include <filesystem>
 #include <memory>
+#include <stdexcept>
 #include <string>
 #include <vector>
+
+#include <unistd.h>
 
 #include <sensor_msgs/msg/point_cloud2.hpp>
 
@@ -35,6 +37,9 @@
 
 namespace yasmin_pcl::test {
 
+/** @brief Create a PCL XYZ point cloud from a vector of points.
+ *  @param points The input points.
+ *  @return The created point cloud. */
 inline pcl::PointCloud<pcl::PointXYZ>
 create_xyz_cloud(const std::vector<pcl::PointXYZ> &points) {
   pcl::PointCloud<pcl::PointXYZ> cloud;
@@ -45,6 +50,9 @@ create_xyz_cloud(const std::vector<pcl::PointXYZ> &points) {
   return cloud;
 }
 
+/** @brief Create a PCL PointCloud2 shared pointer from points.
+ *  @param points The input points.
+ *  @return Shared pointer to a PCL PointCloud2. */
 inline common::PclPointCloud2Ptr
 create_pcl_cloud_ptr(const std::vector<pcl::PointXYZ> &points) {
   auto cloud = common::make_pcl_point_cloud2();
@@ -53,6 +61,9 @@ create_pcl_cloud_ptr(const std::vector<pcl::PointXYZ> &points) {
   return cloud;
 }
 
+/** @brief Create a ROS PointCloud2 shared pointer from points.
+ *  @param points The input points.
+ *  @return Shared pointer to a ROS PointCloud2. */
 inline common::RosPointCloud2Ptr
 create_ros_cloud_ptr(const std::vector<pcl::PointXYZ> &points) {
   const auto pcl_cloud = create_pcl_cloud_ptr(points);
@@ -61,6 +72,9 @@ create_ros_cloud_ptr(const std::vector<pcl::PointXYZ> &points) {
   return ros_cloud;
 }
 
+/** @brief Convert a PCLPointCloud2 to a PCL XYZ point cloud.
+ *  @param cloud The input PCLPointCloud2.
+ *  @return The converted XYZ point cloud. */
 inline pcl::PointCloud<pcl::PointXYZ>
 to_xyz_cloud(const pcl::PCLPointCloud2 &cloud) {
   pcl::PointCloud<pcl::PointXYZ> xyz_cloud;
@@ -68,12 +82,57 @@ to_xyz_cloud(const pcl::PCLPointCloud2 &cloud) {
   return xyz_cloud;
 }
 
-inline std::filesystem::path make_temp_path(const std::string &stem,
-                                            const std::string &extension) {
-  const auto unique_id =
-      std::chrono::steady_clock::now().time_since_epoch().count();
-  return std::filesystem::temp_directory_path() /
-         (stem + "_" + std::to_string(unique_id) + extension);
+/** @brief RAII temporary file that removes itself on destruction. */
+class TempFile {
+public:
+  TempFile() = default;
+
+  explicit TempFile(std::filesystem::path path) : path_(std::move(path)) {}
+
+  TempFile(const TempFile &) = delete;
+  TempFile &operator=(const TempFile &) = delete;
+
+  TempFile(TempFile &&other) noexcept : path_(std::exchange(other.path_, {})) {}
+
+  TempFile &operator=(TempFile &&other) noexcept {
+    if (this != &other) {
+      reset();
+      path_ = std::exchange(other.path_, {});
+    }
+    return *this;
+  }
+
+  ~TempFile() { reset(); }
+
+  const std::filesystem::path &path() const { return path_; }
+
+  void reset() {
+    if (!path_.empty()) {
+      std::error_code ec;
+      std::filesystem::remove(path_, ec);
+      path_.clear();
+    }
+  }
+
+private:
+  std::filesystem::path path_;
+};
+
+/** @brief Create a unique temporary file path using mkstemps.
+ *  @param stem The filename stem (prefix).
+ *  @param suffix The file extension with leading dot, e.g. ".ply".
+ *  @return A TempFile whose path() gives the created path. */
+inline TempFile make_temp_file(const std::string &stem,
+                               const std::string &suffix) {
+  const auto dir = std::filesystem::temp_directory_path();
+  std::string tmpl = (dir / (stem + "_XXXXXX" + suffix)).string();
+  const int suffix_len = static_cast<int>(suffix.size());
+  const int fd = mkstemps(tmpl.data(), suffix_len);
+  if (fd < 0) {
+    throw std::runtime_error("mkstemps failed for " + tmpl);
+  }
+  close(fd);
+  return TempFile(std::filesystem::path(tmpl));
 }
 
 } // namespace yasmin_pcl::test

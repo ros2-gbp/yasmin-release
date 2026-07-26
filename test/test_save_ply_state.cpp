@@ -1,17 +1,16 @@
 // Copyright (C) 2026 Maik Knof
 //
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
 //
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
+//     http://www.apache.org/licenses/LICENSE-2.0
 //
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 #include <gtest/gtest.h>
 #include <pcl/io/ply_io.h>
@@ -24,7 +23,8 @@
 #include "yasmin_pcl/io/save_ply_state.hpp"
 
 TEST(SavePlyState, SavesPlyFileFromBlackboardCloud) {
-  const auto file_path = yasmin_pcl::test::make_temp_path("save_ply", ".ply");
+  auto temp_file = yasmin_pcl::test::make_temp_file("save_ply", ".ply");
+  const auto file_path = temp_file.path();
 
   yasmin_pcl::io::SavePlyState state;
   state.set_parameter<std::string>("file_path", file_path.string());
@@ -43,13 +43,11 @@ TEST(SavePlyState, SavesPlyFileFromBlackboardCloud) {
   pcl::PCLPointCloud2 loaded_cloud;
   ASSERT_EQ(pcl::io::loadPLYFile(file_path.string(), loaded_cloud), 0);
   EXPECT_EQ(yasmin_pcl::test::to_xyz_cloud(loaded_cloud).points.size(), 2U);
-
-  std::filesystem::remove(file_path);
 }
 
 TEST(SavePlyState, SavesBinaryPlyFileFromBlackboardCloud) {
-  const auto file_path =
-      yasmin_pcl::test::make_temp_path("save_ply_binary", ".ply");
+  auto temp_file = yasmin_pcl::test::make_temp_file("save_ply_binary", ".ply");
+  const auto file_path = temp_file.path();
 
   yasmin_pcl::io::SavePlyState state;
   state.set_parameter<std::string>("file_path", file_path.string());
@@ -68,8 +66,6 @@ TEST(SavePlyState, SavesBinaryPlyFileFromBlackboardCloud) {
   pcl::PCLPointCloud2 loaded_cloud;
   ASSERT_EQ(pcl::io::loadPLYFile(file_path.string(), loaded_cloud), 0);
   EXPECT_EQ(yasmin_pcl::test::to_xyz_cloud(loaded_cloud).points.size(), 2U);
-
-  std::filesystem::remove(file_path);
 }
 
 TEST(SavePlyState, AbortsWhenFilePathIsEmpty) {

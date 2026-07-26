@@ -39,6 +39,7 @@
           <li><a href="../../index.html">Introduction</a></li>
           <li><a href="../../docker.html">Docker Environment</a></li>
           <li><a href="../../main_concepts.html">Main Concepts</a></li>
+          <li><a href="../../shared_states.html">Shared States</a></li>
           <li><a href="../../callback_signal.html">Callback Signal</a></li>
           <li><a href="../../xml_factory.html">XML State Machines</a></li>
           <li><a href="../../packages.html">Packages Overview</a></li>
@@ -74,7 +75,7 @@
             Advanced
             <ul>
               <li><a href="factory_demo.html">Factory (XML)</a></li>
-              <li><a href="multiple_states_demo.html">Multiple States</a></li>
+
               <li><a href="nav2_demo.html">Nav2 Demo</a></li>
               <li><a href="orthogonal_demo.html">Orthogonal Regions</a></li>
               <li>
@@ -123,11 +124,7 @@
             Advanced
             <ul>
               <li><a href="../python/factory_demo.html">Factory (XML)</a></li>
-              <li>
-                <a href="../python/multiple_states_demo.html"
-                  >Multiple States</a
-                >
-              </li>
+
               <li><a href="../python/nav2_demo.html">Nav2 Demo</a></li>
               <li>
                 <a href="../python/orthogonal_demo.html">Orthogonal Regions</a>
@@ -430,18 +427,21 @@ int main(int argc, char *argv[]) {
                                          {yasmin_ros::basic_outcomes::ABORT,
                                           yasmin_ros::basic_outcomes::ABORT}});
 
-  yasmin_viewer::YasminViewerPub yasmin_pub(sm, "YASMIN_NAV2_DEMO");
+  {
+    yasmin_viewer::YasminViewerPub yasmin_pub(sm, "YASMIN_NAV2_DEMO");
 
-  auto blackboard = yasmin::Blackboard::make_shared();
-  blackboard-&gt;set&lt;int&gt;("waypoints_num", 2);
+    auto blackboard = yasmin::Blackboard::make_shared();
+    blackboard-&gt;set&lt;int&gt;("waypoints_num", 2);
 
-  try {
-    std::string outcome = (*sm.get())(blackboard);
-    YASMIN_LOG_INFO(outcome.c_str());
-  } catch (const std::exception &e) {
-    YASMIN_LOG_WARN(e.what());
+    try {
+      std::string outcome = (*sm.get())(blackboard);
+      YASMIN_LOG_INFO(outcome.c_str());
+    } catch (const std::exception &amp;e) {
+      YASMIN_LOG_WARN(e.what());
+    }
   }
 
+  yasmin_ros::YasminNode::destroy_instance();
   rclcpp::shutdown();
 
   return 0;

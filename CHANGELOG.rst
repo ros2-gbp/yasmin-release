@@ -2,6 +2,52 @@
 Changelog for package yasmin_cli
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+6.1.0 (2026-07-26)
+------------------
+* feat(cli): enhance command utility and refactor XML processing
+  Improve the `yasmin_cli` by centralizing XML utility functions, optimizing
+  plugin loading, and adding new dependencies.
+  - Extract `parse_assignments` and `indent_xml` to a new `_xml_utils.py`
+  module to reduce duplication across verbs.
+  - Implement a plugin manager cache in `completer.py` to avoid redundant
+  plugin loading during autocompletion.
+  - Add `yasmin_viewer` and `yasmin_editor` as execution dependencies in
+  `package.xml`.
+  - Optimize XML file discovery in `xml_file_completer` using a depth-limited
+  walk.
+  - Improve CLI robustness by flushing `stdout`/`stderr` before exit and
+  adding better XML parsing error handling in the `run` verb.
+  - Update `validate` verb to allow exit code 130 (SIGINT) during validation.
+  - Clean up unused arguments in the `viewer` verb.
+* Contributors: Miguel Ángel González Santamarta
+
+6.0.0 (2026-07-07)
+------------------
+* Refactor type hints to use Union for optional types
+  - Updated type hints across multiple files to replace the use of the pipe operator (|) with Union from the typing module for better compatibility and clarity.
+  - This change affects various classes and functions, ensuring that optional types are consistently defined using Union, enhancing code readability and maintainability.
+* Refactor type hints across the codebase to use standard typing constructs
+  - Updated various type hints from built-in types to use `List`, `Dict`, `Tuple`, and `Set` from the `typing` module for consistency and clarity.
+  - Modified function signatures and variable declarations in multiple files, including `selection_names.py`, `selection_placement.py`, `transition_rules.py`, and others.
+  - Ensured that all instances of type hints are now using the updated typing constructs, improving code readability and maintainability.
+* relicense to Apache 2.0 (`#122 <https://github.com/uleroboticsgroup/yasmin/issues/122>`_)
+* refactor: remove shebang lines from multiple Python files
+* refactor: refactor and optimize yasmin code
+  - Removed unnecessary code and improved the formatting of plugin headers in discovery_node.py.
+  - Simplified metadata loading in plugin_info.py by introducing a safe_get method to handle exceptions.
+  - Enhanced plugin manager to streamline package retrieval and signature validation.
+  - Cleaned up ROS interface serialization by removing unused includes.
+  - Updated action client state to utilize a retry mechanism for server connections.
+  - Improved service state handling with a retry mechanism for service calls.
+  - Consolidated node resolution logic into a utility function for better code reuse.
+  - Refactored viewer node to enhance readability and maintainability.
+  - Updated tests to reflect changes in expected warning log counts.
+  - Added new utility functions for retry logic and node resolution in ros_state_utils.py.
+* Contributors: Miguel Ángel González Santamarta
+
+5.1.0 (2026-05-01)
+------------------
+
 5.0.0 (2026-01-14)
 ------------------
 * build: update setup.py to exclude test packages and add pytest, remove linter tests

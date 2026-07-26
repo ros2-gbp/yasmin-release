@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.5)
+cmake_minimum_required(VERSION 3.10)
 project(yasmin_msgs)
 
 # find dependencies
@@ -9,6 +9,7 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/State.msg"
   "msg/Transition.msg"
   "msg/StateMachine.msg"
+  "action/RunStateMachine.action"
 )
 
 ament_package()

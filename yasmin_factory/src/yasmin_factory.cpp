@@ -63,6 +63,9 @@ std::string normalize_xml_value_type(const std::string &type_name) {
   if (normalized == "string") {
     return "str";
   }
+  if (normalized == "integer") {
+    return "int";
+  }
   if (normalized == "double") {
     return "float";
   }
@@ -201,12 +204,24 @@ void with_typed_xml_value(const std::string &value_str,
   }
 
   if (normalized_type == "int") {
-    callback(std::stoi(value_str));
+    std::size_t pos = 0;
+    int result = std::stoi(value_str, &pos);
+    if (pos != value_str.size()) {
+      throw std::runtime_error("Trailing characters in integer value '" +
+                               value_str + "'");
+    }
+    callback(result);
     return;
   }
 
   if (normalized_type == "float") {
-    callback(std::stod(value_str));
+    std::size_t pos = 0;
+    double result = std::stod(value_str, &pos);
+    if (pos != value_str.size()) {
+      throw std::runtime_error("Trailing characters in float value '" +
+                               value_str + "'");
+    }
+    callback(result);
     return;
   }
 
@@ -848,6 +863,7 @@ yasmin::StateMachine::SharedPtr
 YasminFactory::create_sm(tinyxml2::XMLElement *root) {
 
   std::string file_path = this->get_optional_attribute(root, "file_path", "");
+  bool from_file_path_attr = !file_path.empty();
 
   if (file_path.empty()) {
     std::string file_name = this->get_optional_attribute(root, "file_name", "");

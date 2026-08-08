@@ -3,6 +3,41 @@ Changelog for package yasmin_msgs
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 
+6.1.1 (2026-08-08)
+------------------
+* yasmin_msgs: Depend on action_msgs (`#127 <https://github.com/uleroboticsgroup/yasmin/issues/127>`_)
+  Without this dependency, when the package is build separately, the
+  build fails with the following error:
+  CMake Error at /nix/store/x11khyi2rivpyy70xxvkm319v5nzwq75-ros-humble-rosidl-cmake-3.1.9-r1/share/rosidl_cmake/cmake/rosidl_generate_interfaces.cmake:147 (message):
+  Unable to generate action interface for 'action/RunStateMachine.action'.
+  In order to generate action interfaces you must add a depend tag for
+  'action_msgs' in your package.xml.
+  Call Stack (most recent call first):
+  CMakeLists.txt:8 (rosidl_generate_interfaces)
+* Contributors: Michal Sojka
+
+6.1.0 (2026-07-26)
+------------------
+* YASMIN Factory Action Server (`#124 <https://github.com/uleroboticsgroup/yasmin/issues/124>`_)
+  * add yasmin_factory_action_server
+  * formatter cpp
+  * formatter py
+  * use ros2 run in tests
+  * add reliable wrapper cleanup
+  * use unique action name to prevent a newly started client from discovering the previous stale server endpoint.
+  * use isolated ROS contexts, DDS domains, and context-bound executors for each test.
+  * foxy support
+  Foxy does not support domain_id keyword in rclpy.init
+  * trigger ci
+  * trigger ci
+  * Split and document the factory action server
+  * add action server to README
+  * formatter
+  * added an action server section to yasmin_factory.html
+  ---------
+  Co-authored-by: Maik Knof <knofm@hs-weingarten.de>
+* Contributors: Maik
+
 6.0.0 (2026-07-07)
 ------------------
 * relicense to Apache 2.0 (`#122 <https://github.com/uleroboticsgroup/yasmin/issues/122>`_)

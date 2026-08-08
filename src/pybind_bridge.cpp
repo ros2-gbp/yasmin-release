@@ -63,15 +63,10 @@ public:
    * instantiated.
    */
   yasmin::State::SharedPtr create(const std::string &class_name) {
-    // Create an unmanaged instance of the specified class
-    // Python will manage the lifetime via shared_ptr
-    auto state = this->loader_->createUnmanagedInstance(class_name);
-
-    // Wrap the raw pointer in a shared_ptr (Python will manage the lifetime)
-    yasmin::State::SharedPtr state_ptr(state);
-
-    // Return the shared pointer to the created state
-    return state_ptr;
+    auto *raw_state = this->loader_->createUnmanagedInstance(class_name);
+    return yasmin::State::SharedPtr(
+        raw_state,
+        [loader = this->loader_](yasmin::State *ptr) { delete ptr; });
   }
 
 private:

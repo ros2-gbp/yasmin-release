@@ -61,7 +61,9 @@ class EditorCanvasMixin:
         self.canvas.scene.removeItem(connection.label)
         if connection in self.connections:
             self.connections.remove(connection)
-        for existing_connection in self.connections:
+        for existing_connection in list(connection.from_node.connections):
+            existing_connection.update_position()
+        for existing_connection in list(connection.to_node.connections):
             existing_connection.update_position()
         self.refresh_connection_port_visibility()
 
@@ -331,7 +333,9 @@ class EditorCanvasMixin:
     def _set_scene_read_only_state(self) -> None:
         readonly = self.is_read_only_mode()
         for item in list(self.state_nodes.values()) + list(self.final_outcomes.values()):
-            item.setFlag(item.ItemIsMovable, not readonly)
+            item.setFlag(
+                QtWidgets.QGraphicsItem.GraphicsItemFlag.ItemIsMovable, not readonly
+            )
             if hasattr(item, "connection_port") and readonly:
                 item.connection_port.setVisible(False)
         for text_block in self.text_blocks:

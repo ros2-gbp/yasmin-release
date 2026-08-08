@@ -1,0 +1,12 @@
+Source: ros-lyrical-yasmin-demos
+Section: misc
+Priority: optional
+Maintainer: "Miguel Ángel González Santamarta" <mgons@unileon.es>
+Build-Depends: debhelper (>= 9.0.0), ros-lyrical-ament-cmake, ros-lyrical-ament-cmake-python, ros-lyrical-ament-index-cpp, ros-lyrical-example-interfaces, ros-lyrical-geometry-msgs, ros-lyrical-nav-msgs, ros-lyrical-pluginlib, ros-lyrical-rclcpp, ros-lyrical-rclcpp-action, ros-lyrical-rclpy, ros-lyrical-ros-environment, ros-lyrical-yasmin, ros-lyrical-yasmin-factory, ros-lyrical-yasmin-ros, ros-lyrical-yasmin-viewer, ros-lyrical-ros-workspace
+Homepage: https://index.ros.org/p/yasmin_demos/#lyrical
+Standards-Version: 3.9.2
+
+Package: ros-lyrical-yasmin-demos
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, ros-lyrical-ament-index-cpp, ros-lyrical-example-interfaces, ros-lyrical-geometry-msgs, ros-lyrical-nav-msgs, ros-lyrical-pluginlib, ros-lyrical-rclcpp, ros-lyrical-rclcpp-action, ros-lyrical-rclpy, ros-lyrical-yasmin, ros-lyrical-yasmin-factory, ros-lyrical-yasmin-ros, ros-lyrical-yasmin-viewer, ros-lyrical-ros-workspace
+Description: Demos of YASMIN (Yet Another State MachINe)

@@ -1,1 +1,0 @@
-from yasmin_factory.factory import YasminFactory

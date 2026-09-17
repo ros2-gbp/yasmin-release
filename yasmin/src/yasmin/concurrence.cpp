@@ -32,6 +32,16 @@
 
 using namespace yasmin;
 
+std::shared_ptr<Concurrence::GilHook> Concurrence::before_fork_hook_;
+std::shared_ptr<Concurrence::GilHook> Concurrence::after_join_hook_;
+std::mutex Concurrence::hooks_mutex_;
+
+void Concurrence::set_thread_hooks(GilHook before_fork, GilHook after_join) {
+  std::lock_guard<std::mutex> lock(hooks_mutex_);
+  before_fork_hook_ = std::make_shared<GilHook>(std::move(before_fork));
+  after_join_hook_ = std::make_shared<GilHook>(std::move(after_join));
+}
+
 Concurrence::Concurrence(const StateMap &states,
                          const std::string &default_outcome,
                          const OutcomeMap &outcome_map,
@@ -48,6 +58,10 @@ Concurrence::Concurrence(const StateMap &states,
   // Check for duplicate state instances
   std::unordered_set<State *> unique_instances;
   for (const auto &[state_name, state] : states) {
+    if (!state) {
+      throw std::invalid_argument("State '" + state_name + "' cannot be null");
+    }
+
     if (!unique_instances.insert(state.get()).second) {
       throw std::invalid_argument(
           "There are duplicate state instances in the states");
@@ -142,24 +156,54 @@ std::string Concurrence::execute(Blackboard::SharedPtr blackboard) {
   std::vector<std::exception_ptr> exceptions(this->states.size(), nullptr);
   size_t thread_idx = 0;
 
+  // Snapshot hooks under lock for thread-safe access during concurrent
+  // execution
+  std::shared_ptr<GilHook> before_hook;
+  std::shared_ptr<GilHook> after_hook;
+  {
+    std::lock_guard<std::mutex> lock(hooks_mutex_);
+    before_hook = before_fork_hook_;
+    after_hook = after_join_hook_;
+  }
+
+  // Invoke before-fork hook (e.g., GIL release when Python states are used)
+  if (before_hook) {
+    (*before_hook)();
+  }
+
   // Initialize the parallel execution of all the states.
   // Each branch receives a blackboard copy that shares the underlying storage
   // but keeps an isolated remapping scope.
-  for (const auto &[state_name, state] : this->states) {
-    Blackboard::SharedPtr thread_blackboard =
-        std::make_shared<Blackboard>(*blackboard);
-    size_t idx = thread_idx++;
-    state_threads.push_back(std::thread(
-        [this, state_name, state, thread_blackboard, &exceptions, idx]() {
-          try {
-            std::string outcome = (*state.get())(thread_blackboard);
-            const std::lock_guard<std::mutex> lock(
-                this->intermediate_outcome_mutex);
-            this->intermediate_outcome_map[state_name] = outcome;
-          } catch (...) {
-            exceptions[idx] = std::current_exception();
-          }
-        }));
+  state_threads.reserve(this->states.size());
+
+  try {
+    for (const auto &[state_name, state] : this->states) {
+      Blackboard::SharedPtr thread_blackboard =
+          std::make_shared<Blackboard>(*blackboard);
+      size_t idx = thread_idx++;
+      state_threads.push_back(std::thread(
+          [this, state_name, state, thread_blackboard, &exceptions, idx]() {
+            try {
+              std::string outcome = (*state.get())(thread_blackboard);
+              const std::lock_guard<std::mutex> lock(
+                  this->intermediate_outcome_mutex);
+              this->intermediate_outcome_map[state_name] = outcome;
+            } catch (...) {
+              exceptions[idx] = std::current_exception();
+            }
+          }));
+    }
+
+  } catch (...) {
+    for (std::thread &state_thread : state_threads) {
+      if (state_thread.joinable()) {
+        state_thread.join();
+      }
+    }
+    if (after_hook) {
+      (*after_hook)();
+    }
+    throw;
   }
 
   // Wait for states to finish
@@ -167,6 +211,11 @@ std::string Concurrence::execute(Blackboard::SharedPtr blackboard) {
     if (state_thread.joinable()) {
       state_thread.join();
     }
+  }
+
+  // Invoke after-join hook (e.g., GIL re-acquire when Python states are used)
+  if (after_hook) {
+    (*after_hook)();
   }
 
   // Check for exceptions from child threads

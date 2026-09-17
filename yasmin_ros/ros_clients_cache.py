@@ -53,9 +53,9 @@ class ROSClientsCache:
     _service_clients: Dict[Tuple[str, str, str, str], Client] = {}
 
     ## Cache for publishers
-    ## Key: (node_name, msg_type_name, topic_name, qos_hash)
+    ## Key: (node_name, msg_type_name, topic_name, qos_hash, callback_group_name)
     ## Value: Publisher instance
-    _publishers: Dict[Tuple[str, str, str, str], Publisher] = {}
+    _publishers: Dict[Tuple[str, str, str, str, str], Publisher] = {}
 
     ## Lock for thread-safe access to all caches
     _lock: RLock = RLock()
@@ -174,7 +174,14 @@ class ROSClientsCache:
         node_name = node.get_name()
         msg_type_name = f"{msg_type.__module__}.{msg_type.__name__}"
         qos_hash = str(cls._hash_qos_profile(qos_profile))
-        cache_key = (node_name, msg_type_name, topic_name, qos_hash)
+        callback_group_name = cls._get_callback_group_name(callback_group)
+        cache_key = (
+            node_name,
+            msg_type_name,
+            topic_name,
+            qos_hash,
+            callback_group_name,
+        )
         return cls._get_or_create(
             cls._publishers,
             cache_key,

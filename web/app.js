@@ -20,6 +20,7 @@ const state = {
   hideNested: false,
   showOnlyActive: false,
   cardsPerRow: 2,
+  pollInFlight: false,
   lastSuccessMs: 0,
   renderGeneration: 0,
   lastStructureSignature: "",
@@ -120,7 +121,10 @@ function clearElement(element) {
 }
 
 function escapeMermaidLabel(value) {
-  return String(value).replace(/"/g, '\\"');
+  // Mermaid rejects backslash-escaped quotes in state labels and does not
+  // decode HTML entities inside them, so quote characters are replaced with a
+  // visually equivalent glyph instead.
+  return String(value).replace(/"/g, "'");
 }
 
 function sanitizeId(value) {
@@ -130,14 +134,22 @@ function sanitizeId(value) {
 function updateFsmSelector() {
   const names = ["ALL", ...Object.keys(state.fsms).sort()];
   const previousValue = state.currentFsm;
+  const optionValues = Array.from(fsmSelect.options).map(
+    (option) => option.value,
+  );
+  const optionsChanged =
+    optionValues.length !== names.length ||
+    names.some((name, index) => optionValues[index] !== name);
 
-  clearElement(fsmSelect);
-  names.forEach((name) => {
-    const option = document.createElement("option");
-    option.value = name;
-    option.textContent = name;
-    fsmSelect.appendChild(option);
-  });
+  if (optionsChanged) {
+    clearElement(fsmSelect);
+    names.forEach((name) => {
+      const option = document.createElement("option");
+      option.value = name;
+      option.textContent = name;
+      fsmSelect.appendChild(option);
+    });
+  }
 
   state.currentFsm = names.includes(previousValue) ? previousValue : "ALL";
   fsmSelect.value = state.currentFsm;
@@ -181,34 +193,67 @@ function cloneNodes(rawStates, fsmName, fsmIndex) {
 }
 
 function computeActiveFlags(nodesById) {
-  const parentsWithAllActive = [];
+  // `current_state` semantics as published by yasmin_viewer:
+  //   -1 -> no child state is running
+  //   -2 -> concurrence/orthogonal marker; all direct children run together,
+  //         but only while this node itself is running
+  //  >=0 -> id of the running child state
+  // Activity must be propagated top-down from the root, otherwise the children
+  // of an idle concurrence would be reported as active.
 
-  nodesById.forEach((node) => {
-    if (node.current_state === -2) {
-      parentsWithAllActive.push(node.id);
-    } else if (nodesById.has(node.current_state)) {
-      nodesById.get(node.current_state).active = true;
+  function isFanOutChildActive(child) {
+    if (child.isSyntheticOutcome) {
+      return false;
     }
-  });
 
-  if (parentsWithAllActive.length > 0) {
-    nodesById.forEach((node) => {
-      if (parentsWithAllActive.includes(node.parent)) {
-        node.active = true;
-      }
-    });
+    if (!child.is_fsm) {
+      // Plain states do not report sub-state information, so they stay active
+      // while their parent runs.
+      return true;
+    }
+
+    // Composite children (nested FSM, region) run their own state machine and
+    // report -1 once they are not executing anymore, so a finished child must
+    // not stay highlighted while its siblings keep running.
+    return child.current_state !== -1;
   }
 
-  nodesById.forEach((node) => {
-    if (!node.active) {
+  function markNodeActive(node) {
+    if (node.active) {
       return;
     }
+
+    node.active = true;
 
     let parentId = node.parent;
     while (nodesById.has(parentId)) {
       const parent = nodesById.get(parentId);
       parent.hasActiveDescendant = true;
       parentId = parent.parent;
+    }
+
+    activateChildren(node);
+  }
+
+  function activateChildren(node) {
+    if (node.current_state === -2) {
+      nodesById.forEach((child) => {
+        if (child.parent === node.id && isFanOutChildActive(child)) {
+          markNodeActive(child);
+        }
+      });
+      return;
+    }
+
+    const child = nodesById.get(node.current_state);
+    if (child) {
+      markNodeActive(child);
+    }
+  }
+
+  nodesById.forEach((node) => {
+    if (node.parent === -1) {
+      activateChildren(node);
     }
   });
 }
@@ -303,7 +348,7 @@ function prepareGraph(fsmName, rawStates, fsmIndex) {
       id: key,
       parent: parentId,
       name: outcomeName,
-      alias: `fsm_${fsmIndex}_outcome_${sanitizeId(parentId)}_${sanitizeId(outcomeName)}`,
+      alias: `fsm_${fsmIndex}_outcome_${sanitizeId(parentId)}_${sanitizeId(outcomeName)}_${syntheticOutcomes.size}`,
       is_fsm: false,
       current_state: -1,
       outcomes: [],
@@ -456,6 +501,10 @@ function removeInitialStateArtifacts(container) {
       circle.remove();
     }
   });
+
+  if (removedPoints.length === 0) {
+    return;
+  }
 
   const hitRadius = 24;
 
@@ -985,6 +1034,17 @@ function createDiagramCardShell(fsmName) {
   };
 }
 
+function createErrorCard(fsmName, error) {
+  const shell = createDiagramCardShell(fsmName);
+  const message = document.createElement("div");
+  message.className = "diagram-error";
+  message.textContent = `Failed to render diagram:\n${String(
+    (error && (error.message || error)) || error,
+  )}`;
+  shell.content.appendChild(message);
+  return shell.card;
+}
+
 async function buildDiagramCard(fsmName, rawStates, index, renderGeneration) {
   const graph = prepareGraph(fsmName, rawStates, index);
   const shell = createDiagramCardShell(fsmName);
@@ -1071,12 +1131,23 @@ async function renderStructure() {
 
   for (let index = 0; index < selectedFsms.length; index += 1) {
     const item = selectedFsms[index];
-    const cardState = await buildDiagramCard(
-      item.name,
-      item.states,
-      index,
-      renderGeneration,
-    );
+    let cardState;
+
+    try {
+      cardState = await buildDiagramCard(
+        item.name,
+        item.states,
+        index,
+        renderGeneration,
+      );
+    } catch (error) {
+      console.error(error);
+      if (renderGeneration !== state.renderGeneration) {
+        return;
+      }
+      diagramList.appendChild(createErrorCard(item.name, error));
+      continue;
+    }
 
     if (!cardState) {
       return;
@@ -1115,6 +1186,14 @@ async function updateView(forceStructure = false) {
     state.lastStructureSignature = structureSignature;
     state.lastActiveSignature = activeSignature;
     await renderStructure();
+
+    // Activity may have changed while the diagrams were being rendered;
+    // re-apply highlights from the latest data so no card stays stale.
+    const latestActiveSignature = getActiveSignature(state.fsms);
+    if (latestActiveSignature !== state.lastActiveSignature) {
+      state.lastActiveSignature = latestActiveSignature;
+      updateActiveStatesOnly();
+    }
     return;
   }
 
@@ -1125,6 +1204,12 @@ async function updateView(forceStructure = false) {
 }
 
 async function pollFsms() {
+  if (state.pollInFlight) {
+    return;
+  }
+
+  state.pollInFlight = true;
+
   try {
     const response = await fetch("/api/fsms", { cache: "no-store" });
     if (!response.ok) {
@@ -1147,6 +1232,8 @@ async function pollFsms() {
       stale ? "status-stale" : "status-connecting",
     );
     console.error(error);
+  } finally {
+    state.pollInFlight = false;
   }
 }
 
@@ -1162,6 +1249,14 @@ function applyToVisibleCards(callback) {
 
 fsmSelect.addEventListener("change", async (event) => {
   state.currentFsm = event.target.value;
+
+  if (state.currentFsm !== "ALL") {
+    // A single selected FSM gets the full row width.
+    state.cardsPerRow = 1;
+    updateCardsPerRowSelector();
+    updateDiagramGridColumns();
+  }
+
   await updateView(true);
 });
 

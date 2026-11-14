@@ -1,0 +1,12 @@
+Source: ros-lyrical-yasmin-pcl
+Section: misc
+Priority: optional
+Maintainer: "Maik Knof" <maik.knof@gmx.de>
+Build-Depends: debhelper (>= 9.0.0), libpcl-dev, ros-lyrical-ament-cmake, ros-lyrical-ament-cmake-gtest <!nocheck>, ros-lyrical-pcl-conversions, ros-lyrical-pluginlib, ros-lyrical-sensor-msgs, ros-lyrical-yasmin, ros-lyrical-ros-workspace
+Homepage: https://index.ros.org/p/yasmin_pcl/#lyrical
+Standards-Version: 3.9.2
+
+Package: ros-lyrical-yasmin-pcl
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, libpcl-dev, ros-lyrical-pcl-conversions, ros-lyrical-pluginlib, ros-lyrical-sensor-msgs, ros-lyrical-yasmin, ros-lyrical-ros-workspace
+Description: PCL-based reusable YASMIN states for PointCloud2 conversion, file I/O, and filtering.
